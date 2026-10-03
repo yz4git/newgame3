@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#060b18" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="NOVA STRIKE — 3Dの軌道都市を駆け抜ける縦スクロールシューティング。3つの武器、巨大ボス、2分スコアアタック。iPhone・PCでプレイ。" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>NOVA STRIKE | 星核を取り戻せ</title>
+</head>
+<body>
+  <aside class="side side-left" aria-hidden="true"><div class="side-mark">N<span> / </span>S</div><div class="side-line"></div><p>THE LAST SIGNAL<br>OF A FALLEN STAR.</p><span class="side-coordinate">SECTOR 07 — 26.04</span></aside>
+  <main class="frame" id="frame">
+    <canvas id="game" aria-label="NOVA STRIKE ゲーム画面"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+    <div id="boot" class="boot"><div class="boot-icon">N/S</div><p id="boot-text">SYSTEM ONLINE<span class="loading-dots">...</span></p><span>軌道都市へ接続中</span></div>
+    <header class="hud" id="hud" hidden>
+      <div class="score-area"><span class="tiny-label">SCORE <span id="multiplier">×1</span></span><strong id="score">0000000</strong><span class="high-score" id="high">BEST 0000000</span></div>
+      <div class="hud-right"><div class="hull" id="hull" aria-label="残り耐久"></div><button id="pause-button" class="icon-button" aria-label="一時停止">Ⅱ</button><div class="sector-label" id="sector">01 / 03</div></div>
+      <div class="progress-track"><div id="progress"></div></div>
+    </header>
+    <div class="boss-hud" id="boss-hud" hidden><div><span id="boss-name"></span><span id="boss-percent"></span></div><div class="boss-track"><i id="boss-fill"></i></div><div class="parts-status" id="parts-status"></div></div>
+    <div class="message" id="message" aria-live="polite"><span id="message-caption"></span><strong id="message-title"></strong></div>
+    <div class="small-toast" id="toast" aria-live="polite"></div>
+    <div class="touch-tip" id="touch-tip" hidden>指をドラッグして移動<span>射撃は自動 · 右下でNOVA</span></div>
+    <div class="controls" id="controls" hidden>
+      <button id="weapon-button" class="weapon-button"><span class="tiny-label">WEAPON ↻</span><strong id="weapon-name">WIDE</strong><span class="power-level" id="power-level">▰ ▱ ▱ ▱</span></button>
+      <div class="action-controls"><button id="focus-button" class="focus-button" aria-label="押している間は精密移動">FOCUS<span>精密移動</span></button><button id="nova-button" class="nova-button"><span id="nova-ready">NOVA</span><strong id="bombs">03</strong><span class="nova-meter"><i id="energy"></i></span></button></div>
+    </div>
+    <section class="screen title-screen" id="title-screen">
+      <div class="title-top"><span class="edition">VERTICAL ARCADE / 2026</span><button id="sound-button" class="sound-button" aria-label="サウンド切替">SOUND ON</button></div>
+      <div class="title-lockup"><span class="eyebrow">星核を取り戻せ。</span><h1>NOVA<br><span>STRIKE</span><i></i></h1><p>THREE SECTORS. ONE SIGNAL.</p></div>
+      <div class="title-menu">
+        <div class="difficulty" aria-label="難易度"><button data-difficulty="casual">CASUAL</button><button data-difficulty="normal" class="selected">NORMAL</button><button data-difficulty="expert">EXPERT</button></div>
+        <button id="start-button" class="primary-button"><span>作戦開始</span><small>CAMPAIGN <b>↗</b></small></button>
+        <button id="caravan-button" class="secondary-button">2分スコアアタック<span>CARAVAN / 120s →</span></button>
+        <button id="help-button" class="text-button">操作とルール</button>
+        <div class="title-bottom"><span>BEST <b id="title-best">0000000</b></span><span>N/S — VOL.01</span></div>
+      </div>
+    </section>
+    <section id="pause-screen" class="screen modal-screen" hidden><div class="modal-card"><span class="eyebrow">SIGNAL ON HOLD</span><h2>PAUSED</h2><p>準備ができたら、再び軌道へ。</p><button id="resume-button" class="primary-button">プレイを続ける <small>RESUME ↗</small></button><button id="pause-help-button" class="secondary-button">操作とルール</button><button id="restart-button" class="text-button">最初からやり直す</button><button id="title-button" class="text-button">タイトルへ</button></div></section>
+    <section id="help-screen" class="screen modal-screen" hidden><div class="modal-card help-card"><span class="eyebrow">FLIGHT MANUAL</span><h2>HOW TO PLAY</h2><div class="manual"><p><b>移動 / 自動射撃</b>画面のどこからでも指をドラッグ。機体が同じ方向へ動きます。PCは矢印キー / WASD。</p><p><b>WEAPON / 武器切替</b><em class="cyan">WIDE</em>：広範囲　<em class="violet">LASER</em>：正面火力・貫通<br><em class="green">HOMING</em>：敵を追尾。補給機を倒して4段階強化。</p><p><b>NOVA / 緊急攻撃</b>敵弾を消し、全体攻撃＋一時無敵。ゲージ満タンならボムを消費せず、6秒間火力アップ。</p><p><b>FOCUS / 精密移動</b>押し続けると低速移動＋集中射撃。白い小さな円が自機の当たり判定です。</p><p><b>スコアの伸ばし方</b>素早い連続撃破で最大8倍。編隊全滅、接近撃破、隠された金色のコアを狙おう。</p><p class="manual-keys">PC：Space / X = NOVA　C = 武器<br>Shift = FOCUS　Esc / P = ポーズ<br>ゲームパッド：左スティック / 十字キーで移動<br>A = FOCUS　B = NOVA　X = 武器　Start = ポーズ</p><p class="manual-note">ホーム画面に追加すると、全画面で遊べます。記録はこの端末に保存されます。</p></div><button id="help-back" class="primary-button">戻る <small>RETURN ↗</small></button></div></section>
+    <section id="result-screen" class="screen modal-screen" hidden><div class="modal-card result-card"><span class="eyebrow" id="result-eyebrow">MISSION REPORT</span><h2 id="result-title">SIGNAL LOST</h2><p id="result-subtitle"></p><span class="tiny-label">FINAL SCORE</span><strong class="final-score" id="final-score">0000000</strong><div id="new-record" class="record" hidden>NEW PERSONAL BEST</div><div class="result-stats" id="result-stats"></div><button id="retry-button" class="primary-button">もう一度出撃 <small>RETRY ↗</small></button><button id="result-title-button" class="text-button">タイトルへ</button></div></section>
+    <div class="screen-flash" id="flash" aria-hidden="true"></div>
+    <button id="update-button" class="update-button" hidden>新しいバージョンで再起動 ↗</button>
+  </main>
+  <aside class="side side-right" aria-hidden="true"><span class="side-coordinate">FLIGHT OPERATIONS</span><div class="side-line"></div><p>MOVE<br><b>WASD / ARROWS</b></p><p>NOVA<br><b>SPACE / X</b></p><p>WEAPON<br><b>C</b></p><p>FOCUS<br><b>SHIFT</b></p><span class="portrait-hint">スマホは縦画面がおすすめ</span></aside>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
