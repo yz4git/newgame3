@@ -40,7 +40,9 @@ npm run build
 
 TypeScript / Vite / three.js r186。WebGPURenderer + TSLのブルーム、WebGL 2バックエンドと起動失敗時の標準レンダラーへのフォールバック。60 Hzの固定ステップ戦闘、シード付き編隊、移動線分による衝突判定、弾・破片のインスタンシング、端末負荷に応じた解像度調整、Web AudioによるBGM / SE。
 
-`app/`が編集用ソース、`public/`がPWA資産です。`npm run build`がルートの`index.html`、`assets/`、`sw.js`を生成します。GitHub Pagesは**main / root**で公開します。Actionsや実行時CDNは不要です。生成済みファイルとソースを一緒にコミットしてください。
+`app/`が編集用ソース、`public/`がPWA資産です。`npm run build`がルートの`index.html`、`assets/`、`sw.js`を生成します。生成済みファイルとソースを一緒にコミットしてください。実行時CDNは不要です。
+
+`.github/workflows/pages.yml`が`main`の公開用ファイルをGitHub Pagesへデプロイします。GitHub PagesのSourceは**GitHub Actions**を使用します。手動のブランチ公開を使う場合は**main / root**でも動作します。
 
 `?renderer=webgl`でWebGL 2を明示できます。テスト用の状態は`window.__nova.snapshot()`、戦闘本体は`window.__nova.game`から確認できます。
 
