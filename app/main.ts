@@ -2,10 +2,11 @@ import './style.css';
 import { Game, STEP, STAGES, W, BOTTOM, TOP, type Difficulty, type Mode } from './sim.ts';
 import { View } from './render.ts';
 import { AudioEngine } from './audio.ts';
+import { CanvasView } from './canvas.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
-const game=new Game(),audio=new AudioEngine(),canvas=el<HTMLCanvasElement>('game');
-let view:View;let ready=false,difficulty:Difficulty='normal',helpFrom='title',lastState=game.state;
+const game=new Game(),audio=new AudioEngine();let canvas=el<HTMLCanvasElement>('game');
+let view:View|CanvasView;let ready=false,difficulty:Difficulty='normal',helpFrom='title',lastState=game.state;
 let toastUntil=0,messageUntil=0,tipUntil=0,lastTime=0,accumulator=0,lastUI=0;
 const keys=new Set<string>();let pointerId:number|null=null,lastPointer={x:0,y:0};
 let target:{x:number;y:number}|undefined,focusPointer:number|null=null;
@@ -61,7 +62,7 @@ actionButton('weapon-button',()=>{if(game.state==='playing')game.cycleWeapon();}
 actionButton('nova-button',()=>{if(!game.nova()&&game.state==='playing')toast('撃破・かすりでゲージを充填');},true);
 actionButton('sound-button',()=>{void audio.unlock().catch(()=>{});const muted=audio.toggle();el('sound-button').textContent=muted?'SOUND OFF':'SOUND ON';try{localStorage.setItem('nova-strike-muted',String(muted));}catch{/* Optional storage. */}});
 document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>selectDifficulty(b.dataset.difficulty as Difficulty)));
-canvas.addEventListener('pointerdown',e=>{
+function bindCanvas(){canvas.addEventListener('pointerdown',e=>{
   if(game.state!=='playing'||pointerId!==null)return;e.preventDefault();pointerId=e.pointerId;lastPointer=view.pointerToWorld(e.clientX,e.clientY);target={x:game.player.x,y:game.player.y};canvas.setPointerCapture(e.pointerId);el('touch-tip').hidden=true;
 });
 canvas.addEventListener('pointermove',e=>{
@@ -69,7 +70,7 @@ canvas.addEventListener('pointermove',e=>{
   target.x=Math.max(-W,Math.min(W,target.x+p.x-lastPointer.x));target.y=Math.max(BOTTOM,Math.min(TOP,target.y+p.y-lastPointer.y));lastPointer=p;
 });
 function release(e:PointerEvent){if(e.pointerId===pointerId){pointerId=null;target=undefined;}}
-canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
+canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);}
 el('focus-button').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();focusPointer=e.pointerId;el('focus-button').setPointerCapture(e.pointerId);el('focus-button').classList.add('held');});
 for(const event of['pointerup','pointercancel','lostpointercapture'])el('focus-button').addEventListener(event,e=>{if((e as PointerEvent).pointerId===focusPointer){focusPointer=null;el('focus-button').classList.remove('held');}});
 window.addEventListener('keydown',e=>{
@@ -137,8 +138,16 @@ function loop(now:number){
 }
 async function boot(){
   try{
-    view=new View(canvas);await view.init(new URLSearchParams(location.search).get('renderer')==='webgl');
-    view.draw(game,0,16.67);ready=true;el('boot').hidden=true;screens();
+    const rendererMode=new URLSearchParams(location.search).get('renderer');
+    try{
+      view=rendererMode==='canvas'?new CanvasView(canvas):new View(canvas);
+      await view.init(rendererMode==='webgl');view.draw(game,0,16.67);
+    }catch(error){
+      console.warn('GPU unavailable; selecting the compatibility view',error);
+      const next=document.createElement('canvas');next.id='game';next.setAttribute('aria-label','NOVA STRIKE ゲーム画面');canvas.replaceWith(next);canvas=next;
+      view=new CanvasView(canvas);await view.init();view.draw(game,0,16.67);
+    }
+    bindCanvas();ready=true;el('boot').hidden=true;screens();
     new ResizeObserver(()=>view.resize()).observe(el('frame'));
     window.addEventListener('pageshow',e=>{if(e.persisted){clearInput();lastTime=performance.now();accumulator=0;}});
     Object.assign(window,{__nova:{game,view,start,pause,resume,snapshot:()=>({...game.snapshot(),render:view.getDiagnostics()})}});
