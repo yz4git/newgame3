@@ -41,7 +41,7 @@ export class CanvasView {
   }
   draw(g:Game,dt:number,_frameMs:number){
     const c=this.ctx,title=g.state==='title',active=g.state==='playing'||g.state==='transition',stage=g.stage;
-    c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle=['#060e1b','#0a0621','#110c13'][stage];c.fillRect(0,0,this.width,this.height);
+    c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle='#'+STAGES[stage].sky.toString(16).padStart(6,'0');c.fillRect(0,0,this.width,this.height);
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
     this.background.draw(c,g);
     for(const e of g.enemies)this.ship(e.kind,e.x,e.y,1,e.kind==='dart'?Math.sin(e.age*1.5)*.15:0,e.flash>0);

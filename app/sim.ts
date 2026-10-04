@@ -3,6 +3,8 @@ export const BOTTOM = -14.4;
 export const TOP = 14.8;
 export const STEP = 1 / 60;
 export const GAME_SPEED = 2.25;
+import {STAGES} from './stages.ts';
+export {STAGES} from './stages.ts';
 export type Weapon = 'wide' | 'laser' | 'homing';
 export type Mode = 'campaign' | 'caravan';
 export type Difficulty = 'casual' | 'normal' | 'expert';
@@ -31,11 +33,6 @@ export interface Lock { id: number; progress: number; x: number; y: number; }
 export interface GameEvent { type: string; x?: number; y?: number; size?: number; color?: number; text?: string; value?: number; }
 export interface Input { x: number; y: number; target?: { x: number; y: number }; focus: boolean; }
 interface Wave { at: number; kind: Kind; count: number; formation: number; side?: number; }
-export const STAGES = [
-  { name: 'ORBITAL DAWN', jp: '軌道都市の夜明け', boss: 'AEGIS / 軌道防衛艦', duration: 64, color: 0x49e4ff },
-  { name: 'PRISM RIFT', jp: '光の裂け目', boss: 'MANTIS / 双翼殲滅機', duration: 74, color: 0xc598ff },
-  { name: 'CORE ZERO', jp: '機械星の心臓', boss: 'HELIX / 星核要塞', duration: 82, color: 0xff764b },
-];
 const DATA: Record<Kind, { hp: number; radius: number; score: number; speed: number }> = {
   drone: { hp: 3.0, radius: .72, score: 120, speed: 7.0 },
   dart: { hp: 4.5, radius: .72, score: 180, speed: 7.5 },
@@ -48,6 +45,7 @@ const DATA: Record<Kind, { hp: number; radius: number; score: number; speed: num
   lancer: { hp: 15, radius: .9, score: 600, speed: 3.3 },
 };
 function waves(stage: number, mode: Mode): Wave[] {
+  const style=STAGES[stage].bossStyle;
   // Teach a role, combine it, release pressure, then resupply.
   const rows: Wave[] = [
     {at:2,kind:'drone',count:5,formation:0}, {at:5,kind:'carrier',count:1,formation:1},
@@ -63,11 +61,11 @@ function waves(stage: number, mode: Mode): Wave[] {
     {at:50,kind:'dart',count:7,formation:2}, {at:54,kind:'tank',count:2,formation:0},
     {at:57,kind:'drone',count:8,formation:1},
   ];
-  if(stage===1){
+  if(style===1){
     for(const r of rows)if(r.kind==='tank')r.kind='weaver';
     rows.push({at:20,kind:'weaver',count:1,formation:3,side:1},{at:53,kind:'lancer',count:2,formation:0});
   }
-  if(stage===2){
+  if(style===2){
     for(const r of rows)if(r.kind==='fighter')r.kind='lancer';
     rows.push({at:20,kind:'weaver',count:2,formation:0},{at:47,kind:'weaver',count:1,formation:3});
   }
@@ -75,7 +73,7 @@ function waves(stage: number, mode: Mode): Wave[] {
     {at:59,kind:'cruiser',count:2,formation:0}, {at:64,kind:'dart',count:8,formation:2},
     {at:68,kind:'carrier',count:1,formation:1},
   );
-  if (stage === 2 || mode === 'caravan') rows.push(
+  if (stage >= 2 || mode === 'caravan') rows.push(
     {at:71,kind:'fighter',count:3,formation:0}, {at:75,kind:'drone',count:8,formation:1},
     {at:79,kind:'relic',count:1,formation:3},
   );
@@ -115,8 +113,8 @@ export class Game {
   private random() { let x=this.seed|0; x^=x<<13; x^=x>>>17; x^=x<<5; this.seed=x; return (x>>>0)/4294967296; }
   emit(type: string, fields: Omit<GameEvent,'type'>={}) { if(this.events.length<600)this.events.push({type,...fields}); }
   drainEvents() { const r=this.events; this.events=[]; return r; }
-  start(mode: Mode='campaign', difficulty: Difficulty='normal') {
-    this.mode=mode; this.difficulty=difficulty; this.stage=0; this.time=0; this.totalTime=0;
+  start(mode: Mode='campaign', difficulty: Difficulty='normal',startStage=0) {
+    this.mode=mode; this.difficulty=difficulty; this.stage=mode==='caravan'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;
     this.score=0; this.kills=0; this.chain=0; this.maxChain=0; this.chainTime=0; this.multiplier=1;
     this.formations=0; this.relics=0; this.grazes=0; this.power=1; this.hull=difficulty==='casual'?4:3;
     this.locks=[];this.lockKills=0;this.resonances=0;this.cancelled=0;this.medalStreak=0;this.bestMedal=0;this.pointBlanks=0;
@@ -124,8 +122,8 @@ export class Game {
     this.weapon='wide'; this.player={x:0,y:-10.5,vx:0,vy:0,focus:false};
     this.enemies=[]; this.bullets=[]; this.pickups=[]; this.events=[]; this.boss=null;
     this.groups.clear(); this.waveIndex=0; this.uid=0; this.seed=2026; this.volley=0;
-    this.lastExtend=0; this.won=false;this.failureReason=null; this.shotTimer=0; this.schedule=waves(0,mode);
-    this.state='playing'; this.emit('stage',{text:mode==='caravan'?'120 SECOND CARAVAN':STAGES[0].name});
+    this.lastExtend=0; this.won=false;this.failureReason=null; this.shotTimer=0; this.schedule=waves(this.stage,mode);
+    this.state='playing'; this.emit('stage',{text:mode==='caravan'?'120 SECOND CARAVAN':STAGES[this.stage].name});
   }
   pause() { if(this.state==='playing'||this.state==='transition'){this.resumeState=this.state;this.state='paused';} }
   resume() { if(this.state==='paused')this.state=this.resumeState; }
@@ -296,11 +294,12 @@ export class Game {
   }
   private updateBoss(dt: number) {
     const b=this.boss;if(!b||b.dead)return;
+    const style=STAGES[this.stage].bossStyle;
     b.age+=dt;b.encounterTime+=dt/GAME_SPEED;b.flash=Math.max(0,b.flash-dt);
     if(this.mode==='campaign'&&b.encounterTime>=90){this.finish(false,'timeout');return;}
     if(this.mode==='campaign'&&b.encounterTime>=70&&b.encounterTime-dt/GAME_SPEED<70)this.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
     b.y+=((b.age<3?9.2:9+Math.sin(b.age*.65)*.7)-b.y)*dt*1.9;
-    b.x=Math.sin(b.age*.55)*(this.stage===2?3.3:2.8);
+    b.x=Math.sin(b.age*.55)*(style===2?3.3:2.8);
     if(b.age<3)return;
     if(b.hp<b.maxHp*.48&&b.phase===1){
       b.phase=2;b.warning=0;b.beam=0;b.shoot=1.1;
@@ -309,10 +308,10 @@ export class Game {
     }
     const cycle=Math.floor((b.age-3)/7.5),elapsed=(b.age-3)%7.5;
     b.rest=elapsed>5.75;
-    b.spread=this.stage===1&&!b.rest&&cycle%3===1?Math.min(1.6,elapsed*1.7):Math.max(0,b.spread-dt*3);
+    b.spread=style===1&&!b.rest&&cycle%3===1?Math.min(1.6,elapsed*1.7):Math.max(0,b.spread-dt*3);
     if(cycle!==b.cycle){
       b.cycle=cycle;b.attack=cycle%3;b.shoot=.8;
-      if(b.attack===2&&this.stage!==1){b.beamX=this.player.x;b.warning=1.35;this.emit('beam',{text:'LASER LOCK / 横に回避'});}
+      if(b.attack===2&&style!==1){b.beamX=this.player.x;b.warning=1.35;this.emit('beam',{text:'LASER LOCK / 横に回避'});}
       else this.emit('pattern',{text:this.attackName()});
     }
     if(b.warning>0){b.warning-=dt;if(b.warning<=0)b.beam=1.65;}
@@ -320,7 +319,7 @@ export class Game {
     if(b.rest){b.shoot=Math.max(.65,b.shoot);return;}
     b.shoot-=dt;if(b.shoot>0)return;
     const weak=b.parts.filter(p=>p>0).length,fast=b.phase===2;
-    if(this.stage===0){
+    if(style===0){
       if(b.attack===0){
         const odd=Math.floor(elapsed/.85)%2===0;
         this.fan(b.x,b.y-1.8,(odd?7:8)+weak,8,-Math.PI/2,.19,b.id,0xffc05b);
@@ -332,7 +331,7 @@ export class Game {
         for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.fan(pos.x,pos.y-1,3,7.5,-Math.PI/2,.3,b.id+i+1);}
         b.shoot=1.2;
       }
-    }else if(this.stage===1){
+    }else if(style===1){
       if(b.attack===0){
         const swing=Math.sin(b.age*1.1)*.4;
         for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.fan(pos.x,pos.y-1,5,7.5,-Math.PI/2+swing*(i===0?1:-1),.22,b.id+i+1,0xffa8da,(i===0?1:-1)*.17);}
@@ -368,7 +367,7 @@ export class Game {
     if(b.rest)return 'CORE EXPOSED / DAMAGE ×1.6';
     return [['GATE FAN / 偶数・奇数弾','CROSS AIM / 狙い弾','LOCK BEAM / 予告レーザー'],
       ['TWIN SPIRAL / 双方向旋回','WING SEPARATION / 双翼分離','PRISM RING / 円形の隙間'],
-      ['HELIX FIELD / 螺旋弾','ACCEL SALVO / 加速弾','CORE LANCE / 星核レーザー']][this.stage][b.attack];
+      ['HELIX FIELD / 螺旋弾','ACCEL SALVO / 加速弾','CORE LANCE / 星核レーザー']][STAGES[this.stage].bossStyle][b.attack];
   }
   private killBoss() {
     const b=this.boss;if(!b||b.dead||this.state!=='playing')return;b.dead=true;
@@ -392,7 +391,7 @@ export class Game {
     this.state='transition';this.transitionTime=3.5;
   }
   private nextStage() {
-    if(this.stage>=2){this.finish(true);return;}
+    if(this.stage>=STAGES.length-1){this.finish(true);return;}
     this.stage++;this.time=0;this.enemies=[];this.bullets=[];this.pickups=[];this.boss=null;
     this.groups.clear();this.waveIndex=0;this.schedule=waves(this.stage,this.mode);this.locks=[];
     this.hull=Math.min(4,this.hull+1);this.bombs=Math.min(3,this.bombs+1);
@@ -438,7 +437,7 @@ export class Game {
         if(e.shoot<=.48&&!e.charging){e.charging=true;e.shoot=.48;e.aimX=p.x;e.aimY=p.y;}
         if(e.shoot<=0){
           const aim={x:e.aimX,y:e.aimY};e.charging=false;e.volley++;
-          if(e.kind==='tank'){this.aimed(e.x,e.y,10,1+this.stage,.16,e.id,aim);e.shoot=2.1;}
+          if(e.kind==='tank'){this.aimed(e.x,e.y,10,1+Math.min(this.stage,2),.16,e.id,aim);e.shoot=2.1;}
           else if(e.kind==='fighter'){this.fan(e.x,e.y,5,8,-Math.PI/2,.26,e.id);e.shoot=1.85;}
           else if(e.kind==='cruiser'){this.fan(e.x,e.y-1.5,9,7.5,-Math.PI/2,.22,e.id);e.shoot=2.3;}
           else if(e.kind==='weaver'){this.fan(e.x,e.y-1,e.volley%2?6:7,7.8,-Math.PI/2,.23,e.id,0xffa8da);e.shoot=1.85;}

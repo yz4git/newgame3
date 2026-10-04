@@ -7,6 +7,7 @@ import { CanvasView } from './canvas.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 const game=new Game(),audio=new AudioEngine();let canvas=el<HTMLCanvasElement>('game');
+let selectedStage=0;
 let view:View|CanvasView;let ready=false,difficulty:Difficulty='normal',helpFrom='title',lastState=game.state;
 let toastUntil=0,messageUntil=0,tipUntil=0,lastTime=0,accumulator=0,lastUI=0;
 const keys=new Set<string>();let pointerId:number|null=null,lastPointer={x:0,y:0};
@@ -18,6 +19,9 @@ const scoreText=(s:number)=>Math.floor(s).toString().padStart(7,'0');
 const keyFor=(mode=game.mode)=>mode+':'+difficulty;
 const best=(mode:Mode)=>Math.max(0,Number(record[keyFor(mode)])||0);
 function selectDifficulty(d:Difficulty){difficulty=d;document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.classList.toggle('selected',b.dataset.difficulty===d));el('title-best').textContent=scoreText(best('campaign'));try{localStorage.setItem('nova-strike-difficulty',d);}catch{/* Optional storage. */}}
+const stageSelect=el<HTMLSelectElement>('stage-select');
+STAGES.forEach((stage,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(index+1).padStart(2,'0')+' / '+stage.jp;stageSelect.append(option);});
+stageSelect.addEventListener('change',()=>{selectedStage=Number(stageSelect.value);if(game.state==='title'){game.stage=selectedStage;game.visualTime=0;}});
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
@@ -34,13 +38,13 @@ function showMessage(title:string,caption:string,seconds=2.3,danger=false){
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
   if(!ready)return;void audio.unlock().catch(()=>toast('音声はサウンドボタンで再試行できます'));
-  clearInput();clearPopups();el('help-screen').hidden=true;game.start(mode,difficulty);lastState='title';
+  clearInput();clearPopups();el('help-screen').hidden=true;game.start(mode,difficulty,selectedStage);lastState='title';
   tipUntil=performance.now()+6500;el('touch-tip').hidden=!matchMedia('(pointer:coarse)').matches;
   el('message').classList.remove('show');el('toast').classList.remove('show');screens();
 }
 function pause(){game.pause();clearInput();screens();}
 function resume(){el('help-screen').hidden=true;game.resume();clearInput();lastTime=performance.now();accumulator=0;screens();void audio.unlock().catch(()=>{});}
-function title(){clearPopups();game.locks=[];game.state='title';game.enemies=[];game.bullets=[];game.pickups=[];game.boss=null;game.hull=3;game.stage=0;game.player.vx=0;game.player.vy=0;clearInput();el('help-screen').hidden=true;el('touch-tip').hidden=true;el('message').classList.remove('show');el('toast').classList.remove('show');screens();}
+function title(){clearPopups();game.locks=[];game.state='title';game.enemies=[];game.bullets=[];game.pickups=[];game.boss=null;game.hull=3;game.stage=selectedStage;game.player.vx=0;game.player.vy=0;clearInput();el('help-screen').hidden=true;el('touch-tip').hidden=true;el('message').classList.remove('show');el('toast').classList.remove('show');screens();}
 function help(){helpFrom=game.state;if(game.state==='playing'||game.state==='transition')pause();el('help-screen').hidden=false;el('pause-screen').hidden=true;}
 function result(){
   clearInput();let newRecord=game.score>best(game.mode);
@@ -48,7 +52,7 @@ function result(){
   el('result-title').textContent=game.won?game.mode==='caravan'?'TIME COMPLETE':'MISSION COMPLETE':game.failureReason==='timeout'?'TIME LIMIT':'SIGNAL LOST';
   el('result-subtitle').textContent=game.won?game.mode==='caravan'?'2分間の戦果。次は、さらに高く。':'星核を回収。夜明けは、ここから。':game.failureReason==='timeout'?'制限時間を超過。砲台を壊し、攻撃の合間に本体を狙おう。':'機体ロスト。次の出撃へ、経験をつなぐ。';
   el('final-score').textContent=scoreText(game.score);el('new-record').hidden=!newRecord;
-  el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['ロック撃破',String(game.lockKills)],['弾消し',String(game.cancelled)],['最高メダル',String(game.bestMedal)+' / 5'],['到達セクター',String(game.stage+1)+' / 3'],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
+  el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['ロック撃破',String(game.lockKills)],['弾消し',String(game.cancelled)],['最高メダル',String(game.bestMedal)+' / 5'],['到達セクター',String(game.stage+1)+' / '+STAGES.length],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
   for(const[label,value]of values){const d=document.createElement('div');d.textContent=label;const s=document.createElement('strong');s.textContent=value;d.append(s);el('result-stats').append(d);}
   el('message').classList.remove('show');el('boss-hud').hidden=true;el('touch-tip').hidden=true;screens();
 }
@@ -77,6 +81,7 @@ canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercan
 el('focus-button').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();focusPointer=e.pointerId;el('focus-button').setPointerCapture(e.pointerId);el('focus-button').classList.add('held');});
 for(const event of['pointerup','pointercancel','lostpointercapture'])el('focus-button').addEventListener(event,e=>{if((e as PointerEvent).pointerId===focusPointer){focusPointer=null;el('focus-button').classList.remove('held');}});
 window.addEventListener('keydown',e=>{
+  if(e.target instanceof HTMLSelectElement)return;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab'].includes(e.code)&&e.code!=='Tab')e.preventDefault();
   if(e.repeat)return;keys.add(e.code);
   if(e.code==='Escape'||e.code==='KeyP'){if(!el('help-screen').hidden){el('help-screen').hidden=true;screens();}else if(game.state==='paused')resume();else pause();}
@@ -108,7 +113,7 @@ function updateUI(now:number){
   el('focus-caption').textContent=game.weapon==='homing'?'LOCK '+game.locks.filter(l=>l.progress>=1).length:game.weapon==='laser'?'貫通強化':'集中射撃';
   el('hull').innerHTML=Array.from({length:4},(_,i)=>'<i'+(i>=game.hull?' class="empty"':'')+'></i>').join('');
   el('hull').setAttribute('aria-label','残り耐久 '+game.hull);
-  el('sector').textContent=game.mode==='caravan'?'残り '+Math.max(0,Math.ceil(120-game.totalTime)).toString().padStart(3,'0')+' s':'SECTOR 0'+(game.stage+1)+' / 03';
+  el('sector').textContent=game.mode==='caravan'?'残り '+Math.max(0,Math.ceil(120-game.totalTime)).toString().padStart(3,'0')+' s':'SECTOR '+String(game.stage+1).padStart(2,'0')+' / '+String(STAGES.length).padStart(2,'0');
   el('progress').style.width=Math.min(100,game.mode==='caravan'?game.totalTime/120*100:game.time/STAGES[game.stage].duration*100)+'%';
   el('weapon-name').textContent=game.weapon.toUpperCase();el('power-level').textContent=Array.from({length:4},(_,i)=>i<game.power?'▰':'▱').join(' ');
   el('bombs').textContent=game.energy>=100?'READY':game.bombs.toString().padStart(2,'0');

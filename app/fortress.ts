@@ -1,13 +1,15 @@
 import * as T from 'three/webgpu';
 import {block,hull,ball,batch,glow} from './art.ts';
-import {surface,metalMap} from './visual-assets.ts';
-import {noise,zoneAt,stageDistance,fortressVariant,LANDMARKS,type Landmark} from './bg-map.ts';
+import {surface,metalMap,terrainMaps} from './visual-assets.ts';
+import {environmentChip,environmentLandmark,rock,type EnvironmentPalette} from './environment-art.ts';
+import {STAGES} from './stages.ts';
+import {noise,zoneAt,stageDistance,fortressVariant,rowScenery,LANDMARKS,type Landmark} from './bg-map.ts';
 export {fortressVariant} from './bg-map.ts';
 import {makeCloud} from './bg-art.ts';
 import {Game} from './sim.ts';
 
 const ROW=8;
-interface Palette {deck:T.MeshStandardMaterial;plate:T.MeshStandardMaterial;steel:T.MeshStandardMaterial;dark:T.MeshStandardMaterial;core:T.MeshStandardMaterial;lamp:T.Material;warm:T.Material;glass:T.MeshPhysicalMaterial;}
+type Palette=EnvironmentPalette;
 function tube(g:T.Group,mat:T.Material,x:number,y:number,z:number,r:number,length:number){const m=new T.Mesh(new T.CylinderGeometry(r,r,length,12),mat);m.position.set(x,y,z);g.add(m);return m;}
 function drum(g:T.Group,mat:T.Material,x:number,y:number,z:number,r:number,depth:number){const m=tube(g,mat,x,y,z,r,depth);m.rotation.x=Math.PI/2;return m;}
 function octagon(g:T.Group,mat:T.Material,x:number,y:number,z:number,w:number,h:number,depth:number){const c=.32;return hull(g,[[x-w/2+c,y-h/2],[x+w/2-c,y-h/2],[x+w/2,y-h/2+c],[x+w/2,y+h/2-c],[x+w/2-c,y+h/2],[x-w/2+c,y+h/2],[x-w/2,y+h/2-c],[x-w/2,y-h/2+c]],depth,mat,z);}
@@ -122,34 +124,43 @@ function landmarkModel(p:Palette,entry:Landmark,stage:number){
 }
 export class FortressBackground {
   root=new T.Group();private stage=-1;private templates:T.Group[]=[];private rows=new Map<number,T.Group>();private materials:T.Material[]=[];private objects:T.Group[]=[];
-  private far:T.Group[]=[];private clouds:T.Sprite[]=[];private cloudTexture:T.CanvasTexture;distance=0;
+  private far:T.Group[]=[];private clouds:T.Sprite[]=[];private cloudTexture:T.CanvasTexture;private fluid?:T.Mesh;private fluidMap?:T.Texture;distance=0;
   constructor(){this.cloudTexture=new T.CanvasTexture(makeCloud());this.cloudTexture.colorSpace=T.SRGBColorSpace;this.setStage(0);}
   private setStage(stage:number){
-    if(stage===this.stage)return;this.stage=stage;this.root.clear();this.rows.clear();for(const t of [...this.templates,...this.objects,...this.far])t.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});for(const m of this.materials)m.dispose();this.objects=[];this.far=[];this.clouds=[];
-    const p:Palette={deck:surface(0x9aa7b5),plate:surface(0xa6b2bc),steel:surface(0x6e8194,true),dark:surface(0x384754),core:new T.MeshStandardMaterial({map:metalMap,bumpMap:metalMap,bumpScale:.085,color:0x285779,roughness:.25,metalness:.6,emissive:0x31b4ff,emissiveMap:metalMap,emissiveIntensity:4}),lamp:glow(stage===2?0x24acff:stage===1?0x5469ff:0x1fafff,2.25),warm:glow(0xff9b47,1.75),glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1})};
-    this.materials=Object.values(p);this.templates=Array.from({length:8},(_,v)=>fortressChip(p,stage,v));
-    this.objects=LANDMARKS[stage].map(entry=>{const m=landmarkModel(p,entry,stage);m.scale.set(entry.scale,entry.scale,1);m.position.x=entry.x;m.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});this.root.add(m);return m;});
+    if(stage===this.stage)return;this.stage=stage;this.root.clear();this.rows.clear();for(const t of [...this.templates,...this.objects,...this.far])t.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.fluid?.geometry.dispose();this.fluidMap?.dispose();this.fluid=undefined;this.fluidMap=undefined;for(const m of this.materials)m.dispose();this.objects=[];this.far=[];this.clouds=[];
+    const env=STAGES[stage].environment,natural=(map:T.Texture,color:number,roughness=.9,bumpScale=.13)=>new T.MeshStandardMaterial({map,color,bumpMap:map,bumpScale,roughness,metalness:0});
+    const p:Palette={deck:surface(env==='ocean'?0x8399b2:0x9aa7b5),plate:surface(env==='ocean'||env==='ice'?0xc8d2d9:0xa6b2bc,env==='ocean'||env==='ice'),steel:surface(0x6e8194,true),dark:surface(0x384754),core:new T.MeshStandardMaterial({map:metalMap,bumpMap:metalMap,bumpScale:.085,color:0x285779,roughness:.25,metalness:.6,emissive:STAGES[stage].color,emissiveMap:metalMap,emissiveIntensity:4}),lamp:glow(STAGES[stage].color,env==='jungle'?1.4:1.8),warm:glow(env==='lava'?0xff780d:0xff9b47,1.75),glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1}),rock:natural(terrainMaps.rock,env==='lava'?0x55515c:0x93949c),ice:natural(terrainMaps.ice,0x98dcff,.30,.18),snow:natural(terrainMaps.snow,0xcbdde5,.88,.075),moss:natural(terrainMaps.moss,0xb3b297,.86,.18),water:new T.MeshStandardMaterial({map:env==='ice'?terrainMaps.ice:terrainMaps.ocean,color:env==='jungle'?0x397969:env==='ice'?0x315477:0x619daf,roughness:.38,metalness:.25}),lava:new T.MeshStandardMaterial({map:terrainMaps.lava,color:0x9d4518,emissive:0xffac6e,emissiveMap:terrainMaps.lava,emissiveIntensity:1.25,roughness:.8}),foliage:new T.MeshStandardMaterial({map:terrainMaps.canopy,color:0xced5b1,roughness:1,transparent:true,alphaTest:.22,side:T.DoubleSide}),foam:new T.MeshBasicMaterial({color:0xceefff,transparent:true,opacity:.36,depthWrite:false}),rust:surface(env==='ice'?0xcb612a:0x794b30,true)};
+    this.materials=Object.values(p);this.templates=Array.from({length:8},(_,v)=>env==='fortress'?fortressChip(p,stage,v):environmentChip(p,stage,v));
+    this.objects=LANDMARKS[stage].map(entry=>{const m=environmentLandmark(p,entry,stage)??landmarkModel(p,entry,stage);m.scale.set(entry.scale,entry.scale,1);m.position.x=entry.x;m.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});this.root.add(m);return m;});
+    if(env==='ocean'||env==='ice'||env==='jungle'||env==='lava'){
+      this.fluidMap=(env==='lava'?terrainMaps.lava:env==='ice'?terrainMaps.ice:terrainMaps.ocean).clone();this.fluidMap.repeat.set(1,3);this.fluidMap.needsUpdate=true;
+      const mat=(env==='lava'?p.lava:p.water).clone();mat.map=this.fluidMap;if(env==='lava')mat.emissiveMap=this.fluidMap;
+      const geo=new T.PlaneGeometry(32,96,16,32);this.fluid=new T.Mesh(geo,mat);this.fluid.position.z=env==='ice'?-9:-7.6;this.fluid.receiveShadow=true;this.fluid.name='moving-surface';this.root.add(this.fluid);this.materials.push(mat);
+    }
     for(let i=0;i<7;i++){
       const g=new T.Group(),x=(i%2?1:-1)*(8+noise(i,stage)*4);
-      for(let j=0;j<6;j++){const m=block(g,p.dark,(noise(i,j,5)-.5)*5,j*1.4-4,0,.6+noise(i,j)*1.4,1.3,.4+noise(i,j,9));m.rotation.z=noise(i,j,3)*.2;}
+      if(env==='asteroids'||env==='ice'||env==='jungle'||env==='lava')for(let j=0;j<5;j++)rock(g,env==='ice'?p.ice:env==='jungle'?p.moss:p.rock,(noise(i,j,5)-.5)*5,j*2-4,0,.8+noise(i,j)*1.9,1.8,1.1,i*7+j);
+      else for(let j=0;j<6;j++){const m=block(g,p.dark,(noise(i,j,5)-.5)*5,j*1.4-4,0,.6+noise(i,j)*1.4,1.3,.4+noise(i,j,9));m.rotation.z=noise(i,j,3)*.2;}
       const m=batch(g);m.position.set(x,0,-18);this.root.add(m);this.far.push(m);
     }
     for(let i=0;i<4;i++){
-      const mat=new T.SpriteMaterial({map:this.cloudTexture,color:stage===2?0x9b8171:0x617a9b,transparent:true,opacity:i<2?.12:.10,depthWrite:false});this.materials.push(mat);
+      const mat=new T.SpriteMaterial({map:this.cloudTexture,color:STAGES[stage].haze,transparent:true,opacity:i<2?.12:.10,depthWrite:false});this.materials.push(mat);
       const cloud=new T.Sprite(mat);cloud.position.z=i<2?3:-12;cloud.scale.set(30,26,1);this.root.add(cloud);this.clouds.push(cloud);
     }
   }
   draw(g:Game){
     this.setStage(g.stage);this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(g.time);const centre=Math.floor(this.distance/ROW),live=new Set<number>();
     for(let row=centre-4;row<=centre+5;row++){
-      live.add(row);let m=this.rows.get(row);if(!m){m=this.templates[fortressVariant(g.stage,row)].clone();this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
+      live.add(row);let m=this.rows.get(row);if(!m){const layout=rowScenery(g.stage,row);m=this.templates[layout.variant].clone();const installations=m.getObjectByName('installations');if(installations){installations.visible=layout.installations;installations.position.x=layout.shift;installations.scale.y=layout.stretch;}this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
     }
     for(const [row,m]of this.rows)if(!live.has(row)){this.root.remove(m);this.rows.delete(row);}
     this.objects.forEach((m,i)=>{m.position.y=LANDMARKS[g.stage][i].distance-this.distance;m.visible=Math.abs(m.position.y)<42;});
     this.far.forEach((m,i)=>{m.position.y=((i*13-this.distance*.30)%91+91)%91-45;});
+    if(this.fluidMap){this.fluidMap.offset.y=this.distance*.72/32;this.fluidMap.offset.x=Math.sin(this.distance*.018)*.015;}
     this.clouds.forEach((m,i)=>{m.position.x=(i%2?1:-1)*(18+Math.sin(this.distance*.008+i)*3);m.position.y=((i*37-this.distance*(i<2?1.38:.16))%126+126)%126-63;});
   }
   getTemplate(stage:number,variant:number){this.setStage(stage);return this.templates[variant];}
   getLandmark(stage:number,index:number){this.setStage(stage);const m=this.objects[index].clone();m.position.set(0,0,0);return m;}
-  diagnostics(){return {technique:'TEXTURED 3D BG CHIPS',zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:4,speeds:[.30,1,1.38,.16],chunks:this.rows.size,landmarks:5};}
+  getFar(stage:number,index:number){this.setStage(stage);const m=this.far[index].clone();m.position.set(0,0,0);return m;}
+  diagnostics(){return {technique:'TEXTURED 3D BG CHIPS',environment:STAGES[this.stage].environment,zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:this.fluid?5:4,speeds:[.30,1,1.38,.16],surfaceSpeed:this.fluid?.72:0,chunks:this.rows.size,landmarks:LANDMARKS[this.stage].length};}
 }

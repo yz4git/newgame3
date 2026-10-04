@@ -4,7 +4,7 @@ import type { Kind } from './sim.ts';
 import {shipSkin} from './visual-assets.ts';
 
 interface SpriteAsset { canvas:HTMLCanvasElement;left:number;top:number;width:number;height:number; }
-interface Face {points:number[][];depth:number;color:string;uv?:number[][];image?:HTMLImageElement|HTMLCanvasElement;}
+interface Face {points:number[][];depth:number;color:string;uv?:number[][];image?:HTMLImageElement|HTMLCanvasElement;cutout?:boolean;}
 const cache=new Map<string,SpriteAsset>();
 
 // Rasterize our own meshes once on the CPU. GPU-disabled devices retain the
@@ -30,21 +30,23 @@ export function meshSprite(key:string,model:T.Object3D,pixels=48):SpriteAsset {
       const shade=basic?1:Math.max(.26,Math.min(1.38,.58-normal.x*.26+normal.y*.24+normal.z*.53));
       const color=material.color.clone().multiplyScalar(shade);
       if(!basic){const p=material as T.MeshStandardMaterial;color.add(p.emissive.clone().multiplyScalar(p.emissiveIntensity));}
-      color.convertLinearToSRGB();faces.push({points,depth:depth/3,color:'#'+color.getHexString(T.LinearSRGBColorSpace),uv,image:material.map?.image as HTMLImageElement|HTMLCanvasElement|undefined});
+      color.convertLinearToSRGB();faces.push({points,depth:depth/3,color:'#'+color.getHexString(T.LinearSRGBColorSpace),uv,cutout:material.alphaTest>0,image:material.map?.image as HTMLImageElement|HTMLCanvasElement|undefined});
     }
   });
+  if(!faces.length){const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const result={canvas,left:0,top:0,width:0,height:0};cache.set(key,result);return result;}
   left-=.12;top+=.12;right+=.12;bottom-=.12;const width=right-left,height=top-bottom;
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*pixels);canvas.height=Math.ceil(height*pixels);
   const ctx=canvas.getContext('2d')!;ctx.scale(pixels,pixels);ctx.translate(-left,top);ctx.scale(1,-1);
   faces.sort((a,b)=>a.depth-b.depth);
   for(const face of faces){
-    ctx.beginPath();face.points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=face.color;ctx.fill();
+    ctx.beginPath();face.points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=face.color;if(!face.cutout)ctx.fill();
     if(!face.image||face.uv?.length!==3||face.uv.some(p=>p.some(v=>v<0||v>1)))continue;
     const [[u0,v0],[u1,v1],[u2,v2]]=face.uv.map(([u,v])=>[u*face.image!.width,v*face.image!.height]);
     const [[x0,y0],[x1,y1],[x2,y2]]=face.points,d=(u1-u0)*(v2-v0)-(u2-u0)*(v1-v0);if(Math.abs(d)<.01)continue;
     const a=((x1-x0)*(v2-v0)-(x2-x0)*(v1-v0))/d,b=((y1-y0)*(v2-v0)-(y2-y0)*(v1-v0))/d;
     const cc=((x2-x0)*(u1-u0)-(x1-x0)*(u2-u0))/d,dd=((y2-y0)*(u1-u0)-(y1-y0)*(u2-u0))/d;
     ctx.save();ctx.clip();ctx.transform(a,b,cc,dd,x0-a*u0-cc*v0,y0-b*u0-dd*v0);ctx.drawImage(face.image,0,0);ctx.restore();
+    if(face.cutout)continue;
     ctx.save();ctx.globalCompositeOperation='multiply';ctx.fillStyle=face.color;ctx.fill();ctx.restore();
   }
   const result={canvas,left,top,width,height};cache.set(key,result);return result;

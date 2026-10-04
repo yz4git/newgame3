@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {Game,STEP,segmentDistance2} from '../app/sim.ts';
+import {Game,STEP,segmentDistance2,STAGES} from '../app/sim.ts';
 const still={x:0,y:0,focus:false};
 test('Fast projectiles use a swept collision segment',()=>{
   assert.equal(segmentDistance2(0,-5,0,5,0,0),0);
@@ -28,7 +28,7 @@ test('Identical fixed-step input gives an identical seeded encounter',()=>{
   for(let i=0;i<3600;i++){const input={x:Math.sin(i/80),y:Math.cos(i/190)*.3,focus:i%500<80};a.update(STEP,input);b.update(STEP,input);}
   assert.deepEqual(a.snapshot(),b.snapshot());assert.deepEqual(a.bullets,b.bullets);
 });
-test('All three sectors and bosses can be cleared with ordinary weapon collision',()=>{
+test('All six sectors and bosses can be cleared with ordinary weapon collision',()=>{
   const g=new Game();g.start('campaign','normal');g.weapon='laser';g.power=2;
   const sectors=new Set();
   for(let i=0;i<60*600&&g.state!=='result';i++){
@@ -36,7 +36,18 @@ test('All three sectors and bosses can be cleared with ordinary weapon collision
     g.update(STEP,{x:0,y:0,focus:false,target});g.drainEvents();
     assert.ok(g.bullets.length<=721);assert.ok(g.enemies.length<100);
   }
-  assert.equal(sectors.size,3);assert.equal(g.state,'result');assert.equal(g.won,true);assert.ok(g.score>30000);
+  assert.equal(sectors.size,STAGES.length);assert.equal(g.state,'result');assert.equal(g.won,true);assert.ok(g.score>30000);
+});
+test('Stage selection starts the requested sector with a clean encounter and never changes Caravan',()=>{
+  const g=new Game();
+  for(let stage=0;stage<STAGES.length;stage++){
+    g.start('campaign','casual',stage);assert.equal(g.stage,stage);assert.equal(g.time,0);assert.equal(g.boss,null);
+    assert.equal(g.drainEvents()[0].text,STAGES[stage].name);
+    g.spawnBoss();g.boss.age=8;assert.ok(g.attackName().length>0);
+  }
+  g.start('campaign','normal',99);assert.equal(g.stage,STAGES.length-1);
+  g.start('campaign','normal',-3);assert.equal(g.stage,0);
+  g.start('caravan','normal',5);assert.equal(g.stage,0);
 });
 test('Caravan always ends at two minutes, including during a boss fight',()=>{
   const g=new Game();g.start('caravan');

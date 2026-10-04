@@ -1,6 +1,6 @@
 import * as T from 'three/webgpu';
 import {FortressBackground} from './fortress.ts';
-import {explosionMap,planetMap,visualAssetStatus} from './visual-assets.ts';
+import {explosionMap,planetMap,terrainMaps,visualAssetStatus} from './visual-assets.ts';
 import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import type {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -105,13 +105,15 @@ export class View {
   worldToScreen(x:number,y:number){const p=new T.Vector3(x,y,1.3).project(this.camera);return {x:(p.x*.5+.5)*this.width,y:(.5-p.y*.5)*this.height};}
   private setTheme(stage:number){
     if(stage===this.theme)return;this.theme=stage;
-    for(const object of [...this.atmosphere.children]){object.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();if(o instanceof T.Sprite||o instanceof T.Mesh){if(!Array.isArray(o.material)){if(o.material.map&&o.material.map!==this.spriteTexture&&o.material.map!==planetMap)o.material.map.dispose();o.material.dispose();}}});this.atmosphere.remove(object);}
-    this.atmosphere.add(planetModel());
-    if(stage===1)for(let i=0;i<3;i++){
-      const cloud=new T.Sprite(new T.SpriteMaterial({map:this.spriteTexture,color:[0x7650d3,0x3158ac,0x78418f][i],transparent:true,opacity:.24,depthWrite:false}));
-      cloud.position.set((i-1)*9,6-i*9,-25);cloud.scale.set(46,45,1);this.atmosphere.add(cloud);
+    for(const object of [...this.atmosphere.children]){object.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();if(o instanceof T.Sprite||o instanceof T.Mesh){if(!Array.isArray(o.material)){if(o.material.map&&o.material.map!==this.spriteTexture&&o.material.map!==planetMap&&!Object.values(terrainMaps).includes(o.material.map as T.CanvasTexture))o.material.map.dispose();o.material.dispose();}}});this.atmosphere.remove(object);}
+    const theme=STAGES[stage];
+    if(theme.environment==='fortress')this.atmosphere.add(planetModel());
+    if(theme.environment==='asteroids'){
+      const sky=new T.Mesh(new T.PlaneGeometry(46,76),new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0xd6d9e8,toneMapped:false}));sky.position.set(0,0,-36);this.atmosphere.add(sky);
     }
-    this.scene.background=new T.Color([0x040c18,0x09051b,0x0c080e][stage]);
+    this.key.color.setHex(theme.sun);this.key.intensity=theme.light;
+    this.stars.visible=theme.environment==='asteroids'||theme.environment==='fortress';
+    this.scene.background=new T.Color(theme.sky);
   }
   event(e:GameEvent){
     const x=e.x||0,y=e.y||0;

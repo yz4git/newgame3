@@ -1,16 +1,17 @@
 import test from 'node:test';
+import {STAGES} from '../app/stages.ts';
 import assert from 'node:assert/strict';
 import {chipAt,fortressVariant,zoneAt,LANDMARKS,CHIP_TYPES,VARIANTS,stageDistance} from '../app/bg-map.ts';
 
 test('Streaming map addresses remain valid before the start and during long boss encounters',()=>{
-  for(let stage=0;stage<3;stage++)for(let row=-30;row<250;row++){const id=fortressVariant(stage,row);assert.ok(Number.isInteger(id)&&id>=0&&id<8);}
-  for(let stage=0;stage<3;stage++)for(let row=-30;row<250;row++)for(let column=-6;column<6;column++)for(const far of[false,true]){
+  for(let stage=0;stage<STAGES.length;stage++)for(let row=-30;row<250;row++){const id=fortressVariant(stage,row);assert.ok(Number.isInteger(id)&&id>=0&&id<8);}
+  for(let stage=0;stage<STAGES.length;stage++)for(let row=-30;row<250;row++)for(let column=-6;column<6;column++)for(const far of[false,true]){
     const id=chipAt(stage,column,row,far);assert.ok(Number.isInteger(id)&&id>=0&&id<CHIP_TYPES*VARIANTS);
   }
 });
 test('Each sector changes districts and does not replay the old 99-unit background loop',()=>{
   const fingerprint=(stage,start)=>Array.from({length:12},(_,r)=>Array.from({length:12},(_,c)=>chipAt(stage,c-6,start+r)));
-  for(let stage=0;stage<3;stage++){
+  for(let stage=0;stage<STAGES.length;stage++){
     const rows=start=>Array.from({length:24},(_,i)=>fortressVariant(stage,start+i));assert.notDeepEqual(rows(0),rows(13));assert.notDeepEqual(rows(13),rows(26));
     assert.notDeepEqual(fingerprint(stage,0),fingerprint(stage,25));
     assert.notDeepEqual(fingerprint(stage,25),fingerprint(stage,50));

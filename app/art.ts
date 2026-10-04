@@ -1,6 +1,7 @@
 import * as T from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Kind } from './sim.ts';
+import {STAGES} from './stages.ts';
 import {armourMap,planetMap,shipSkin} from './visual-assets.ts';
 
 export const metal=(c:number,emission=0)=>new T.MeshStandardMaterial({color:c,map:armourMap,bumpMap:armourMap,bumpScale:.027,metalness:.55,roughness:.34,emissive:c,emissiveIntensity:emission,envMapIntensity:1.0});
@@ -151,7 +152,8 @@ export function shipModel(kind:Kind|'player'){
   return result;
 }
 export function bossModel(stage:number){
-  const g=new T.Group(),paint=metal([0x627b8c,0x746284,0x666778][stage]),accent=[cyan,pink,gold][stage];
+  const style=STAGES[stage].bossStyle;
+  const g=new T.Group(),paint=metal([0x627b8c,0x746284,0x666778][style]),accent=glow(STAGES[stage].color,2.2);
   const body=new T.Group();
   hull(body,[[0,-3.15],[-1.6,-1.75],[-2,.7],[-1.35,2.55],[1.35,2.55],[2,.7],[1.6,-1.75]],.90,paint);
   hull(body,[[-.85,-2.2],[-.85,1.6],[.85,1.6],[.85,-2.2]],.30,dark,.9);
@@ -162,11 +164,11 @@ export function bossModel(stage:number){
     block(body,accent,side*1.32,-1.0,1.29,.08,.62,.06);
     turbine(body,side*1.20,1.70,1.1,.28,accent);
   }
-  if(stage===0){
+  if(style===0){
     block(body,navy,0,1.25,1.15,1.30,1.1,.40);hull(body,[[-.6,.9],[-.42,1.7],[.42,1.7],[.6,.9]],.12,cockpit,1.55);
     for(let i=0;i<5;i++)block(body,alloy,-.52+i*.26,.84,1.52,.06,.45,.06);
     for(const side of[-1,1]){block(body,bronze,side*.67,-2.40,1.10,.4,1.25,.27);block(body,accent,side*.67,-2.99,1.16,.26,.12,.08);}
-  }else if(stage===1){
+  }else if(style===1){
     for(const side of[-1,1])hull(body,[[side*.2,1.65],[side*1.45,3.0],[side*1.12,1.05]],.18,violet,.4);
     hull(body,[[0,-2.8],[-.35,-1.9],[.35,-1.9]],.2,alloy,1.1);
   }else{
@@ -176,7 +178,7 @@ export function bossModel(stage:number){
   g.add(batch(body));
   for(let i=0;i<2;i++){
     const wing=new T.Group(),side=i===0?-1:1;
-    if(stage===1){
+    if(style===1){
       hull(wing,[[side*1.35,1.2],[side*3.7,2.5],[side*5.2,.3],[side*4.7,-1.55],[side*3,-2],[side*2,-.75]],.38,violet);
       hull(wing,[[side*2.2,1],[side*3.7,1.8],[side*4.5,.35],[side*3.3,-.4]],.11,paint,.42);
     }else{
@@ -187,7 +189,7 @@ export function bossModel(stage:number){
     for(const offset of[-.25,.25]){block(wing,alloy,side*3.0+offset,-.7,.94,.23,1.65,.22);block(wing,accent,side*3.0+offset,-1.54,1,.16,.13,.08);}
     turbine(wing,side*3.72,.70,.89,.43,accent);vents(wing,side*2.5,.55,.8,steel,5,.35);
     for(let j=0;j<3;j++){block(wing,bronze,side*(4.05+j*.20),-.24,.69,.13,.75,.09);block(wing,accent,side*(4.05+j*.20),.20,.76,.08,.06,.03);}
-    if(stage===2)for(let j=0;j<3;j++)block(wing,paint,side*(3.8+j*.38),-.85,.60,.22,1.8-j*.25,.28);
+    if(style===2)for(let j=0;j<3;j++)block(wing,paint,side*(3.8+j*.38),-.85,.60,.22,1.8-j*.25,.28);
     const w=batch(wing);w.name='wing'+i;g.add(w);
   }
   const rotor=new T.Group();rotor.name='rotor';

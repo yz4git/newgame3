@@ -1,4 +1,4 @@
-import{S as e,_ as t,s as n}from"./index-1b5SA-B0.js";import{n as r,t as i}from"./Pass-DrJPixDk.js";var a={name:`OutputShader`,uniforms:{tDiffuse:{value:null},toneMappingExposure:{value:1}},vertexShader:`
+import{S as e,_ as t,s as n}from"./index-iIUmHtzg.js";import{n as r,t as i}from"./Pass-BtDtO2tj.js";var a={name:`OutputShader`,uniforms:{tDiffuse:{value:null},toneMappingExposure:{value:1}},vertexShader:`
 		precision highp float;
 
 		uniform mat4 modelViewMatrix;

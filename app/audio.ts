@@ -1,3 +1,4 @@
+import {STAGES} from './stages.ts';
 import type { GameEvent } from './sim.ts';
 export class AudioEngine {
   private ctx:AudioContext|null=null;private master:GainNode|null=null;private music:GainNode|null=null;
@@ -30,7 +31,7 @@ export class AudioEngine {
     if(!this.ctx||this.muted||!active){if(this.ctx)this.nextBeat=this.ctx.currentTime+.05;return;}
     const now=this.ctx.currentTime;if(this.nextBeat<now-.25)this.nextBeat=now+.03;
     const bpm=boss?150:136+stage*4,step=60/bpm/4;
-    const root=[55,65.406,49][stage],chords=[0,0,5,7],notes=[0,12,7,15,0,19,7,12,5,12,10,17,7,14,10,19];
+    const root=STAGES[stage].music,chords=[0,0,5,7],notes=[0,12,7,15,0,19,7,12,5,12,10,17,7,14,10,19];
     while(this.nextBeat<now+.13){
       const t=this.nextBeat,b=this.beat,chord=chords[Math.floor(b/32)%4];
       if(b%4===0){this.tone(155,.19,'sine',.43,t,37,true);this.tone(root*2**(chord/12),.17,'sawtooth',.085,t,undefined,true);}
