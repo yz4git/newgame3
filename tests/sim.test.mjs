@@ -52,7 +52,8 @@ test('Guided weapons preserve speed and cannot exceed their turning limit',async
 });
 test('Focus acquires multiple targets and releases locks when focus ends',()=>{
   const g=new Game();g.start();g.weapon='homing';g.power=2;
-  g.spawn('fighter',-3,11);g.spawn('fighter',3,11);
+  // Keep both targets alive while testing acquisition and release at faster speeds.
+  for(const x of[-3,3]){const e=g.spawn('fighter',x,11);e.hp=e.maxHp=100;}
   for(let i=0;i<28;i++)g.update(STEP,{...still,focus:true});
   assert.equal(g.locks.filter(l=>l.progress===1).length,2);
   assert.ok(g.bullets.some(b=>b.targetId!==undefined&&b.trail.length>0));

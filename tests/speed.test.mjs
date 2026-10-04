@@ -4,13 +4,13 @@ import {Game,STEP,GAME_SPEED} from '../app/sim.ts';
 import {stageDistance} from '../app/bg-map.ts';
 const still={x:0,y:0,focus:false};
 
-test('One real second advances scrolling and enemies by 1.5 seconds of combat',()=>{
+test('One real second advances scrolling and enemies by 2.25 seconds of combat',()=>{
   const g=new Game();g.start();g.shotTimer=100;const e=g.spawn('drone',9,18);
   for(let i=0;i<60;i++)g.update(STEP,still);
   assert.ok(Math.abs(g.time-GAME_SPEED)<1e-9);
   assert.ok(Math.abs(g.totalTime-1)<1e-9);
   assert.ok(Math.abs(e.y-(18-7*GAME_SPEED))<1e-9);
-  assert.ok(Math.abs(stageDistance(g.time)-6.6)<1e-9);
+  assert.ok(Math.abs(stageDistance(g.time)-9.9)<1e-9);
 });
 test('Player movement and projectiles use the same accelerated combat clock',()=>{
   const g=new Game();g.start();g.shotTimer=100;
@@ -23,7 +23,7 @@ test('Player movement and projectiles use the same accelerated combat clock',()=
 test('Faster boss attacks retain a ninety-second real encounter limit',()=>{
   const g=new Game();g.start();g.time=100;g.spawnBoss();g.shotTimer=100;g.invulnerable=100;
   for(let i=0;i<60;i++)g.update(STEP,still);
-  assert.ok(Math.abs(g.boss.age-1.5)<1e-9);
+  assert.ok(Math.abs(g.boss.age-2.25)<1e-9);
   assert.ok(Math.abs(g.boss.encounterTime-1)<1e-9);
   g.boss.encounterTime=89.9;
   for(let i=0;i<10&&g.state==='playing';i++)g.update(STEP,still);

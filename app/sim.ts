@@ -2,7 +2,7 @@ export const W = 10.2;
 export const BOTTOM = -14.4;
 export const TOP = 14.8;
 export const STEP = 1 / 60;
-export const GAME_SPEED = 1.5;
+export const GAME_SPEED = 2.25;
 export type Weapon = 'wide' | 'laser' | 'homing';
 export type Mode = 'campaign' | 'caravan';
 export type Difficulty = 'casual' | 'normal' | 'expert';
@@ -379,7 +379,7 @@ export class Game {
     for(const e of this.enemies)e.dead=true;for(const shot of this.bullets)shot.dead=true;
     if(this.mode==='caravan'){
       this.boss=null;
-      // Combat reaches the boss earlier at 1.5x; fill the remaining real
+      // Combat reaches the boss earlier at the accelerated speed; fill the remaining real
       // two-minute session instead of leaving a silent final stretch.
       for(let at=this.time+2,cycle=0;at<120*GAME_SPEED;at+=16,cycle++)this.schedule.push(
         {at,kind:'drone',count:9,formation:cycle%2?4:1},
@@ -400,7 +400,7 @@ export class Game {
   }
   finish(won: boolean,reason:'hull'|'timeout'='hull') {this.won=won;this.failureReason=won?null:reason;this.state='result';this.emit('finish',{text:won?'MISSION COMPLETE':'SIGNAL LOST'});}
   update(dt: number,input: Input) {
-    // The caller supplies real fixed-step seconds. Combat runs at 1.5x,
+    // The caller supplies real fixed-step seconds. Combat runs at GAME_SPEED,
     // while advertised time limits and results retain real seconds.
     const realDt=dt;dt*=GAME_SPEED;
     this.visualTime+=dt;
