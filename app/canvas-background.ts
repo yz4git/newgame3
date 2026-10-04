@@ -5,6 +5,7 @@ import {makeCloud} from './bg-art.ts';
 import {planetMap,terrainMaps} from './visual-assets.ts';
 import {STAGES} from './stages.ts';
 import {Game} from './sim.ts';
+import {worldClock} from './motion.ts';
 
 /** CPU view caches the same textured meshes, rather than rebuilding a flat map. */
 export class CanvasFortressBackground {
@@ -19,7 +20,7 @@ export class CanvasFortressBackground {
     c.strokeStyle='#80caff';c.lineWidth=5;c.beginPath();c.arc(384,384,350,0,Math.PI*2);c.stroke();this.planet=canvas;return canvas;
   }
   draw(c:CanvasRenderingContext2D,g:Game){
-    this.stage=g.stage;this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(g.time);
+    this.stage=g.stage;this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(worldClock(g));
     const env=STAGES[g.stage].environment;
     if(env==='fortress'){c.save();c.translate(-14,2-this.distance*.018);c.scale(1,-1);c.drawImage(this.planetCanvas(),-24,-24,48,48);c.restore();}
     if(env==='asteroids'){c.save();c.scale(1,-1);c.drawImage(terrainMaps.nebula.image,-16,-30,32,60);c.restore();}

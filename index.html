@@ -11,8 +11,8 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
   <title>NOVA STRIKE | 星核を取り戻せ</title>
-  <script type="module" crossorigin src="./assets/index-iIUmHtzg.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BEMIKVNW.css">
+  <script type="module" crossorigin src="./assets/index-Cx5UtyGj.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DW1JuwfR.css">
 </head>
 <body>
   <aside class="side side-left" aria-hidden="true"><div class="side-mark">N<span> / </span>S</div><div class="side-line"></div><p>THE LAST SIGNAL<br>OF A FALLEN STAR.</p><span class="side-coordinate">SECTOR 07 — 26.04</span></aside>
@@ -27,6 +27,9 @@
     </header>
     <div class="boss-hud" id="boss-hud" hidden><div><span id="boss-name"></span><span id="boss-percent"></span></div><div class="boss-track"><i id="boss-fill"></i></div><div class="parts-status" id="parts-status"></div><div class="boss-pattern" id="boss-pattern"></div></div>
     <div class="message" id="message" aria-live="polite"><span id="message-caption"></span><strong id="message-title"></strong></div>
+    <div id="cinematic-frame" class="cinematic-frame" aria-hidden="true" hidden></div>
+    <div id="sector-strip" class="sector-strip" aria-hidden="true" hidden><span>FLIGHT SECTOR</span><b id="district"></b></div>
+    <div id="stage-cue" class="stage-cue" aria-live="polite" hidden><div class="cue-heading"><span id="cue-label"></span><i id="radio-bars" class="radio-bars" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b></i></div><strong id="cue-text"></strong><div class="cue-track"><i id="cue-progress"></i></div></div>
     <div class="small-toast" id="toast" aria-live="polite"></div><div class="score-popups" id="score-popups" aria-hidden="true"></div>
     <div class="touch-tip" id="touch-tip" hidden>指をドラッグして移動<span>射撃は自動 · 右下でNOVA</span></div>
     <div class="controls" id="controls" hidden>
@@ -34,8 +37,8 @@
       <div class="action-controls"><button id="focus-button" class="focus-button" aria-label="押している間は精密移動">FOCUS<span id="focus-caption">精密移動</span></button><button id="nova-button" class="nova-button"><span id="nova-ready">NOVA</span><strong id="bombs">03</strong><span class="nova-meter"><i id="energy"></i></span></button></div>
     </div>
     <section class="screen title-screen" id="title-screen">
-      <div class="title-top"><span class="edition">NOVA STRIKE 1.4 / 2026</span><button id="sound-button" class="sound-button" aria-label="サウンド切替">SOUND ON</button></div>
-      <div class="title-lockup"><span class="eyebrow">星核を取り戻せ。</span><h1>NOVA<br><span>STRIKE</span><i></i></h1><p>SIX WORLDS. ONE SIGNAL.</p></div>
+      <div class="title-top"><span class="edition">NOVA STRIKE 1.5 / 2026</span><button id="sound-button" class="sound-button" aria-label="サウンド切替">SOUND ON</button></div>
+      <div class="title-lockup"><span class="eyebrow">星核を取り戻せ。</span><h1>NOVA<br><span>STRIKE</span><i></i></h1><p>SIX WORLDS. CINEMATIC OPERATIONS.</p></div>
       <div class="title-menu">
         <div class="difficulty" aria-label="難易度"><button data-difficulty="casual">CASUAL</button><button data-difficulty="normal" class="selected">NORMAL</button><button data-difficulty="expert">EXPERT</button></div>
         <label class="stage-picker" for="stage-select"><span>開始ステージ</span><select id="stage-select" aria-label="開始ステージ"></select></label>

@@ -3,6 +3,7 @@ import type { GameEvent } from './sim.ts';
 export class AudioEngine {
   private ctx:AudioContext|null=null;private master:GainNode|null=null;private music:GainNode|null=null;
   muted=false;private nextBeat=0;private beat=0;private noise:AudioBuffer|null=null;
+  private lastEnemySound=-1;
   async unlock(){
     if(!this.ctx){
       this.ctx=new AudioContext();this.master=this.ctx.createGain();this.master.gain.value=this.muted?0:.36;
@@ -45,9 +46,13 @@ export class AudioEngine {
   event(e:GameEvent){
     if(this.muted)return;
     if(e.type==='shot')this.tone(940,.045,'triangle',.034,undefined,330);
+    if(e.type==='enemyshot'&&this.ctx&&this.ctx.currentTime-this.lastEnemySound>.10){this.lastEnemySound=this.ctx.currentTime;this.tone(e.kind==='cruiser'?170:260,.065,'triangle',.025,undefined,90);}
+    if(e.type==='radio'){this.hiss(.035,.025,3200);this.tone(1150,.06,'sine',.025,undefined,1250);}
+    if(e.type==='stage'){const t=this.ctx?.currentTime||0;for(let i=0;i<4;i++)this.tone([262,392,523,784][i],.20,'sine',.075,t+i*.08);this.hiss(.20,.045,3800,t);}
     if(e.type==='explode'){this.hiss(.14+(e.size||1)*.025,.12,1800);this.tone(110,.10,'sine',.14,undefined,35);}
     if(e.type==='damage'){this.hiss(.28,.22,1900);this.tone(250,.24,'sawtooth',.08,undefined,50);}
     if(e.type==='nova'||e.type==='bosskill'){this.hiss(.8,.33,2800);this.tone(180,.7,'sine',.36,undefined,28);}
+    if(e.type==='bosskill'){const t=this.ctx?.currentTime||0;for(let i=0;i<6;i++)this.hiss(.15,.055,1700,t+.14+i*.15);for(let i=0;i<3;i++)this.tone([392,523,784][i],.25,'triangle',.085,t+.85+i*.08);}
     if(['power','repair','formation','extend','relic'].includes(e.type)){
       const t=this.ctx?.currentTime||0;for(let i=0;i<4;i++)this.tone([523,659,784,1047][i],.12,'triangle',.12,t+i*.055);
     }

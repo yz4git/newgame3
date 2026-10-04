@@ -55,7 +55,7 @@ function loft(g:T.Group,sections:number[][],mat:T.Material){
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.computeVertexNormals();g.add(new T.Mesh(geo,mat));
 }
 export function shipModel(kind:Kind|'player'){
-  const g=new T.Group();
+  const g=new T.Group(),attachments:T.Group[]=[];
   if(kind==='player'){
     loft(g,[[1.9,.015,.035,.09],[1.1,.15,.17,.14],[.35,.36,.30,.17],[-.55,.39,.25,.13],[-1.35,.20,.16,.10]],white);
     hull(g,[[0,1.75],[-.14,.9],[-.18,.55],[.18,.55],[.14,.9]],.05,alloy,.34);
@@ -116,9 +116,10 @@ export function shipModel(kind:Kind|'player'){
   }else if(kind==='tank'){
     hull(g,[[-.8,-.95],[-1,.2],[-.6,.95],[.6,.95],[1,.2],[.8,-.95]],.36,bronze);
     for(const side of[-1,1]){block(g,dark,side*.9,0,.15,.42,2.0,.38);vents(g,side*.9,0,.36,steel,12,.37);}
-    disc(g,steel,0,0,.44,.67,.18);hull(g,[[-.45,-.55],[-.60,.20],[-.32,.48],[.32,.48],[.60,.2],[.45,-.55]],.2,bronze,.50);
-    for(const side of[-1,1]){block(g,alloy,side*.24,-.80,.62,.14,1.0,.15);block(g,gold,side*.24,-1.27,.64,.10,.08,.07);}
-    disc(g,dark,0,.13,.74,.18,.08);block(g,gold,0,-.30,.76,.25,.05,.02);
+    const turret=new T.Group();disc(turret,steel,0,0,.44,.67,.18);hull(turret,[[-.45,-.55],[-.60,.20],[-.32,.48],[.32,.48],[.60,.2],[.45,-.55]],.2,bronze,.50);
+    for(const side of[-1,1]){block(turret,alloy,side*.24,-.80,.62,.14,1.0,.15);block(turret,gold,side*.24,-1.27,.64,.10,.08,.07);}
+    disc(turret,dark,0,.13,.74,.18,.08);block(turret,gold,0,-.30,.76,.25,.05,.02);
+    const moving=batch(turret);moving.name='turret';attachments.push(moving);
   }else if(kind==='carrier'){
     hull(g,[[-.5,-1.1],[-1.1,-.1],[-1,.8],[-.6,1.1],[.6,1.1],[1,.8],[1.1,-.1],[.5,-1.1]],.38,navy);
     block(g,white,0,-.10,.44,.8,1.2,.16);block(g,cyan,0,-.10,.62,.12,.6,.03);block(g,cyan,0,-.10,.62,.6,.12,.03);
@@ -146,9 +147,10 @@ export function shipModel(kind:Kind|'player'){
   const result=batch(g);if(kind==='player')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(.8,1.14,1.2);});
   if(kind==='cruiser')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(1.25,1.22,1);});
   const skin=shipSkin(kind);if(skin){
-    result.traverse(o=>{if(o instanceof T.Mesh)o.material=shadowProxy;});
+    const geometries:T.BufferGeometry[]=[];result.traverse(o=>{if(o instanceof T.Mesh)geometries.push(o.geometry);});const proxy=mergeGeometries(geometries,false);result.clear();for(const geometry of geometries)geometry.dispose();if(proxy){const mesh=new T.Mesh(proxy,shadowProxy);mesh.castShadow=true;result.add(mesh);}
     const sprite=new T.Sprite(new T.SpriteMaterial({map:skin.map,color:skin.color,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false}));sprite.name='skin';sprite.position.z=1.62;sprite.scale.set(skin.width,skin.height,1);result.add(sprite);
   }
+  for(const attachment of attachments)result.add(attachment);
   return result;
 }
 export function bossModel(stage:number){

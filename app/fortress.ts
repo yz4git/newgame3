@@ -7,6 +7,7 @@ import {noise,zoneAt,stageDistance,fortressVariant,rowScenery,LANDMARKS,type Lan
 export {fortressVariant} from './bg-map.ts';
 import {makeCloud} from './bg-art.ts';
 import {Game} from './sim.ts';
+import {worldClock} from './motion.ts';
 
 const ROW=8;
 type Palette=EnvironmentPalette;
@@ -149,7 +150,7 @@ export class FortressBackground {
     }
   }
   draw(g:Game){
-    this.setStage(g.stage);this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(g.time);const centre=Math.floor(this.distance/ROW),live=new Set<number>();
+    this.setStage(g.stage);this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(worldClock(g));const centre=Math.floor(this.distance/ROW),live=new Set<number>();
     for(let row=centre-4;row<=centre+5;row++){
       live.add(row);let m=this.rows.get(row);if(!m){const layout=rowScenery(g.stage,row);m=this.templates[layout.variant].clone();const installations=m.getObjectByName('installations');if(installations){installations.visible=layout.installations;installations.position.x=layout.shift;installations.scale.y=layout.stretch;}this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
     }

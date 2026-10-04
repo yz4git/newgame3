@@ -14,7 +14,7 @@ export interface Enemy {
   id: number; kind: Kind; x: number; y: number; origin: number; radius: number;
   hp: number; maxHp: number; age: number; shoot: number; flash: number; group: number;
   phase: number; dead: boolean; ground: boolean; pattern: number;
-  aimX: number; aimY: number; charging: boolean; volley: number; spawnY: number;
+  aimX: number; aimY: number; charging: boolean; volley: number; spawnY: number; recoil:number;
 }
 export interface Bullet {
   id: number; x: number; y: number; px: number; py: number; vx: number; vy: number;
@@ -27,10 +27,10 @@ export interface Boss {
   id: number; x: number; y: number; age: number; encounterTime: number; hp: number; maxHp: number;
   parts: number[]; maxPart: number; shoot: number; attack: number; cycle: number;
   warning: number; beam: number; beamX: number; dead: boolean; flash: number;
-  phase: number; rest: boolean; spread: number;
+  phase: number; rest: boolean; spread: number; recoil:number;
 }
 export interface Lock { id: number; progress: number; x: number; y: number; }
-export interface GameEvent { type: string; x?: number; y?: number; size?: number; color?: number; text?: string; value?: number; }
+export interface GameEvent { type: string; x?: number; y?: number; size?: number; color?: number; text?: string; value?: number; source?:number; kind?:Kind|'player'|'boss'; }
 export interface Input { x: number; y: number; target?: { x: number; y: number }; focus: boolean; }
 interface Wave { at: number; kind: Kind; count: number; formation: number; side?: number; }
 const DATA: Record<Kind, { hp: number; radius: number; score: number; speed: number }> = {
@@ -114,11 +114,11 @@ export class Game {
   emit(type: string, fields: Omit<GameEvent,'type'>={}) { if(this.events.length<600)this.events.push({type,...fields}); }
   drainEvents() { const r=this.events; this.events=[]; return r; }
   start(mode: Mode='campaign', difficulty: Difficulty='normal',startStage=0) {
-    this.mode=mode; this.difficulty=difficulty; this.stage=mode==='caravan'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;
+    this.mode=mode; this.difficulty=difficulty; this.stage=mode==='caravan'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
     this.score=0; this.kills=0; this.chain=0; this.maxChain=0; this.chainTime=0; this.multiplier=1;
     this.formations=0; this.relics=0; this.grazes=0; this.power=1; this.hull=difficulty==='casual'?4:3;
     this.locks=[];this.lockKills=0;this.resonances=0;this.cancelled=0;this.medalStreak=0;this.bestMedal=0;this.pointBlanks=0;
-    this.bombs=3; this.energy=0; this.invulnerable=3; this.overdrive=0; this.novaTime=0;
+    this.bombs=3; this.energy=0; this.invulnerable=3; this.overdrive=0; this.novaTime=0;this.transitionTime=0;
     this.weapon='wide'; this.player={x:0,y:-10.5,vx:0,vy:0,focus:false};
     this.enemies=[]; this.bullets=[]; this.pickups=[]; this.events=[]; this.boss=null;
     this.groups.clear(); this.waveIndex=0; this.uid=0; this.seed=2026; this.volley=0;
@@ -153,7 +153,7 @@ export class Game {
     const d=DATA[kind],hp=d.hp*(this.difficulty==='expert'?1.12:1);
     const e: Enemy={id:++this.uid,kind,x,y,origin:x,radius:d.radius,hp,maxHp:hp,age:0,
       shoot:1.1+this.random()*.8,flash:0,group,phase:this.random()*6.28,dead:false,
-      ground:kind==='tank'||kind==='relic',pattern,aimX:0,aimY:0,charging:false,volley:0,spawnY:y};this.enemies.push(e);return e;
+      ground:kind==='tank'||kind==='relic',pattern,aimX:0,aimY:0,charging:false,volley:0,spawnY:y,recoil:0};this.enemies.push(e);return e;
   }
   private wave(w: Wave) {
     const group=++this.uid;this.groups.set(group,{total:w.count,kills:0,escaped:false});
@@ -239,7 +239,7 @@ export class Game {
     this.addScore(value);
     if(close||locked||e.radius>1.4)this.emit('score',{x:e.x,y:e.y,value,text:(locked?'LOCK ':close?'CLOSE ':'')+'+'+value});
     this.energy=Math.min(100,this.energy+(e.kind==='cruiser'?12:3.2));
-    this.emit('explode',{x:e.x,y:e.y,size:e.radius,color:e.kind==='relic'?0xffdb66:0xff8650});
+    this.emit('explode',{x:e.x,y:e.y,size:e.radius,color:e.kind==='relic'?0xffdb66:0xff8650,source:e.id,kind:e.kind});
     if(e.kind==='cruiser'&&cause!=='nova'){
       this.resonances++;const radius=close?6.4:4.8;
       const converted=this.cancelBullets(e.x,e.y,radius);
@@ -282,20 +282,20 @@ export class Game {
     this.power=Math.max(1,this.power-1);this.bombs=Math.min(3,this.bombs+1);
     this.locks=[];this.medalStreak=0;
     for(const b of this.bullets)if(b.enemy&&Math.hypot(b.x-this.player.x,b.y-this.player.y)<7)b.dead=true;
-    this.emit('damage',{x:this.player.x,y:this.player.y,size:1.4,text:'HULL HIT / 一時無敵'});
+    this.emit('damage',{x:this.player.x,y:this.player.y,size:1.4,text:'HULL HIT / 一時無敵',kind:'player'});
     if(this.hull<=0){this.finish(false);return;}
     this.pickup('power',this.player.x,this.player.y+3.5);
   }
   spawnBoss() {
     const maxHp=460+this.stage*220;
     this.boss={id:++this.uid,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[100+this.stage*45,100+this.stage*45],
-      maxPart:100+this.stage*45,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0};
+      maxPart:100+this.stage*45,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0};
     this.emit('warning',{text:'WARNING / '+STAGES[this.stage].boss});
   }
   private updateBoss(dt: number) {
     const b=this.boss;if(!b||b.dead)return;
     const style=STAGES[this.stage].bossStyle;
-    b.age+=dt;b.encounterTime+=dt/GAME_SPEED;b.flash=Math.max(0,b.flash-dt);
+    b.age+=dt;b.encounterTime+=dt/GAME_SPEED;b.flash=Math.max(0,b.flash-dt);b.recoil=Math.max(0,b.recoil-dt);
     if(this.mode==='campaign'&&b.encounterTime>=90){this.finish(false,'timeout');return;}
     if(this.mode==='campaign'&&b.encounterTime>=70&&b.encounterTime-dt/GAME_SPEED<70)this.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
     b.y+=((b.age<3?9.2:9+Math.sin(b.age*.65)*.7)-b.y)*dt*1.9;
@@ -304,7 +304,7 @@ export class Game {
     if(b.hp<b.maxHp*.48&&b.phase===1){
       b.phase=2;b.warning=0;b.beam=0;b.shoot=1.1;
       this.cancelBullets(b.x,b.y,40);this.invulnerable=Math.max(this.invulnerable,.8);
-      this.emit('phase',{text:'PHASE 02 / ATTACK PATTERN SHIFT'});
+      this.emit('phase',{x:b.x,y:b.y,color:STAGES[this.stage].color,text:'PHASE 02 / ATTACK PATTERN SHIFT'});
     }
     const cycle=Math.floor((b.age-3)/7.5),elapsed=(b.age-3)%7.5;
     b.rest=elapsed>5.75;
@@ -318,7 +318,7 @@ export class Game {
     else if(b.beam>0){b.beam=Math.max(0,b.beam-dt);if(Math.abs(this.player.x-b.beamX)<.8&&this.player.y<b.y)this.hitPlayer();}
     if(b.rest){b.shoot=Math.max(.65,b.shoot);return;}
     b.shoot-=dt;if(b.shoot>0)return;
-    const weak=b.parts.filter(p=>p>0).length,fast=b.phase===2;
+    const weak=b.parts.filter(p=>p>0).length,fast=b.phase===2;b.recoil=.24;
     if(style===0){
       if(b.attack===0){
         const odd=Math.floor(elapsed/.85)%2===0;
@@ -374,7 +374,7 @@ export class Game {
     const timeBonus=Math.max(0,Math.round(8000-Math.max(0,b.age-3)*100));
     this.addScore(((10000+this.stage*5000)+timeBonus)*this.multiplier);
     this.emit('score',{x:b.x,y:b.y-3,text:'TIME BONUS +'+timeBonus*this.multiplier});
-    this.emit('bosskill',{x:b.x,y:b.y,size:5.5,text:'TARGET DESTROYED'});
+    this.emit('bosskill',{x:b.x,y:b.y,size:5.5,text:'TARGET DESTROYED',source:b.id,kind:'boss'});
     for(const e of this.enemies)e.dead=true;for(const shot of this.bullets)shot.dead=true;
     if(this.mode==='caravan'){
       this.boss=null;
@@ -402,7 +402,7 @@ export class Game {
     // The caller supplies real fixed-step seconds. Combat runs at GAME_SPEED,
     // while advertised time limits and results retain real seconds.
     const realDt=dt;dt*=GAME_SPEED;
-    this.visualTime+=dt;
+    if(this.state!=='paused'&&this.state!=='result')this.visualTime+=dt;
     if(this.state==='transition'){this.transitionTime-=dt;if(this.transitionTime<=0)this.nextStage();return;}
     if(this.state!=='playing')return;
     this.time+=dt;this.totalTime+=realDt;
@@ -424,7 +424,7 @@ export class Game {
     if(this.time>=bossTime&&!this.boss&&this.mode==='campaign')this.spawnBoss();
     if(this.mode==='caravan'&&this.time>=96&&this.time<96+dt*1.1&&!this.boss)this.spawnBoss();
     for(const e of this.enemies){
-      if(e.dead)continue;e.age+=dt;e.flash=Math.max(0,e.flash-dt);
+      if(e.dead)continue;e.age+=dt;e.flash=Math.max(0,e.flash-dt);e.recoil=Math.max(0,e.recoil-dt);
       e.y-=DATA[e.kind].speed*dt;
       if(e.pattern===4){const t=(18-e.y)/DATA[e.kind].speed;e.x=Math.sign(e.origin)*6*Math.cos(t*.78);}
       else if(e.kind==='dart')e.x=e.origin+Math.sin(e.age*1.5+e.phase)*2.2;
@@ -436,7 +436,7 @@ export class Game {
       if(e.y<13.5&&e.y>p.y+3.8){
         if(e.shoot<=.48&&!e.charging){e.charging=true;e.shoot=.48;e.aimX=p.x;e.aimY=p.y;}
         if(e.shoot<=0){
-          const aim={x:e.aimX,y:e.aimY};e.charging=false;e.volley++;
+          const aim={x:e.aimX,y:e.aimY};e.charging=false;e.volley++;const bulletsBefore=this.bullets.length;
           if(e.kind==='tank'){this.aimed(e.x,e.y,10,1+Math.min(this.stage,2),.16,e.id,aim);e.shoot=2.1;}
           else if(e.kind==='fighter'){this.fan(e.x,e.y,5,8,-Math.PI/2,.26,e.id);e.shoot=1.85;}
           else if(e.kind==='cruiser'){this.fan(e.x,e.y-1.5,9,7.5,-Math.PI/2,.22,e.id);e.shoot=2.3;}
@@ -445,6 +445,7 @@ export class Game {
           else if(e.kind==='dart'){this.aimed(e.x,e.y,9,1,.15,e.id,aim);e.shoot=3.8;}
           else if(e.kind==='drone'&&(this.stage>0||e.id%3===0)){this.aimed(e.x,e.y,8,1,.15,e.id,aim);e.shoot=6;}
           else e.shoot=10;
+          if(this.bullets.length>bulletsBefore){e.recoil=.24;this.emit('enemyshot',{x:e.x,y:e.y,source:e.id,kind:e.kind});}
         }
       }
       if(!e.ground&&Math.hypot(e.x-p.x,e.y-p.y)<e.radius*.8+.23)this.hitPlayer();

@@ -4,12 +4,15 @@ import { Game, STEP, GAME_SPEED, STAGES, W, BOTTOM, TOP, type Difficulty, type M
 import { View } from './render.ts';
 import { AudioEngine } from './audio.ts';
 import { CanvasView } from './canvas.ts';
+import {stageCue} from './motion.ts';
+import {zoneAt,stageDistance} from './bg-map.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 const game=new Game(),audio=new AudioEngine();let canvas=el<HTMLCanvasElement>('game');
 let selectedStage=0;
 let view:View|CanvasView;let ready=false,difficulty:Difficulty='normal',helpFrom='title',lastState=game.state;
 let toastUntil=0,messageUntil=0,tipUntil=0,lastTime=0,accumulator=0,lastUI=0;
+let lastCueKey='';
 const keys=new Set<string>();let pointerId:number|null=null,lastPointer={x:0,y:0};
 let target:{x:number;y:number}|undefined,focusPointer:number|null=null;
 let record:Record<string,number>={},padButtons:boolean[]=[];
@@ -122,6 +125,18 @@ function updateUI(now:number){
   el('energy').style.width=game.energy+'%';const boss=game.boss;
   el('boss-hud').hidden=!boss||boss.dead||game.state==='result'||game.state==='title';
   if(boss){el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
+  const cue=stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
+  const panel=el('stage-cue');panel.hidden=!cue;
+  el('cinematic-frame').hidden=!cue&&game.state!=='transition'||cue?.kind==='radio';
+  el('sector-strip').hidden=!playing||!!boss;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
+  el('district').textContent=zoneAt(game.stage,stageDistance(game.time)).toUpperCase().replaceAll('-',' ');
+  if(cue){
+    panel.className='stage-cue '+cue.kind;panel.style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
+    panel.style.opacity=String(Math.min(1,cue.progress*7,(1-cue.progress)*7));
+    el('cue-label').textContent=cue.title;el('cue-text').textContent=cue.text;el('cue-progress').style.width=cue.progress*100+'%';
+    el('radio-bars').hidden=cue.kind!=='radio';Array.from(el('radio-bars').children).forEach((bar,i)=>(bar as HTMLElement).style.transform='scaleY('+( .25+Math.abs(Math.sin(game.visualTime*11+i*.85))*.75)+')');
+    if(cue.key!==lastCueKey){lastCueKey=cue.key;if(cue.kind==='radio')audio.event({type:'radio'});}
+  }
   if(now>messageUntil)el('message').classList.remove('show');if(now>toastUntil)el('toast').classList.remove('show');if(now>tipUntil)el('touch-tip').hidden=true;
 }
 function scorePopup(text:string,x:number,y:number,type='score'){
@@ -136,9 +151,10 @@ function events(){
   for(const e of game.drainEvents()){
     view.event(e);audio.event(e);
     if(e.type==='score'||e.type==='medal'){scorePopup(e.type==='medal'?'MEDAL +'+e.value:e.text||'',e.x??0,e.y??0,e.type);continue;}
-    if(e.type==='stage')showMessage(e.text||'','SECTOR 0'+(game.stage+1)+' / '+STAGES[game.stage].jp,2.6);
-    else if(e.type==='warning')showMessage('WARNING',e.text||'',2.8,true);
-    else if(e.type==='bosskill')showMessage('SECTOR CLEAR',game.mode==='campaign'&&game.stage<2?'TARGET DESTROYED / HULL +1':'TARGET DESTROYED',3.1);
+    if(e.type==='stage'){lastCueKey='';el('message').classList.remove('show');}
+    else if(e.type==='warning')el('touch-tip').hidden=true;
+    else if(e.type==='bosskill')showMessage(game.stage===STAGES.length-1&&game.mode==='campaign'?'STAR CORE RECOVERED':'SECTOR CLEAR',game.mode==='campaign'&&game.stage<STAGES.length-1?'TARGET DESTROYED / HULL +1':'TARGET DESTROYED',1.3);
+    else if(e.type==='phase')showMessage('PHASE 02','ATTACK PATTERN SHIFT',.8,true);
     else if(e.type==='finish')continue;
     else if(e.text)toast(e.text);
     if(e.type==='damage'||e.type==='nova'){

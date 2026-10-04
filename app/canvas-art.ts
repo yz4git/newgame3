@@ -65,3 +65,9 @@ export function bossSprite(stage:number,part:'core'|'wing0'|'wing1'){
   else {const wing=model.getObjectByName(part)!;model.clear();model.add(wing);}
   return meshSprite(key,model);
 }
+export function tankSprite(part:'chassis'|'turret'){
+  const key='tank-'+part,existing=cache.get(key);if(existing)return existing;
+  const model=shipModel('tank'),turret=model.getObjectByName('turret')!;
+  if(part==='chassis')model.remove(turret);else{model.clear();model.add(turret);}
+  return meshSprite(key,model);
+}
