@@ -1,6 +1,6 @@
 import * as T from 'three/webgpu';
 import {FortressBackground} from './fortress.ts';
-import {explosionMap,planetMap,terrainMaps,visualAssetStatus} from './visual-assets.ts';
+import {explosionFrames,smokeMap,shipSkin,planetMap,terrainMaps,visualAssetStatus} from './visual-assets.ts';
 import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import type {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -13,7 +13,7 @@ import {addShipRig,addBossRig,cloneAnimatedModel,disposeAnimatedModel,animateShi
 const boxGeometry=new T.BoxGeometry(1,1,1);
 const shotGeometry=new T.SphereGeometry(1,10,6);
 const dummy=new T.Object3D();
-const skinOffset=new T.Vector3(0,-.50625,1.62),inverseRotation=new T.Quaternion();
+const skinOffset=new T.Vector3(0,-.50625,1.62),inverseRotation=new T.Quaternion(),faceRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.atan(12.5/40)),rollRotation=new T.Quaternion();
 
 interface Particle {x:number;y:number;z:number;vx:number;vy:number;vz:number;life:number;max:number;size:number;color:T.Color;}
 interface Flare {sprite:T.Sprite;age:number;life:number;size:number;smoke:boolean;}
@@ -27,10 +27,10 @@ export class View {
   private models=new Map<number,T.Group>();private templates=new Map<Kind,T.Group>();private boss:T.Group|null=null;private bossStage=-1;
   private theme=-1;private background=new FortressBackground();private atmosphere=new T.Group();
   private stars:T.InstancedMesh;private starData:Float32Array;
-  private shots:T.InstancedMesh;private shotColor=new T.Color();private particles:Particle[]=[];private sparkMesh:T.InstancedMesh;
+  private diamonds:T.InstancedMesh;private diamondRims:T.InstancedMesh;private shots:T.InstancedMesh;private shotColor=new T.Color();private particles:Particle[]=[];private sparkMesh:T.InstancedMesh;
   private shotRims:T.InstancedMesh;private shotCores:T.InstancedMesh;private shotGlows:T.InstancedMesh;private trails:T.InstancedMesh;private shadows:T.InstancedMesh;
   private markers:T.InstancedMesh;private aimLines:T.InstancedMesh;private flames:T.Sprite[]=[];private flares:Flare[]=[];
-  private fireMap=effectTexture('fire');private smokeMap=effectTexture('smoke');
+  private fireMap=effectTexture('fire');private smokeMap=smokeMap;
   private lockMarkers=new Map<number,T.Group>();
   private pickups=new Map<number,T.Group>();private ring:T.Mesh;private indicator:T.Group;
   private beam:T.Mesh;private warning:T.Mesh;private shake=0;private spriteTexture=radialTexture();
@@ -52,6 +52,7 @@ export class View {
     const bulletMat=new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
     this.shots=new T.InstancedMesh(shotGeometry,bulletMat,740);this.shots.setColorAt(0,new T.Color(0xffffff));this.shots.instanceColor!.setUsage(T.DynamicDrawUsage);
     this.shots.instanceMatrix.setUsage(T.DynamicDrawUsage);this.shots.frustumCulled=false;this.scene.add(this.shots);
+    this.diamonds=new T.InstancedMesh(boxGeometry,bulletMat,740);this.diamonds.setColorAt(0,new T.Color());this.diamonds.frustumCulled=false;this.scene.add(this.diamonds);this.diamondRims=new T.InstancedMesh(boxGeometry,new T.MeshBasicMaterial({color:0x10071c}),740);this.diamondRims.frustumCulled=false;this.scene.add(this.diamondRims);
     this.shotRims=new T.InstancedMesh(shotGeometry,new T.MeshBasicMaterial({color:0x030b17}),740);this.shotRims.frustumCulled=false;this.scene.add(this.shotRims);
     this.shotCores=new T.InstancedMesh(shotGeometry,new T.MeshBasicMaterial({color:0xfffbef,toneMapped:false}),740);this.shotCores.frustumCulled=false;this.scene.add(this.shotCores);
     this.shotGlows=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:this.spriteTexture,transparent:true,opacity:.74,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),740);this.shotGlows.setColorAt(0,new T.Color());this.shotGlows.frustumCulled=false;this.scene.add(this.shotGlows);
@@ -142,8 +143,8 @@ export class View {
       if(e.type!=='nova'&&e.type!=='resonance'){
         for(const smoke of[false,true]){
           if(this.flares.length>=48)break;
-          const sprite=new T.Sprite(new T.SpriteMaterial({map:smoke?this.smokeMap:explosionMap,transparent:true,blending:T.NormalBlending,depthWrite:false,toneMapped:false}));
-          sprite.position.set(x,y,smoke?.6:1.65);this.scene.add(sprite);this.flares.push({sprite,age:smoke?-.08:0,life:smoke?1.2:.70,size:size*(smoke?3.8:3.4),smoke});
+          const sprite=new T.Sprite(new T.SpriteMaterial({map:smoke?this.smokeMap:explosionFrames[0],transparent:true,blending:T.NormalBlending,depthWrite:false,toneMapped:false}));
+          sprite.position.set(x,y,smoke?.6:1.65);this.scene.add(sprite);this.flares.push({sprite,age:smoke?-.08:0,life:smoke?1.6:.88,size:size*(smoke?3.8:3.4),smoke});
         }
       }
     }
@@ -159,9 +160,9 @@ export class View {
   }
   private wreck(source:T.Group,boss:boolean,life:number){
     if(this.wrecks.length>=12)this.disposeWreck(this.wrecks.shift()!);
-    const model=source.clone();model.traverse(o=>{if(o instanceof T.Sprite||o instanceof T.Mesh){if(Array.isArray(o.material))return;o.material=o.material.clone();o.material.transparent=true;o.material.depthWrite=false;if('color'in o.material)(o.material.color as T.Color).multiplyScalar(boss?.65:.45);}});this.scene.add(model);this.wrecks.push({model,age:0,life,side:source.position.x>=0?1:-1,boss});
+    const model=source.clone();model.traverse(o=>{if(o instanceof T.Sprite||o instanceof T.Mesh){if(Array.isArray(o.material))return;o.material=o.material.clone();if(o instanceof T.Mesh&&o.userData.deformSkin)o.geometry=o.geometry.clone();o.material.transparent=true;o.material.depthWrite=false;if('color'in o.material)(o.material.color as T.Color).multiplyScalar(boss?.65:.45);}});this.scene.add(model);this.wrecks.push({model,age:0,life,side:source.position.x>=0?1:-1,boss});
   }
-  private disposeWreck(w:Wreck){this.scene.remove(w.model);w.model.traverse(o=>{if(o instanceof T.Sprite||o instanceof T.Mesh){if(!Array.isArray(o.material))o.material.dispose();}});}
+  private disposeWreck(w:Wreck){this.scene.remove(w.model);w.model.traverse(o=>{if(o instanceof T.Sprite||o instanceof T.Mesh){if(!Array.isArray(o.material))o.material.dispose();if(o instanceof T.Mesh&&o.userData.deformSkin)o.geometry.dispose();}});}
   draw(game:Game,dt:number,frameMs:number){
     dt=animationClockRunning(game)?dt:0;this.epoch=game.visualTime;this.setTheme(game.stage);
     const state=presentationState(game),active=state==='playing'||state==='transition',title=state==='title';
@@ -178,6 +179,7 @@ export class View {
     const depart=state==='transition'?smooth((3.5-game.transitionTime)/3.5):game.state==='result'&&game.won&&game.boss?.dead?1:0;
     this.player.position.set(title?Math.sin(this.epoch*.5)*.5:p.x,title?1.9+Math.sin(this.epoch)*.25:p.y+depart*34,1.0);
     this.player.rotation.y+=(pose.bank-this.player.rotation.y)*(dt>0?1-Math.exp(-dt*9):0);
+    this.player.rotation.z=title?Math.sin(this.epoch*.7)*.035:pose.roll;
     const skin=this.player.getObjectByName('skin') as T.Sprite|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(this.player.quaternion).invert());skin.material.rotation=title?Math.sin(this.epoch*.7)*.035:pose.roll;skin.scale.x=3.1*(1-Math.abs(this.player.rotation.y)*.3);}
     animateShip(this.player,pose,this.epoch,'player');
     this.player.scale.setScalar(title?2.0:1.0);this.player.visible=game.hull>0||title;
@@ -196,7 +198,7 @@ export class View {
       let m=this.models.get(e.id);if(!m){let template=this.templates.get(e.kind);if(!template){template=addShipRig(shipModel(e.kind),e.kind);this.templates.set(e.kind,template);}m=cloneAnimatedModel(template);this.models.set(e.id,m);this.scene.add(m);}
       const pose=enemyPose(e,p);this.enemyAnimations[pose.mode]=(this.enemyAnimations[pose.mode]||0)+1;
       m.position.set(e.x,e.y+(e.ground?.4375:0),e.ground?-.4:1);m.rotation.z=pose.roll;m.rotation.y=pose.bank;m.scale.setScalar(e.flash>0?1.025:1);animateShip(m,pose,e.age,e.kind);
-      const skin=m.getObjectByName('skin') as T.Sprite|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(m.quaternion).invert());skin.material.rotation=pose.roll;const base=e.kind==='cruiser'?5.2:e.kind==='drone'||e.kind==='dart'?1.95:3.1;skin.scale.x=base*(1-Math.abs(pose.bank)*.32);skin.material.color.setHex(e.flash>0?0xfff0d0:shipTint(e.kind));}
+      const skin=m.getObjectByName('skin') as T.Sprite|T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(m.quaternion).invert());if(skin instanceof T.Sprite){skin.material.rotation=pose.roll;skin.scale.x=(shipSkin(e.kind)?.width??3.1)*(1-Math.abs(pose.bank)*.32);}else{skin.quaternion.copy(inverseRotation).multiply(faceRotation).multiply(rollRotation.setFromAxisAngle(new T.Vector3(0,0,1),pose.roll));skin.scale.x=1-Math.abs(pose.bank)*.32;}skin.material.color.setHex(e.flash>0?0xfff0d0:shipSkin(e.kind)?.color??shipTint(e.kind));}
     }
     const liveItems=new Set(game.pickups.map(p=>p.id));for(const[id,m]of this.pickups)if(!liveItems.has(id)){this.scene.remove(m);this.pickups.delete(id);}
     for(const item of game.pickups){
@@ -219,9 +221,9 @@ export class View {
     let markerCount=0,lineCount=0,shadowCount=0;
     for(const e of game.enemies){
       if(!e.ground&&shadowCount<98){dummy.position.set(e.x+.15,e.y+.7,-2.95);dummy.rotation.set(0,0,0);dummy.scale.set(e.radius*2.8,e.radius*2.0,1);dummy.updateMatrix();this.shadows.setMatrixAt(shadowCount++,dummy.matrix);}
-      if(e.charging&&e.y<13.5&&e.y>p.y+3.8&&markerCount<60&&['tank','lancer','weaver','cruiser'].includes(e.kind)){
+      if(e.charging&&e.y<13.5&&e.y>p.y+3.8&&markerCount<60&&['tank','lancer','weaver','cruiser','bomber','corvette','sentinel','strider'].includes(e.kind)){
         dummy.position.set(e.x,e.y,1.18);dummy.scale.setScalar(.7+(1-Math.max(0,e.shoot/.48))*.6);dummy.updateMatrix();this.markers.setMatrixAt(markerCount++,dummy.matrix);
-        if(e.kind==='tank'||e.kind==='lancer'){
+        if(e.kind==='tank'||e.kind==='lancer'||e.kind==='strider'){
           const dx=e.aimX-e.x,dy=e.aimY-e.y;dummy.position.set((e.x+e.aimX)/2,(e.y+e.aimY)/2,1.10);dummy.rotation.z=-Math.atan2(dx,dy);dummy.scale.set(.035,Math.hypot(dx,dy),1);dummy.updateMatrix();this.aimLines.setMatrixAt(lineCount++,dummy.matrix);
         }
       }
@@ -238,21 +240,23 @@ export class View {
         this.lockMarkers.set(lock.id,m);this.scene.add(m);
       }m.position.set(lock.x,lock.y,1.6);m.scale.setScalar(1.4-lock.progress*.4);m.getObjectByName('ring')!.rotation.z=-this.epoch*2;
     }
-    let n=0,rimCount=0,coreCount=0,trailCount=0;for(const bullet of game.bullets){if(n>=740)break;
+    let n=0,rimCount=0,coreCount=0,trailCount=0,diamondCount=0;for(const bullet of game.bullets){if(n>=740)break;
       dummy.position.set(bullet.x,bullet.y,1.32);dummy.rotation.set(0,0,Math.atan2(bullet.vy,bullet.vx)-Math.PI/2);
-      const rad=bullet.enemy?.21:bullet.weapon==='laser'?.08:.105;
-      dummy.scale.set(rad,bullet.enemy?.36:bullet.weapon==='laser'?1.15:.60,.10);dummy.updateMatrix();this.shots.setMatrixAt(n,dummy.matrix);
+      const rad=bullet.enemy?(bullet.shape==='missile'?.16:bullet.shape==='diamond'?0:.21):bullet.weapon==='laser'?.08:.105;
+      dummy.scale.set(rad,bullet.enemy?(bullet.shape==='missile'?.58:bullet.shape==='diamond'?.23:.36):bullet.weapon==='laser'?1.15:.60,.10);dummy.updateMatrix();this.shots.setMatrixAt(n,dummy.matrix);
       this.shotColor.setHex(bullet.enemy?bullet.color:bullet.weapon==='homing'?0xaaffee:bullet.weapon==='laser'?0xa68aff:0x35afff).multiplyScalar(bullet.enemy?2.4:3.0);this.shots.setColorAt(n,this.shotColor);
       dummy.position.z=1.23;dummy.scale.set(bullet.enemy?1.18:.64,bullet.enemy?1.85:2.4,1);dummy.updateMatrix();this.shotGlows.setMatrixAt(n,dummy.matrix);this.shotGlows.setColorAt(n++,this.shotColor);
       if(bullet.enemy){
-        dummy.position.z=1.27;dummy.scale.set(.27,.42,.1);dummy.updateMatrix();this.shotRims.setMatrixAt(rimCount++,dummy.matrix);
+        dummy.position.z=1.27;dummy.scale.set(bullet.shape==='diamond'?0:bullet.shape==='missile'?.22:.27,bullet.shape==='missile'?.64:bullet.shape==='diamond'?.27:.42,.1);dummy.updateMatrix();this.shotRims.setMatrixAt(rimCount++,dummy.matrix);
         dummy.position.z=1.44;dummy.scale.set(.105,.135,.07);dummy.updateMatrix();this.shotCores.setMatrixAt(coreCount++,dummy.matrix);
       }else{dummy.position.z=1.44;dummy.scale.set(.045,.33,.07);dummy.updateMatrix();this.shotCores.setMatrixAt(coreCount++,dummy.matrix);}
+      if(bullet.enemy&&bullet.shape==='diamond'){dummy.position.set(bullet.x,bullet.y,1.34);dummy.rotation.set(0,0,Math.PI/4);dummy.scale.set(.40,.40,.08);dummy.updateMatrix();this.diamonds.setMatrixAt(diamondCount,dummy.matrix);this.diamonds.setColorAt(diamondCount,this.shotColor);dummy.position.z=1.26;dummy.scale.set(.48,.48,.06);dummy.updateMatrix();this.diamondRims.setMatrixAt(diamondCount++,dummy.matrix);}
       if(bullet.trail)for(let i=1;i<bullet.trail.length&&trailCount<1800;i++){
         const a=bullet.trail[i-1],b=bullet.trail[i],dx=b.x-a.x,dy=b.y-a.y;
         dummy.position.set((a.x+b.x)/2,(a.y+b.y)/2,1.10);dummy.rotation.set(0,0,-Math.atan2(dx,dy));dummy.scale.set(.18*i/bullet.trail.length,Math.hypot(dx,dy)+.28,1);dummy.updateMatrix();this.trails.setMatrixAt(trailCount++,dummy.matrix);
       }
     }this.shots.count=n;this.shots.instanceMatrix.needsUpdate=true;if(this.shots.instanceColor)this.shots.instanceColor.needsUpdate=true;
+    this.diamonds.count=diamondCount;this.diamonds.instanceMatrix.needsUpdate=true;this.diamonds.instanceColor!.needsUpdate=true;this.diamondRims.count=diamondCount;this.diamondRims.instanceMatrix.needsUpdate=true;
     this.shotGlows.count=n;this.shotGlows.instanceMatrix.needsUpdate=true;if(this.shotGlows.instanceColor)this.shotGlows.instanceColor.needsUpdate=true;
     this.shotRims.count=rimCount;this.shotRims.instanceMatrix.needsUpdate=true;this.shotCores.count=coreCount;this.shotCores.instanceMatrix.needsUpdate=true;this.trails.count=trailCount;this.trails.instanceMatrix.needsUpdate=true;
     for(const c of this.cascades)c.at-=dt;const due=this.cascades.filter(c=>c.at<=0);this.cascades=this.cascades.filter(c=>c.at>0);for(const c of due)this.event({type:'explode',x:c.x,y:c.y,size:c.size});
@@ -261,7 +265,7 @@ export class View {
       dummy.position.set(part.x,part.y,part.z);dummy.rotation.set(0,0,Math.atan2(part.vy,part.vx));const fade=part.life/part.max;
       dummy.scale.set(part.size*fade,part.size*fade*(Math.hypot(part.vx,part.vy)>8?2:1),part.size*.6*fade);dummy.updateMatrix();this.sparkMesh.setMatrixAt(n,dummy.matrix);this.sparkMesh.setColorAt(n,part.color);n++;
     }this.particles=this.particles.filter(p=>p.life>0);this.sparkMesh.count=n;this.sparkMesh.instanceMatrix.needsUpdate=true;if(this.sparkMesh.instanceColor)this.sparkMesh.instanceColor.needsUpdate=true;
-    for(const f of this.flares){f.age+=dt;const t=Math.max(0,f.age/f.life);f.sprite.visible=f.age>=0;f.sprite.scale.setScalar(f.size*(f.smoke?.45+t*.7:.20+Math.sin(Math.min(1,t)*Math.PI/2)*.75));f.sprite.material.opacity=Math.max(0,(1-t)*(f.smoke?.75:1));f.sprite.material.rotation+=dt*.3;}
+    for(const f of this.flares){f.age+=dt;const t=Math.max(0,f.age/f.life);f.sprite.visible=f.age>=0;f.sprite.scale.setScalar(f.size*(f.smoke?.45+t*.7:.20+Math.sin(Math.min(1,t)*Math.PI/2)*.75));f.sprite.material.opacity=Math.max(0,(1-t)*(f.smoke?.75:1));if(!f.smoke)f.sprite.material.map=explosionFrames[Math.min(3,Math.floor(t*4))];else f.sprite.material.rotation+=dt*.12;}
     this.flares=this.flares.filter(f=>{if(f.age<f.life)return true;this.scene.remove(f.sprite);f.sprite.material.dispose();return false;});
     const blast=this.flares.find(f=>!f.smoke&&f.age>=0&&f.age<.35);this.blastLight.intensity=blast?45*(1-blast.age/.35):0;if(blast)this.blastLight.position.copy(blast.sprite.position).add(new T.Vector3(0,0,2.8));
     const ringMat=this.ring.material as T.MeshBasicMaterial;

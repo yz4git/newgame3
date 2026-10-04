@@ -2,10 +2,12 @@ import * as T from 'three/webgpu';
 import { shipModel, bossModel } from './art.ts';
 import type { Kind } from './sim.ts';
 import {shipSkin} from './visual-assets.ts';
+import {skinWarp} from './motion.ts';
 
 interface SpriteAsset { canvas:HTMLCanvasElement;left:number;top:number;width:number;height:number; }
 interface Face {points:number[][];depth:number;color:string;uv?:number[][];image?:HTMLImageElement|HTMLCanvasElement;cutout?:boolean;}
 const cache=new Map<string,SpriteAsset>();
+export function dropSprite(key:string){cache.delete(key);}
 
 // Rasterize our own meshes once on the CPU. GPU-disabled devices retain the
 // same silhouettes and armour detail, without maintaining a second asset set.
@@ -26,7 +28,7 @@ export function meshSprite(key:string,model:T.Object3D,pixels=48):SpriteAsset {
         left=Math.min(left,x);right=Math.max(right,x);top=Math.max(top,y);bottom=Math.min(bottom,y);
         if(normals)normal.add(new T.Vector3().fromBufferAttribute(normals,id).applyNormalMatrix(normalMatrix));
       }
-      normal.normalize();const basic=material instanceof T.MeshBasicMaterial;
+      normal.normalize();if(material.side!==T.DoubleSide&&normal.z*.954-normal.y*.298<=.005)continue;const basic=material instanceof T.MeshBasicMaterial;
       const shade=basic?1:Math.max(.26,Math.min(1.38,.58-normal.x*.26+normal.y*.24+normal.z*.53));
       const color=material.color.clone().multiplyScalar(shade);
       if(!basic){const p=material as T.MeshStandardMaterial;color.add(p.emissive.clone().multiplyScalar(p.emissiveIntensity));}
@@ -45,7 +47,7 @@ export function meshSprite(key:string,model:T.Object3D,pixels=48):SpriteAsset {
     const [[x0,y0],[x1,y1],[x2,y2]]=face.points,d=(u1-u0)*(v2-v0)-(u2-u0)*(v1-v0);if(Math.abs(d)<.01)continue;
     const a=((x1-x0)*(v2-v0)-(x2-x0)*(v1-v0))/d,b=((y1-y0)*(v2-v0)-(y2-y0)*(v1-v0))/d;
     const cc=((x2-x0)*(u1-u0)-(x1-x0)*(u2-u0))/d,dd=((y2-y0)*(u1-u0)-(y1-y0)*(u2-u0))/d;
-    ctx.save();ctx.clip();ctx.transform(a,b,cc,dd,x0-a*u0-cc*v0,y0-b*u0-dd*v0);ctx.drawImage(face.image,0,0);ctx.restore();
+    ctx.save();ctx.clip();ctx.transform(a,b,cc,dd,x0-a*u0-cc*v0,y0-b*u0-dd*v0);const minU=Math.max(0,Math.min(u0,u1,u2)-1),minV=Math.max(0,Math.min(v0,v1,v2)-1),maxU=Math.min(face.image.width,Math.max(u0,u1,u2)+1),maxV=Math.min(face.image.height,Math.max(v0,v1,v2)+1);if(maxU>minU&&maxV>minV)ctx.drawImage(face.image,minU,minV,maxU-minU,maxV-minV,minU,minV,maxU-minU,maxV-minV);ctx.restore();
     if(face.cutout)continue;
     ctx.save();ctx.globalCompositeOperation='multiply';ctx.fillStyle=face.color;ctx.fill();ctx.restore();
   }
@@ -70,4 +72,28 @@ export function tankSprite(part:'chassis'|'turret'){
   const model=shipModel('tank'),turret=model.getObjectByName('turret')!;
   if(part==='chassis')model.remove(turret);else{model.clear();model.add(turret);}
   return meshSprite(key,model);
+}
+
+/** Affine textured triangles match the GPU cutout deformation without new per-frame bitmaps. */
+export function drawWarpedSprite(c:CanvasRenderingContext2D,asset:SpriteAsset,warp:(x:number,y:number)=>[number,number]){
+ const cells=6,im=asset.canvas;
+ for(let row=0;row<cells;row++)for(let col=0;col<cells;col++){
+  const u0=col/cells,u1=(col+1)/cells,v0=row/cells,v1=(row+1)/cells;
+  const p=[[u0,v0],[u1,v0],[u1,v1],[u0,v1]].map(([u,v])=>{const [x,y]=warp(u-.5,.5-v);return [x*asset.width,-y*asset.height];});
+  const tex=[[u0*im.width,v0*im.height],[u1*im.width,v0*im.height],[u1*im.width,v1*im.height],[u0*im.width,v1*im.height]];
+  for(const ids of[[0,1,2],[0,2,3]]){
+   const [[x0,y0],[x1,y1],[x2,y2]]=ids.map(i=>p[i]),[[a0,b0],[a1,b1],[a2,b2]]=ids.map(i=>tex[i]);
+   const d=(a1-a0)*(b2-b0)-(a2-a0)*(b1-b0),a=((x1-x0)*(b2-b0)-(x2-x0)*(b1-b0))/d,b=((y1-y0)*(b2-b0)-(y2-y0)*(b1-b0))/d;
+   const cc=((x2-x0)*(a1-a0)-(x1-x0)*(a2-a0))/d,dd=((y2-y0)*(a1-a0)-(y1-y0)*(a2-a0))/d;
+   c.save();c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.lineTo(x2,y2);c.closePath();c.clip();c.transform(a,b,cc,dd,x0-a*a0-cc*b0,y0-b*a0-dd*b0);c.drawImage(im,u0*im.width,v0*im.height,im.width/cells,im.height/cells,u0*im.width,v0*im.height,im.width/cells,im.height/cells);c.restore();
+  }
+ }
+}
+const warpedFrames=new Map<string,SpriteAsset>();
+export function warpedSprite(asset:SpriteAsset,kind:Kind,t:number,flex:number){
+ const frame=Math.floor(t*18),panel=Math.round(flex*16),key=kind+':'+frame+':'+panel,saved=warpedFrames.get(key);if(saved)return saved;
+ const width=asset.width*1.18,height=asset.height*1.18,pixels=320/Math.max(width,height),canvas=document.createElement('canvas');
+ canvas.width=Math.ceil(width*pixels);canvas.height=Math.ceil(height*pixels);const c=canvas.getContext('2d')!;c.translate(canvas.width/2,canvas.height/2);c.scale(pixels,pixels);
+ drawWarpedSprite(c,asset,(x,y)=>skinWarp(kind,x,y,frame/18,panel/16));
+ const baked={canvas,left:-width/2,top:height/2,width,height};warpedFrames.set(key,baked);if(warpedFrames.size>24)warpedFrames.delete(warpedFrames.keys().next().value!);return baked;
 }

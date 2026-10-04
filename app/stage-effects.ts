@@ -2,9 +2,10 @@ import * as T from 'three/webgpu';
 import {STAGES} from './stages.ts';
 import {LANDMARKS,noise,stageDistance} from './bg-map.ts';
 import {block as sharedBlock,ball as sharedBall,glow,radialTexture} from './art.ts';
-import {terrainMaps,playerMap,armourMap} from './visual-assets.ts';
+import {terrainMaps,playerMap,armourMap,smokeMap} from './visual-assets.ts';
 import {worldClock,smooth,wrap,clamp,presentationState,WORLD_CUES} from './motion.ts';
 import type {Game} from './sim.ts';
+import {SCENES} from './scenery.ts';
 
 const dummy=new T.Object3D();
 function block(...args:Parameters<typeof sharedBlock>){const m=sharedBlock(...args);m.geometry=m.geometry.clone();return m;}
@@ -19,7 +20,7 @@ export class StageEffects{
     this.weather.frustumCulled=false;this.weather.instanceMatrix.setUsage(T.DynamicDrawUsage);this.root.add(this.props,this.weather);this.setStage(0);
   }
   private clearProps(){const geos=new Set<T.BufferGeometry>(),mats=new Set<T.Material>();this.props.traverse(o=>{if(o instanceof T.Mesh){geos.add(o.geometry);if(!Array.isArray(o.material))mats.add(o.material);}if(o instanceof T.Sprite)mats.add(o.material);});geos.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());this.props.clear();this.layers=[];}
-  private mist(g:T.Group,name:string,x:number,y:number,size:number,color:number){const s=new T.Sprite(new T.SpriteMaterial({map:this.dustMap,color,transparent:true,opacity:.25,depthWrite:false}));s.name=name;s.position.set(x,y,-1.5);s.scale.set(size,size*1.6,1);g.add(s);return s;}
+  private mist(g:T.Group,name:string,x:number,y:number,size:number,color:number){const s=new T.Sprite(new T.SpriteMaterial({map:smokeMap,color,transparent:true,opacity:.25,depthWrite:false}));s.name=name;s.position.set(x,y,-1.5);s.scale.set(size,size*1.6,1);g.add(s);return s;}
   private setStage(stage:number){
     if(this.stage===stage)return;this.stage=stage;this.clearProps();const env=STAGES[stage].environment,color=STAGES[stage].color;
     (this.weather.material as T.MeshBasicMaterial).color.setHex(env==='lava'?0xffbb79:env==='jungle'?0xadffd6:0xcceaff);
@@ -42,6 +43,19 @@ export class StageEffects{
         const radar=new T.Group();radar.name='mechanism';radar.position.z=-1.7;
         const sector=new T.Shape();sector.moveTo(0,0);for(let j=0;j<=8;j++){const a=j/8*.5;sector.lineTo(Math.sin(a)*3.4,Math.cos(a)*3.4);}sector.closePath();
         radar.add(new T.Mesh(new T.ShapeGeometry(sector),new T.MeshBasicMaterial({color,transparent:true,opacity:.12,depthWrite:false,toneMapped:false})));g.add(radar);
+      }
+    }
+    for(const [i,entry]of SCENES[stage].entries()){
+      const g=new T.Group();g.position.x=entry.x;g.rotation.z=entry.angle;g.userData.scene=i;g.userData.kind=entry.kind;this.props.add(g);this.layers.push(g);
+      if(entry.kind==='artwork'){
+        for(let j=0;j<3;j++){const beacon=new T.Sprite(new T.SpriteMaterial({map:this.dustMap,color,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));beacon.name='beacon'+j;beacon.position.set((j-1)*2.8,1+j*.8,.3);beacon.scale.setScalar(.65);g.add(beacon);}
+        if(env==='lava'||env==='ice'||env==='jungle')for(let j=0;j<3;j++){const plume=this.mist(g,'plume'+j,(j-1)*3.8,j*.6-1,env==='lava'?3.8:4.5,env==='lava'?0xa98c7b:env==='ice'?0xd5eaff:0xb7d3c6);plume.position.z=.45;}
+        if(env==='ocean')for(let j=0;j<3;j++){const wake=new T.Mesh(new T.RingGeometry(1,1.035,40,1,0,Math.PI),new T.MeshBasicMaterial({color:0xb5eaff,transparent:true,opacity:.18,depthWrite:false}));wake.name='wake'+j;wake.position.z=-2.4;wake.scale.set(2,3,1);g.add(wake);}
+      }else{
+        const m=new T.Group();m.name='mechanism';m.position.z=-1.7;
+        if(entry.kind==='array')for(const side of[-1,1]){const f=block(m,new T.MeshStandardMaterial({map:armourMap,color:0x6a849c,metalness:.75,roughness:.3}),side*3,0,0,3,.16,.14);f.name='solar-vane';}
+        else if(entry.kind==='crane'){block(m,new T.MeshStandardMaterial({map:armourMap,color:0x84684a,metalness:.6,roughness:.4}),0,4,0,.5,.7,.25);block(m,glow(color,1.1),0,4,.15,.08,.12,.03);}
+        else for(let j=0;j<6;j++){const a=j*Math.PI/3;block(m,glow(color,1.1),Math.cos(a)*3.1,Math.sin(a)*3.1,0,.055,.32,.03);}g.add(m);
       }
     }
     this.convoy=new T.Group();this.convoy.name='flyover';
@@ -68,15 +82,16 @@ export class StageEffects{
       const seed=noise(i,g.stage,94),side=i%2?1:-1,edge=env==='lava'||env==='asteroids'||env==='jungle';
       const x=edge?side*(7.2+seed*6):seed*27-13.5,y=wrap(noise(i,stageSeed(g.stage))*54-t*(env==='lava'?-2.2:env==='ice'?4.8:2.1),54)-27;
       const flutter=reduced?0:Math.sin(t*(.4+seed)+i)*(env==='ice'?1.2:.4),size=env==='ice'?.03+seed*.08:env==='lava'?.04+seed*.11:.055+seed*.09;
-      dummy.position.set(x+flutter,y,env==='ice'&&i%5===0?2.5:-1.2);dummy.rotation.set(0,0,env==='ice'?-.35:0);dummy.scale.set(size,env==='ice'?size*2.8:size*(env==='lava'?2:1),1);dummy.updateMatrix();this.weather.setMatrixAt(i,dummy.matrix);
+      dummy.position.set(x+flutter,y,env==='ice'&&i%5===0?2.5:-1.2);dummy.rotation.set(0,0,env==='ice'?-.35:env==='ocean'?-.16:0);dummy.scale.set(size,env==='ice'?size*2.8:env==='ocean'?size*8:env==='asteroids'&&i%7===0?size*6:size*(env==='lava'?2:1),1);dummy.updateMatrix();this.weather.setMatrixAt(i,dummy.matrix);
     }this.weather.count=count;this.weather.instanceMatrix.needsUpdate=true;
     for(const layer of this.layers){
-      const entry=LANDMARKS[g.stage][layer.userData.entry],kind=entry.kind;layer.position.y=entry.distance-distance;layer.visible=Math.abs(layer.position.y)<38;
-      const mechanism=layer.getObjectByName('mechanism');if(mechanism){if(kind==='furnace'||kind==='reactor')mechanism.position.y=Math.sin(t*2.7+layer.userData.entry)*.55;else mechanism.rotation.z=t*(kind==='temple'?.5:kind==='orbital'?.18:.7);}
+      const entry=layer.userData.scene===undefined?LANDMARKS[g.stage][layer.userData.entry]:SCENES[g.stage][layer.userData.scene],kind=entry.kind;layer.position.y=entry.distance-distance;layer.visible=Math.abs(layer.position.y)<38;
+      const mechanism=layer.getObjectByName('mechanism');if(mechanism){if(kind==='furnace'||kind==='reactor')mechanism.position.y=Math.sin(t*2.7+layer.userData.entry)*.55;else if(kind==='crane')mechanism.position.x=Math.sin(t*.55)*3.0;else if(kind==='array')mechanism.rotation.y=Math.sin(t*.35)*.35;else mechanism.rotation.z=t*(kind==='temple'?.5:kind==='orbital'?.18:.7);}
       for(let j=0;j<3;j++){
         const mist=layer.getObjectByName('mist'+j) as T.Sprite|undefined;if(mist){mist.material.opacity=.15+.08*Math.sin(t*1.3+j);mist.position.y=Math.sin(t*.7+j)*.6;}
         const wake=layer.getObjectByName('wake'+j) as T.Mesh|undefined;if(wake){const a=wrap(t*.8+j/3,1);wake.scale.set(1+a*2.2,(1+a*2.2)*.6,1);wake.position.y=1.8+a*4;(wake.material as T.MeshBasicMaterial).opacity=(1-a)*.35;}
       }
+      for(let j=0;j<3;j++){const plume=layer.getObjectByName('plume'+j) as T.Sprite|undefined;if(plume){const a=wrap(t*.24+j/3,1);plume.material.opacity=Math.sin(a*Math.PI)*(env==='lava'?.21:.10);plume.position.y=j*.6-1+a*3.1;plume.scale.set(2.6+a*3.7,4+a*4.3,1);plume.material.rotation=Math.sin(t*.2+j)*.18;}const beacon=layer.getObjectByName('beacon'+j) as T.Sprite|undefined;if(beacon)beacon.material.opacity=.35+Math.sin(t*2+j)*.22;}
       const steam=layer.getObjectByName('steam') as T.Sprite|undefined;if(steam){const pressure=.5+.5*Math.sin(t*2+layer.userData.entry);steam.scale.set(2.7+pressure,4+pressure*3,1);steam.material.opacity=.12+pressure*.13;}
     }
     // A single timed flyover per sector, then a distant relief convoy before the boss.

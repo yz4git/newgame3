@@ -6,11 +6,20 @@ export const ATLAS_COLS=8;
 export const CHIP_TYPES=12;
 export const VARIANTS=4;
 export function noise(x:number,y:number,seed=0){let n=Math.imul(x+71,374761393)^Math.imul(y+317,668265263)^Math.imul(seed+1,1274126177);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;}
-export function fortressVariant(stage:number,row:number){const region=Math.floor(Math.max(0,row)/9);return (Math.floor(noise(row,stage,41)*8)+region)%8;}
+export const SCENERY_VARIANTS=24;
+export function fortressVariant(stage:number,row:number){const district=STAGES[stage].limits.filter(limit=>row*8>=limit).length;return (Math.floor(noise(row,stage,41)*SCENERY_VARIANTS)+district*5)%SCENERY_VARIANTS;}
+/** Continuous bends and width changes act on world coordinates, never on a repeating row. */
+export function routeAt(stage:number,distance:number){
+ const env=STAGES[stage].environment,t=Math.max(0,distance),phase=stage*1.7;
+ const center=Math.sin(t*.023+phase)*(env==='fortress'?1.1:2.6)+Math.sin(t*.009+phase*.4)*.9;
+ const width=1+Math.sin(t*.035+phase)*.16+Math.sin(t*.014+phase+1)*.10;
+ return {center,width};
+}
+export function terrainX(stage:number,x:number,distance:number){const r=routeAt(stage,distance),edge=Math.max(0,1-Math.max(0,Math.abs(x)-9)/6);return x*r.width*edge+x*(1-edge)+r.center*edge;}
 export function rowScenery(stage:number,row:number){
-  const theme=STAGES[stage],district=theme.limits.filter(limit=>row*8>=limit).length;
-  const density=theme.environment==='fortress'?1:theme.environment==='asteroids'?.20+district*.13:theme.environment==='ocean'?.32+district*.09:theme.environment==='ice'?(district===3?.95:.18):theme.environment==='jungle'?.28+district*.12:.48+district*.1;
-  return {variant:fortressVariant(stage,row),installations:noise(row,stage,68)<density,shift:(noise(row,stage,79)-.5)*1.3,stretch:.78+noise(row,stage,81)*.37};
+ const theme=STAGES[stage],district=theme.limits.filter(limit=>row*8>=limit).length;
+ const density=theme.environment==='fortress'?1:theme.environment==='asteroids'?.20+district*.13:theme.environment==='ocean'?.32+district*.09:theme.environment==='ice'?(district===3?.95:.18):theme.environment==='jungle'?.28+district*.12:.48+district*.1;
+ return {variant:fortressVariant(stage,row),installations:noise(row,stage,68)<density,shift:(noise(row,stage,79)-.5)*3.3,stretch:.65+noise(row,stage,81)*.66,rotation:(noise(row,stage,84)-.5)*.17,damage:noise(row,stage,96)>.72};
 }
 export function zoneAt(stage:number,distance:number){
   const {zones,limits}=STAGES[stage];

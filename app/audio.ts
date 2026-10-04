@@ -46,7 +46,7 @@ export class AudioEngine {
   event(e:GameEvent){
     if(this.muted)return;
     if(e.type==='shot')this.tone(940,.045,'triangle',.034,undefined,330);
-    if(e.type==='enemyshot'&&this.ctx&&this.ctx.currentTime-this.lastEnemySound>.10){this.lastEnemySound=this.ctx.currentTime;this.tone(e.kind==='cruiser'?170:260,.065,'triangle',.025,undefined,90);}
+    if(e.type==='enemyshot'&&this.ctx&&this.ctx.currentTime-this.lastEnemySound>.10){this.lastEnemySound=this.ctx.currentTime;const pitch=e.kind==='bomber'?100:e.kind==='corvette'||e.kind==='cruiser'?170:e.kind==='sentinel'?510:e.kind==='strider'?220:260;this.tone(pitch,e.kind==='bomber'?.10:.065,e.kind==='sentinel'?'sine':'triangle',.025,undefined,e.kind==='sentinel'?260:90);}
     if(e.type==='radio'){this.hiss(.035,.025,3200);this.tone(1150,.06,'sine',.025,undefined,1250);}
     if(e.type==='stage'){const t=this.ctx?.currentTime||0;for(let i=0;i<4;i++)this.tone([262,392,523,784][i],.20,'sine',.075,t+i*.08);this.hiss(.20,.045,3800,t);}
     if(e.type==='explode'){this.hiss(.14+(e.size||1)*.025,.12,1800);this.tone(110,.10,'sine',.14,undefined,35);}

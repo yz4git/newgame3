@@ -1,7 +1,7 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
-import {shipSprite,bossSprite,tankSprite} from './canvas-art.ts';
+import {shipSprite,bossSprite,tankSprite,warpedSprite} from './canvas-art.ts';
 import {CanvasFortressBackground} from './canvas-background.ts';
-import {explosionMap,visualAssetStatus} from './visual-assets.ts';
+import {explosionAtlasMap,smokeMap,visualAssetStatus} from './visual-assets.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState,type ShipPose} from './motion.ts';
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
 
@@ -12,7 +12,7 @@ export class CanvasView {
   engine='Canvas 2D';quality='COMPATIBLE';
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
-  private explosions:{x:number;y:number;size:number;age:number;life:number}[]=[];
+  private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
   private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
   private wrecks:{x:number;y:number;kind:Kind|'boss';age:number;life:number;stage:number;parts?:number[];spread?:number;deploy?:number}[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];private lastBoss:Game['boss']=null;
   constructor(private canvas:HTMLCanvasElement){}
@@ -23,17 +23,17 @@ export class CanvasView {
   private rect(x:number,y:number,w:number,h:number,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(x,y,w,h);}
   private circle(x:number,y:number,r:number,color:string){const c=this.ctx;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();}
   worldToScreen(x:number,y:number){return {x:(x/24+.5)*this.width,y:(.5-y/(128/3))*this.height};}
-  private asset(asset:ReturnType<typeof shipSprite>,x:number,y:number,scale=1,tilt=0,bank=0){
+  private asset(asset:ReturnType<typeof shipSprite>,x:number,y:number,scale=1,tilt=0,bank=0,warp?:{kind:Kind;t:number;flex:number}){
     const c=this.ctx;c.save();c.translate(x,y);c.rotate(tilt);c.scale(scale*(1-Math.abs(bank)*.30),-scale);
-    c.drawImage(asset.canvas,asset.left,-asset.top,asset.width,asset.height);c.restore();
+    const sprite=warp?warpedSprite(asset,warp.kind,warp.t,warp.flex):asset;c.drawImage(sprite.canvas,sprite.left,-sprite.top,sprite.width,sprite.height);c.restore();
   }
-  private ship(kind:Kind|'player',x:number,y:number,pose:ShipPose,scale=1,flash=false){
-    if(kind!=='tank'&&kind!=='relic')this.circle(x+.15,y+.6,kind==='cruiser'?1.9:1.05,'#02061170');
-    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank);
+  private ship(kind:Kind|'player',x:number,y:number,pose:ShipPose,scale=1,flash=false,t=0){
+    if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')this.circle(x+.15,y+.6,kind==='cruiser'?1.9:1.05,'#02061170');
+    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
     const c=this.ctx;c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
-    const player=kind==='player',large=kind==='cruiser',small=kind==='drone'||kind==='dart',color=player||kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'?'#ff9adb':'#ffb56d';
-    if(kind!=='tank'&&kind!=='relic')for(const s of[-1,1])canvasGlow(c,s*(large?1.35:player?.50:small?.35:.62),large?2.2:player?-1.68:small?.78:1.05,.3*pose.thrust,color,.7);
-    if(kind!=='carrier'&&kind!=='relic'&&pose.recoil>.04)for(const s of[-1,1])canvasGlow(c,s*(kind==='tank'?.24:large?1.35:player?.50:.62),kind==='tank'?-1.27:large?-2.15:player?.90:-1.05,.20+pose.recoil*.35,player?'#a8eaff':'#ffdfb0',pose.recoil*.9);
+    const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player||kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
+    if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')for(const s of[-1,1])canvasGlow(c,s*(large?1.35:kind==='bomber'?1.38:player?.50:small?.35:.62),large?2.2:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:small?.78:1.05,.3*pose.thrust,color,.7);
+    if(kind!=='carrier'&&kind!=='relic'&&pose.recoil>.04)for(const s of[-1,1])canvasGlow(c,s*(kind==='tank'?.24:large?1.35:player?.50:.62),kind==='tank'||kind==='strider'?-1.27:large?-2.15:kind==='lancer'?-2.16:player?.90:-1.05,.20+pose.recoil*.35,player?'#a8eaff':'#ffdfb0',pose.recoil*.9);
     if(player||kind==='fighter'||kind==='lancer'||large){c.fillStyle=player?'#afc8d4':'#ac9695';for(const s of[-1,1]){const xx=s*(large?1.48:player?.74:.78)+s*pose.flex*.08;c.save();c.translate(xx,player?-.76:.4);c.rotate(s*pose.flex*.18);c.fillRect(-.055,-.22,.11,.45);c.restore();}}
     if(kind==='carrier'){c.fillStyle='#576f89';for(const s of[-1,1])c.fillRect(s*(.23+pose.flex*.30)-.2,-.58,.40,.98);}
     if(kind==='weaver'||kind==='relic'){c.save();c.rotate(pose.rotor);c.strokeStyle=color;c.lineWidth=.055;for(let i=0;i<4;i++){const a=i*Math.PI/2;c.beginPath();c.moveTo(Math.cos(a)*.45,Math.sin(a)*.45);c.lineTo(Math.cos(a)*.70,Math.sin(a)*.70);c.stroke();}c.restore();}
@@ -55,7 +55,7 @@ export class CanvasView {
       this.sparks.push({x:e.x||0,y:e.y||0,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life,max:life,color,size:.05+Math.random()*.14});
     }
     if(e.type==='nova'||e.type==='bosskill'||e.type==='resonance'){this.ring={x:e.x||0,y:e.y||0,age:0};this.pulse=.3;}
-    if(['explode','bosskill','damage'].includes(e.type)&&this.explosions.length<32)this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.4,age:0,life:.7});
+    if(['explode','bosskill','damage'].includes(e.type)&&this.explosions.length<48){this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.4,age:0,life:.88});this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.8,age:-.08,life:1.6,smoke:true});}
   }
   draw(g:Game,dt:number,_frameMs:number){
     dt=animationClockRunning(g)?dt:0;
@@ -64,7 +64,7 @@ export class CanvasView {
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
     this.background.draw(c,g);
     this.stageEffects.draw(c,g,window.matchMedia('(prefers-reduced-motion: reduce)').matches);this.enemyAnimations={};
-    for(const e of g.enemies){const pose=enemyPose(e,g.player);this.enemyAnimations[pose.mode]=(this.enemyAnimations[pose.mode]||0)+1;this.ship(e.kind,e.x,e.y,pose,1,e.flash>0);}
+    for(const e of g.enemies){const pose=enemyPose(e,g.player);this.enemyAnimations[pose.mode]=(this.enemyAnimations[pose.mode]||0)+1;this.ship(e.kind,e.x,e.y,pose,1,e.flash>0,e.age);}
     const b=g.boss;
     if(b&&!b.dead){
       this.lastBoss=b;
@@ -80,11 +80,11 @@ export class CanvasView {
     for(const item of g.pickups){c.save();c.translate(item.x,item.y);c.rotate(item.age);const color=item.type==='power'?'#7effff':item.type==='repair'?'#8affa6':'#ffd282';c.strokeStyle=color;c.lineWidth=.08;c.beginPath();c.arc(0,0,.58,0,Math.PI*2);c.stroke();this.shape([[0,.4],[-.35,0],[0,-.4],[.35,0]],color);c.restore();}
     for(const bullet of g.bullets)if(bullet.trail&&bullet.trail.length>1){c.strokeStyle='#6cffcc';c.lineWidth=.09;c.globalAlpha=.6;c.beginPath();bullet.trail.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke();}c.globalAlpha=1;
     for(const lock of g.locks){c.strokeStyle='#94ffd6';c.lineWidth=.05;const r=1.5-lock.progress*.5;c.strokeRect(lock.x-r,lock.y-r,r*2,r*2);}
-    for(const e of g.enemies)if(e.charging&&e.y<13.5&&e.y>g.player.y+3.8){c.strokeStyle='#ff9d86';c.lineWidth=.06;c.beginPath();c.arc(e.x,e.y,.45+(1-e.shoot/.48)*.3,0,Math.PI*2);c.stroke();if(e.kind==='lancer'||e.kind==='tank'){c.globalAlpha=.30;c.setLineDash([.25,.2]);c.beginPath();c.moveTo(e.x,e.y);c.lineTo(e.aimX,e.aimY);c.stroke();c.setLineDash([]);c.globalAlpha=1;}}
+    for(const e of g.enemies)if(e.charging&&e.y<13.5&&e.y>g.player.y+3.8){c.strokeStyle='#ff9d86';c.lineWidth=.06;c.beginPath();c.arc(e.x,e.y,.45+(1-e.shoot/.48)*.3,0,Math.PI*2);c.stroke();if(e.kind==='lancer'||e.kind==='tank'||e.kind==='strider'){c.globalAlpha=.30;c.setLineDash([.25,.2]);c.beginPath();c.moveTo(e.x,e.y);c.lineTo(e.aimX,e.aimY);c.stroke();c.setLineDash([]);c.globalAlpha=1;}}
     for(const bullet of g.bullets){
       const color=bullet.enemy?'#'+bullet.color.toString(16).padStart(6,'0'):bullet.weapon==='laser'?'#bb9dff':bullet.weapon==='homing'?'#9bffe2':'#7ce6ff';
       c.save();c.translate(bullet.x,bullet.y);c.rotate(Math.atan2(bullet.vy,bullet.vx)-Math.PI/2);c.shadowColor=color;c.shadowBlur=bullet.enemy?6:8;
-      if(bullet.enemy){this.circle(0,0,.36,'#030a16');this.circle(0,0,.265,color);this.circle(0,0,.1,'#fff5de');}else this.rect(-.07,-.5,.14,bullet.weapon==='laser'?1.6:.9,color);c.restore();
+      if(bullet.enemy){if(bullet.shape==='missile'){this.shape([[0,.60],[-.21,.18],[-.16,-.52],[.16,-.52],[.21,.18]],'#030a16');this.rect(-.12,-.40,.24,.8,color);canvasGlow(c,0,-.55,.25,'#ffac69',.8);this.rect(-.065,.1,.13,.30,'#fff5de');}else if(bullet.shape==='diamond'){this.shape([[0,.35],[-.29,0],[0,-.35],[.29,0]],color,'#160d2c');this.circle(0,0,.09,'#fff5ef');}else{this.circle(0,0,.36,'#030a16');this.circle(0,0,.265,color);this.circle(0,0,.1,'#fff5de');}}else this.rect(-.07,-.5,.14,bullet.weapon==='laser'?1.6:.9,color);c.restore();
     }
     const p=g.player,pose=playerPose(g),depart=state==='transition'?smooth((3.5-g.transitionTime)/3.5):g.state==='result'&&g.won&&g.boss?.dead?1:0;this.playerAnimation=state==='transition'?'depart':pose.mode;
     const playerVisible=title||g.hull>0&&(g.time<2.6||g.invulnerable<=0||Math.floor(g.invulnerable*12)%3!==0);
@@ -94,7 +94,7 @@ export class CanvasView {
     if(active&&playerVisible){const y=p.y+depart*34,length=(1.3+Math.sin(g.visualTime*36)*.15)*pose.thrust;for(const s of[-1,1]){c.save();c.translate(p.x+s*.5,y-1.65);c.scale(.12,length);canvasGlow(c,0,-.5,.75,'#57d6ff',.8);c.restore();}}
     for(const q of this.cascades)q.at-=dt;const due=this.cascades.filter(q=>q.at<=0);this.cascades=this.cascades.filter(q=>q.at>0);for(const q of due)this.event({type:'explode',x:q.x,y:q.y,size:q.size});
     this.wrecks=this.wrecks.filter(w=>{w.age+=dt;if(w.age>=w.life)return false;w.y-=dt*(w.kind==='boss'?.6:2.3);const t=w.age/w.life;c.save();c.translate(w.x,w.y);c.rotate(w.age*(w.x>0?1:-1)*(w.kind==='boss'?.13:1.3));c.globalAlpha=(1-t)*.45;if(w.kind==='boss'){this.asset(bossSprite(w.stage,'core'),0,0);for(let i=0;i<2;i++)if(w.parts![i]>0)this.asset(bossSprite(w.stage,i===0?'wing0':'wing1'),(i===0?-1:1)*(w.spread!+(1-w.deploy!)*1.2),-w.spread!*.65);}else this.asset(shipSprite(w.kind),0,0);c.restore();return true;});
-    for(const e of this.explosions){e.age+=dt;const t=e.age/e.life,s=e.size*(.25+Math.sin(Math.min(1,t)*Math.PI/2)*.75);c.save();c.globalAlpha=Math.max(0,1-t);c.translate(e.x,e.y);c.scale(1,-1);c.drawImage(explosionMap.image,-s/2,-s/2,s,s);c.restore();}this.explosions=this.explosions.filter(e=>e.age<e.life);
+    for(const e of this.explosions){e.age+=dt;if(e.age<0)continue;const t=e.age/e.life,s=e.size*(e.smoke?.45+t*.7:.25+Math.sin(Math.min(1,t)*Math.PI/2)*.75);c.save();c.globalAlpha=Math.max(0,(1-t)*(e.smoke?.75:1));c.translate(e.x,e.y);c.scale(1,-1);if(e.smoke)c.drawImage(smokeMap.image,-s/2,-s/2,s,s);else{const frame=Math.min(3,Math.floor(t*4)),im=explosionAtlasMap.image,w=im.width/2,h=im.height/2;c.drawImage(im,frame%2*w,Math.floor(frame/2)*h,w,h,-s/2,-s/2,s,s);}c.restore();}this.explosions=this.explosions.filter(e=>e.age<e.life);
     for(const s of this.sparks){s.life-=dt;if(s.life<=0)continue;s.x+=s.vx*dt;s.y+=s.vy*dt;c.globalAlpha=s.life/s.max;this.rect(s.x,s.y,s.size,s.size*1.5,s.color);}c.globalAlpha=1;this.sparks=this.sparks.filter(s=>s.life>0);
     this.ring.age+=dt;if(this.ring.age<.8){c.globalAlpha=1-this.ring.age/.8;c.strokeStyle='#92f3ff';c.lineWidth=.13;c.beginPath();c.arc(this.ring.x,this.ring.y,this.ring.age*34,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}

@@ -173,7 +173,7 @@ function loop(now:number){
 }
 async function boot(){
   try{
-    el('boot-text').textContent='装甲テクスチャを読み込み中';
+    el('boot-text').textContent='機体とステージを読み込み中';
     await loadVisualAssets();
     const rendererMode=new URLSearchParams(location.search).get('renderer');
     try{

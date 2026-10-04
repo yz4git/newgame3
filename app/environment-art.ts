@@ -97,11 +97,11 @@ export function environmentChip(p:EnvironmentPalette,stage:number,v:number){
   const g=new T.Group(),machines=new T.Group(),env=STAGES[stage].environment;
   if(env==='asteroids'){
     for(const s of[-1,1]){
-      for(let j=0;j<3;j++){const x=s*(8+noise(v,j,43)*4),y=-3+j*2.8;rock(g,p.rock,x,y,-5.7,2.2+noise(v,j,51)*1.5,1.9+noise(v,j)*1.1,2.1,v*9+j+s,3);}
+      for(let j=0;j<3;j++){const x=s*(8+noise(v,j,43)*4),y=-3+j*2.8;rock(g,p.rock,x,y,-5.7,2.2+noise(v,j,51)*1.5,1.9+noise(v,j)*1.1,2.1,v*9+j+s,2);}
       if(v%3!==1){outpost(machines,p,s*(9.1+(v%2)),(noise(v,s,92)-.5)*2,-3.9,3.1+noise(v,s,91),4.4+noise(v,s,93)*2.3,v+(s>0?2:0));}
     }
     for(let i=0;i<5;i++){const x=(noise(v,i,68)-.5)*14,y=(noise(v,i,9)-.5)*8;rock(g,p.rock,x,y,-9,.2+noise(v,i,67)*.55,.35,.37,v*17+i);}
-    if(v===2||v===6){const x=v===2?-6:7;hull(g,[[x-1,-2],[x+1.6,-1],[x+1,2],[x-1.6,2.4]],.30,p.plate,-6.2);for(let i=0;i<4;i++)block(g,p.steel,x,-1+i,-5.9,3,.08,.12);}
+    if(v%8===2||v%8===6){const x=v===2?-6:7;hull(g,[[x-1,-2],[x+1.6,-1],[x+1,2],[x-1.6,2.4]],.30,p.plate,-6.2);for(let i=0;i<4;i++)block(g,p.steel,x,-1+i,-5.9,3,.08,.12);}
   }else if(env==='ocean'){
     for(const s of[-1,1]){
       const x=s*(8.9+noise(v,s,42)*1.1),y=(noise(v,s,44)-.5)*3;
@@ -116,7 +116,7 @@ export function environmentChip(p:EnvironmentPalette,stage:number,v:number){
     for(const s of[-1,1])cliff(g,p,s,v,stage);
     if(env==='ice'){
       for(let i=0;i<3;i++)rock(g,p.ice,(noise(v,i,42)-.5)*8,(i-1)*2.3,-8,.45,.7,.55,v+i);
-      if(v===2||v===6){const x=v===2?-9:9;platform(machines,p,x,0,-2.8,3.9,4.3,.55);block(machines,p.plate,x,0,-1.8,2.5,2.9,.75);block(machines,p.rust,x,0,-1.35,2.54,.29,.13);vents(machines,p,x,0,-.92,1.6,1.7);}
+      if(v%8===2||v%8===6){const x=v===2?-9:9;platform(machines,p,x,0,-2.8,3.9,4.3,.55);block(machines,p.plate,x,0,-1.8,2.5,2.9,.75);block(machines,p.rust,x,0,-1.35,2.54,.29,.13);vents(machines,p,x,0,-.92,1.6,1.7);}
     }else if(env==='jungle'){
       for(const s of[-1,1]){
         const x=s*(7.9+noise(v,s,72));
@@ -132,7 +132,7 @@ export function environmentChip(p:EnvironmentPalette,stage:number,v:number){
         for(let j=0;j<3;j++){pipe(machines,p.steel,x+s*(.3+j*.4),0,-2.6,.15,7.5);for(let k=0;k<4;k++)block(machines,p.rust,x+s*(.3+j*.4),-2.6+k*1.7,-2.45,.42,.18,.14);}
         for(let j=0;j<2;j++){const xx=x-s*1.1,yy=j*3.6-1.8;drum(machines,p.dark,xx,yy,-2.2,.62,.42);drum(machines,p.lava,xx,yy,-1.96,.44,.12);ring(machines,p.rust,xx,yy,-1.9,.55,.06);}
       }
-      if(v===3||v===7)bridge(machines,p,0,1.8,-3.25);
+      if(v%8===3||v%8===7)bridge(machines,p,0,1.8,-3.25);
       const points:number[][]=[[-3.0,-4.3],[-3.8,-2.0],[-2.8,.1],[-3.5,2.8],[-2.9,4.3],[3.2,4.3],[2.9,2.0],[3.5,-.3],[2.6,-2.4],[3.0,-4.3]];
       hull(g,points,.63,p.rock,-6.1);
     }

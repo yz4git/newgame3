@@ -17,12 +17,18 @@ export function playerPose(g:Game):ShipPose{
 export function enemyPose(e:Enemy,p:{x:number;y:number}):ShipPose{
   let vx=e.kind==='dart'?Math.cos(e.age*1.5+e.phase)*3.3:e.kind==='fighter'?Math.cos(e.age*1.1+e.phase)*1.32:e.kind==='weaver'?Math.cos(e.age*.85)*.94:e.kind==='drone'&&e.pattern===1?Math.cos(e.age)*1.75:0;
   if(e.pattern===4)vx=-Math.sign(e.origin)*Math.sin((18-e.y)/7*.78)*4.2;
+  if(e.kind==='interceptor'&&e.pattern<4)vx=Math.cos(e.age*1.7+e.phase)*4.08;
+  if(e.kind==='bomber')vx=Math.cos(e.age*.55+e.phase)*.3575;
+  if(e.kind==='corvette')vx=Math.cos(e.age*.6+e.phase)*.48;
+  if(e.kind==='sentinel')vx=Math.cos(e.age*1.3+e.phase)*2.21;
+  if(e.pattern===5)vx=-e.origin*Math.sin(e.age*.75)*.75;
+  if(e.pattern===6)vx=Math.cos(e.age*.95+e.phase)*1.9;
   const charge=e.charging?smooth(1-e.shoot/.48):0;
   const turret=e.ground?Math.atan2((e.charging?e.aimX:p.x)-e.x,-((e.charging?e.aimY:p.y)-e.y)):0;
-  return {mode:e.flash>0?'hit':e.recoil>0?'fire':e.charging?'charge':e.age<.8?'deploy':e.kind==='weaver'?'spin':'cruise',
+  return {mode:e.flash>0?'hit':e.recoil>0?'fire':e.charging?'charge':e.age<.8?'deploy':e.kind==='weaver'?'spin':e.kind==='strider'?'walk':e.kind==='sentinel'?'hover':e.kind==='interceptor'?'sweep':e.kind==='bomber'?'glide':e.kind==='corvette'?'patrol':'cruise',
     roll:e.ground?0:clamp(vx*.035,-.27,.27),bank:e.ground?0:clamp(vx*.055,-.38,.38),
-    flex:e.kind==='carrier'?.5+.5*Math.sin(e.age*2):charge*.85+.16*Math.sin(e.age*2+e.phase),
-    thrust:e.kind==='dart'?1.4:.85+Math.sin(e.age*9+e.phase)*.10,charge,recoil:clamp(e.recoil/.24),turret,
+    flex:e.kind==='carrier'?.5+.5*Math.sin(e.age*2):e.kind==='sentinel'?.3+charge*.65+.12*Math.sin(e.age*3):e.kind==='bomber'?.35+charge*.35:charge*.85+.16*Math.sin(e.age*2+e.phase),
+    thrust:e.kind==='dart'||e.kind==='interceptor'?1.4:e.kind==='bomber'?1.2:.85+Math.sin(e.age*9+e.phase)*.10,charge,recoil:clamp(e.recoil/.24),turret,
     rotor:e.age*(e.kind==='weaver'?2.5:7)+e.phase,glow:e.hp/e.maxHp<.35?.75+Math.sin(e.age*24)*.25:1};
 }
 export function bossPose(b:Boss){
@@ -50,3 +56,10 @@ export function stageCue(g:Game){
   return null;
 }
 export function animationClockRunning(g:Game){return g.state==='playing'||g.state==='transition'||g.state==='title';}
+
+/** Normalized cutout coordinates. Central hulls remain fixed; only limbs and panels deform. */
+export function skinWarp(kind:Kind,x:number,y:number,t:number,flex:number):[number,number]{
+ if(kind==='strider'){const limb=smooth((Math.abs(x)-.16)/.21)*smooth((Math.abs(y)-.06)/.27),stride=Math.sin(t*7+(x*y>0?0:Math.PI));return [x+Math.sign(x)*Math.cos(t*7+(x*y>0?0:Math.PI))*.028*limb,y+stride*.046*limb];}
+ if(kind==='sentinel'){const outer=smooth((Math.hypot(x,y)-.13)/.25),open=(flex*.12+Math.sin(t*2.3)*.012)*outer;return [x*(1+open),y*(1+open)];}
+ if(kind==='bomber'){const wing=smooth((Math.abs(x)-.14)/.31);return [x*(1-flex*.055*wing),y+wing*(Math.sin(t*2.1)*.012-flex*.035)];}return [x,y];
+}

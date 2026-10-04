@@ -9,7 +9,7 @@ export type Weapon = 'wide' | 'laser' | 'homing';
 export type Mode = 'campaign' | 'caravan';
 export type Difficulty = 'casual' | 'normal' | 'expert';
 export type State = 'title' | 'playing' | 'paused' | 'transition' | 'result';
-export type Kind = 'drone' | 'dart' | 'fighter' | 'tank' | 'cruiser' | 'carrier' | 'relic' | 'weaver' | 'lancer';
+export type Kind = 'drone' | 'dart' | 'fighter' | 'tank' | 'cruiser' | 'carrier' | 'relic' | 'weaver' | 'lancer' | 'interceptor' | 'bomber' | 'corvette' | 'sentinel' | 'strider';
 export interface Enemy {
   id: number; kind: Kind; x: number; y: number; origin: number; radius: number;
   hp: number; maxHp: number; age: number; shoot: number; flash: number; group: number;
@@ -21,6 +21,7 @@ export interface Bullet {
   radius: number; damage: number; enemy: boolean; homing: boolean; weapon: Weapon;
   age: number; dead: boolean; grazed: boolean; hits: number[]; color: number;
   source?: number; targetId?: number; turn?: number; accel?: number; trail?: {x:number;y:number}[];
+  shape?:'missile'|'diamond';
 }
 export interface Pickup { id: number; x: number; y: number; type: 'power' | 'medal' | 'repair'; age: number; dead: boolean; }
 export interface Boss {
@@ -43,6 +44,11 @@ const DATA: Record<Kind, { hp: number; radius: number; score: number; speed: num
   relic: { hp: 28, radius: .9, score: 3500, speed: 4.4 },
   weaver: { hp: 22, radius: 1.1, score: 700, speed: 2.8 },
   lancer: { hp: 15, radius: .9, score: 600, speed: 3.3 },
+  interceptor: { hp: 9, radius: .9, score: 400, speed: 5.8 },
+  bomber: { hp: 26, radius: 1.35, score: 850, speed: 2.9 },
+  corvette: { hp: 38, radius: 1.5, score: 1100, speed: 2.8 },
+  sentinel: { hp: 18, radius: 1.0, score: 650, speed: 3.0 },
+  strider: { hp: 24, radius: 1.05, score: 700, speed: 4.4 },
 };
 function waves(stage: number, mode: Mode): Wave[] {
   const style=STAGES[stage].bossStyle;
@@ -81,6 +87,17 @@ function waves(stage: number, mode: Mode): Wave[] {
     {at:82,kind:'dart',count:8,formation:2}, {at:86,kind:'cruiser',count:2,formation:0},
     {at:90,kind:'carrier',count:1,formation:1},
   );
+  // Replace repeated squads with distinct roles while retaining supplies and recovery gaps.
+  for(const row of rows){
+    if(row.at===11){row.kind='interceptor';row.count=stage===2?3:4;row.formation=5;}
+    if(row.at===14.5){row.kind='strider';row.count=stage===4?3:2;}
+    if(row.at===35){row.kind='corvette';row.count=stage===1?2:1;}
+    if(row.at===37){row.kind='sentinel';row.count=stage===3?2:1;}
+    if(row.at===44){row.kind='bomber';row.count=stage===0?1:2;row.formation=0;}
+    if(row.at===64){row.kind=stage%2?'interceptor':'dart';row.formation=6;row.count=5;}
+    if(row.at===71){row.kind=stage===5?'corvette':stage===4?'sentinel':'fighter';row.count=2;}
+  }
+  if(stage===0)rows.push({at:49,kind:'cruiser',count:1,formation:3},{at:21,kind:'weaver',count:1,formation:3,side:1});
   return rows.sort((a,b)=>a.at-b.at);
 }
 export function segmentDistance2(ax: number, ay: number, bx: number, by: number, x: number, y: number) {
@@ -153,7 +170,7 @@ export class Game {
     const d=DATA[kind],hp=d.hp*(this.difficulty==='expert'?1.12:1);
     const e: Enemy={id:++this.uid,kind,x,y,origin:x,radius:d.radius,hp,maxHp:hp,age:0,
       shoot:1.1+this.random()*.8,flash:0,group,phase:this.random()*6.28,dead:false,
-      ground:kind==='tank'||kind==='relic',pattern,aimX:0,aimY:0,charging:false,volley:0,spawnY:y,recoil:0};this.enemies.push(e);return e;
+      ground:kind==='tank'||kind==='relic'||kind==='strider',pattern,aimX:0,aimY:0,charging:false,volley:0,spawnY:y,recoil:0};this.enemies.push(e);return e;
   }
   private wave(w: Wave) {
     const group=++this.uid;this.groups.set(group,{total:w.count,kills:0,escaped:false});
@@ -165,6 +182,8 @@ export class Game {
       if(w.formation===2){x=(i%2===0?-1:1)*(3.2+Math.floor(i/2)*.6);y=18+Math.floor(i/2)*1.7;}
       if(w.formation===3)x=side*7;
       if(w.formation===4){x=side*6;y=18+i*1.6;}
+      if(w.formation===5){x=(i%2?1:-1)*(6.7+i*.25);y=18+i*1.8;}
+      if(w.formation===6){x=(i%2?1:-1)*(4.7+i*.15);y=18+i*1.7;}
       this.spawn(w.kind,x,y,group,w.formation);
     }
     if(w.kind==='carrier')this.emit('supply',{text:'SUPPLY / 補給機を撃破'});
@@ -427,11 +446,18 @@ export class Game {
       if(e.dead)continue;e.age+=dt;e.flash=Math.max(0,e.flash-dt);e.recoil=Math.max(0,e.recoil-dt);
       e.y-=DATA[e.kind].speed*dt;
       if(e.pattern===4){const t=(18-e.y)/DATA[e.kind].speed;e.x=Math.sign(e.origin)*6*Math.cos(t*.78);}
+      else if(e.pattern===5)e.x=e.origin*Math.cos(e.age*.75);
+      else if(e.pattern===6)e.x=e.origin+Math.sin(e.age*.95+e.phase)*2.0;
       else if(e.kind==='dart')e.x=e.origin+Math.sin(e.age*1.5+e.phase)*2.2;
       else if(e.kind==='drone'&&e.pattern===1)e.x=e.origin+Math.sin(e.age)*1.75;
       if(e.kind==='fighter'){e.x=e.origin+Math.sin(e.age*1.1+e.phase)*1.2;e.y+=e.age<4?1.6*dt:0;}
       if(e.kind==='weaver')e.x=e.origin+Math.sin(e.age*.85)*1.1;
       if(e.kind==='lancer'&&e.age<5)e.y+=2.4*dt;
+      if(e.kind==='interceptor'&&e.pattern<4)e.x=e.origin+Math.sin(e.age*1.7+e.phase)*2.4;
+      if(e.kind==='bomber'){e.x=e.origin+Math.sin(e.age*.55+e.phase)*.65;e.y+=e.age<3?1.0*dt:0;}
+      if(e.kind==='corvette'){e.x=e.origin+Math.sin(e.age*.6+e.phase)*.8;e.y+=e.age<4?1.6*dt:0;}
+      if(e.kind==='sentinel')e.x=e.origin+Math.sin(e.age*1.3+e.phase)*1.7;
+      if(e.kind==='strider')e.x=e.origin+Math.sin(e.age*.7+e.phase)*.8;
       e.shoot-=dt;
       if(e.y<13.5&&e.y>p.y+3.8){
         if(e.shoot<=.48&&!e.charging){e.charging=true;e.shoot=.48;e.aimX=p.x;e.aimY=p.y;}
@@ -442,9 +468,17 @@ export class Game {
           else if(e.kind==='cruiser'){this.fan(e.x,e.y-1.5,9,7.5,-Math.PI/2,.22,e.id);e.shoot=2.3;}
           else if(e.kind==='weaver'){this.fan(e.x,e.y-1,e.volley%2?6:7,7.8,-Math.PI/2,.23,e.id,0xffa8da);e.shoot=1.85;}
           else if(e.kind==='lancer'){this.aimed(e.x,e.y,5.5,3,.13,e.id,aim,5.0);e.shoot=2.15;}
-          else if(e.kind==='dart'){this.aimed(e.x,e.y,9,1,.15,e.id,aim);e.shoot=3.8;}
+          else if(e.pattern===5)e.x=e.origin*Math.cos(e.age*.75);
+      else if(e.pattern===6)e.x=e.origin+Math.sin(e.age*.95+e.phase)*2.0;
+      else if(e.kind==='dart'){this.aimed(e.x,e.y,9,1,.15,e.id,aim);e.shoot=3.8;}
           else if(e.kind==='drone'&&(this.stage>0||e.id%3===0)){this.aimed(e.x,e.y,8,1,.15,e.id,aim);e.shoot=6;}
+          else if(e.kind==='interceptor'){this.aimed(e.x,e.y,9.5,2,.20,e.id,aim);e.shoot=2.05;}
+          else if(e.kind==='bomber'){this.aimed(e.x,e.y-.8,5.5,3,.25,e.id,aim,1.7);e.shoot=2.75;}
+          else if(e.kind==='corvette'){for(const s of[-1,1])this.aimed(e.x+s*1.3,e.y-1,7.2,2,.15,e.id,aim);e.shoot=2.65;}
+          else if(e.kind==='sentinel'){for(const s of[-1,1])this.fan(e.x+s*.5,e.y-.3,4,6.8,-Math.PI/2+s*.55,.14,e.id,0xffa8ef,-s*.10);e.shoot=2.4;}
+          else if(e.kind==='strider'){this.aimed(e.x,e.y-.9,8.3,e.volley%2?2:3,.18,e.id,aim);e.shoot=2.35;}
           else e.shoot=10;
+          for(let i=bulletsBefore;i<this.bullets.length;i++)if(e.kind==='bomber')this.bullets[i].shape='missile';else if(e.kind==='sentinel')this.bullets[i].shape='diamond';
           if(this.bullets.length>bulletsBefore){e.recoil=.24;this.emit('enemyshot',{x:e.x,y:e.y,source:e.id,kind:e.kind});}
         }
       }

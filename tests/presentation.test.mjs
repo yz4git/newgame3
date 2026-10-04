@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Game,STEP,STAGES} from '../app/sim.ts';
-import {playerPose,enemyPose,bossPose,worldClock,stageCue} from '../app/motion.ts';
+import {playerPose,enemyPose,bossPose,worldClock,stageCue,skinWarp} from '../app/motion.ts';
 const idle={x:0,y:0,focus:false};
 
 test('Pause freezes poses, weather and scripted communications; retry restarts their clocks',()=>{
@@ -28,4 +28,10 @@ test('Boss armour opens during vulnerability and death transition scenery keeps 
   const g=new Game();g.start();g.spawnBoss();const b=g.boss;b.age=10;const closed=bossPose(b);b.rest=true;assert.ok(bossPose(b).open>closed.open);b.phase=2;b.rest=false;assert.equal(bossPose(b).mode,'enraged');
   g.state='transition';g.transitionTime=3.5;const before={time:g.time,visual:g.visualTime};g.update(STEP,idle);assert.equal(g.time,before.time);assert.ok(worldClock(g)>g.time);assert.ok(g.visualTime>before.visual);g.pause();const clock=worldClock(g);g.update(STEP,idle);assert.equal(worldClock(g),clock);
   g.stage=5;g.resume();g.transitionTime=.01;g.boss.dead=true;g.update(STEP,idle);assert.equal(g.state,'result');assert.equal(worldClock(g),g.time+3.5);
+});
+
+test('New enemy poses and articulated cutouts animate around a fixed central hull',()=>{
+ const g=new Game();g.start();const modes=[];for(const kind of ['interceptor','bomber','corvette','sentinel','strider']){const e=g.spawn(kind,3,9);e.age=2;e.charging=false;e.recoil=0;modes.push(enemyPose(e,g.player).mode);const pose=enemyPose(e,g.player);for(const value of Object.values(pose))if(typeof value==='number')assert.ok(Number.isFinite(value));assert.deepEqual(skinWarp(kind,0,0,2,.8),[0,0]);}assert.equal(new Set(modes).size,5);
+ for(const kind of ['bomber','sentinel','strider'])assert.notDeepEqual(skinWarp(kind,.4,.35,2,.2),skinWarp(kind,.4,.35,2.2,.8));
+ const e=g.spawn('strider',4,6);e.age=1.6;const a=skinWarp(e.kind,.4,.35,e.age,.4);g.pause();for(let i=0;i<50;i++)g.update(STEP,idle);assert.deepEqual(skinWarp(e.kind,.4,.35,e.age,.4),a);
 });

@@ -101,3 +101,10 @@ test('Boss encounters end within a bounded time instead of permitting endless sc
   for(let i=0;i<30&&g.state==='playing';i++){g.invulnerable=3;g.update(STEP,still);}
   assert.equal(g.state,'result');assert.equal(g.won,false);assert.equal(g.failureReason,'timeout');assert.ok(g.boss.hp>0);
 });
+
+test('Five new classes telegraph distinct attacks, preserve aim snapshots and stay in projectile bounds',()=>{
+ const counts={interceptor:2,bomber:3,corvette:4,sentinel:8,strider:2};for(const kind of Object.keys(counts)){const g=new Game();g.start();g.time=5;g.waveIndex=999;g.player.x=-6;g.shotTimer=100;const e=g.spawn(kind,5,10);e.hp=e.maxHp=100;e.shoot=0;g.update(STEP,still);assert.ok(e.charging);assert.equal(e.aimX,-6);assert.ok(e.shoot>.45);assert.equal(g.bullets.filter(b=>b.source===e.id).length,0);g.player.x=6;for(let i=0;i<32;i++)g.update(STEP,still);const shots=g.bullets.filter(b=>b.source===e.id);assert.equal(shots.length,counts[kind]);if(kind==='bomber')assert.ok(shots.every(b=>b.shape==='missile'&&b.accel>0));if(kind==='sentinel')assert.ok(shots.every(b=>b.shape==='diamond'&&Math.abs(b.turn)>0));if(kind!=='sentinel')assert.ok(shots.some(b=>b.vx<0));assert.equal(e.ground,kind==='strider');}
+});
+test('Opening sector introduces all five new classes through ordinary scheduled waves',()=>{
+ const g=new Game();g.start();g.invulnerable=1000;g.shotTimer=1000;const kinds=new Set();for(let i=0;i<60*30;i++){g.update(STEP,still);g.enemies.forEach(e=>kinds.add(e.kind));g.drainEvents();}for(const kind of ['interceptor','bomber','corvette','sentinel','strider'])assert.ok(kinds.has(kind),kind+' must be reachable in normal play');
+});

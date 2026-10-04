@@ -129,6 +129,13 @@ export function shipModel(kind:Kind|'player'){
     const ring=new T.Mesh(new T.TorusGeometry(.60,.055,6,24),gold);ring.position.z=.5;g.add(ring);
     const core=ball(g,gold,0,0,.5,.35,.35,.20);core.rotation.z=Math.PI/4;
     for(const side of[-1,1]){block(g,alloy,side*.67,0,.34,.18,1.1,.13);block(g,navy,0,side*.67,.34,1.1,.18,.13);}
+  }else if(['interceptor','bomber','corvette','sentinel','strider'].includes(kind)){
+    const width=kind==='bomber'?2.2:kind==='corvette'?1.6:kind==='interceptor'?1.4:1.3,length=kind==='corvette'?2.5:1.6;
+    hull(g,[[0,-length],[-width*.35,-length*.5],[-width,.35],[-width*.8,length*.7],[0,length],[width*.8,length*.7],[width,.35],[width*.35,-length*.5]],.32,kind==='bomber'||kind==='strider'?bronze:kind==='sentinel'?violet:navy);
+    loft(g,[[length,.15,.1,.35],[.3,.32,.22,.48],[-length*.75,.18,.14,.38]],white);
+    if(kind==='strider')for(const side of[-1,1])for(const end of[-1,1]){const m=block(g,bronze,side*1.15,end*.85,.18,.20,1.1,.2);m.rotation.z=side*end*.65;}
+    if(kind==='sentinel')turbine(g,0,0,.45,.6,pink);
+    for(const side of[-1,1])turbine(g,side*width*.58,length*.62,.42,.22,kind==='sentinel'?pink:cyan);
   }else{
     hull(g,[[0,-2.4],[-1.1,-1.3],[-1.85,.9],[-1.5,2],[1.5,2],[1.85,.9],[1.1,-1.3]],.66,dark);
     loft(g,[[2.05,.24,.20,.65],[1.2,.44,.40,.72],[-.15,.49,.37,.75],[-1.7,.24,.19,.61],[-2.48,.025,.03,.42]],white);
@@ -148,7 +155,10 @@ export function shipModel(kind:Kind|'player'){
   if(kind==='cruiser')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(1.25,1.22,1);});
   const skin=shipSkin(kind);if(skin){
     const geometries:T.BufferGeometry[]=[];result.traverse(o=>{if(o instanceof T.Mesh)geometries.push(o.geometry);});const proxy=mergeGeometries(geometries,false);result.clear();for(const geometry of geometries)geometry.dispose();if(proxy){const mesh=new T.Mesh(proxy,shadowProxy);mesh.castShadow=true;result.add(mesh);}
-    const sprite=new T.Sprite(new T.SpriteMaterial({map:skin.map,color:skin.color,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false}));sprite.name='skin';sprite.position.z=1.62;sprite.scale.set(skin.width,skin.height,1);result.add(sprite);
+    if(['strider','sentinel','bomber'].includes(kind)){
+      const mesh=new T.Mesh(new T.PlaneGeometry(skin.width,skin.height,12,12),new T.MeshBasicMaterial({map:skin.map,color:skin.color,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:T.DoubleSide}));
+      mesh.name='skin';mesh.position.z=1.62;mesh.userData.deformSkin=true;mesh.userData.skinWidth=skin.width;mesh.userData.skinHeight=skin.height;mesh.userData.animated=true;mesh.frustumCulled=false;result.add(mesh);
+    }else{const sprite=new T.Sprite(new T.SpriteMaterial({map:skin.map,color:skin.color,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false}));sprite.name='skin';sprite.position.z=1.62;sprite.scale.set(skin.width,skin.height,1);result.add(sprite);}
   }
   for(const attachment of attachments)result.add(attachment);
   return result;
@@ -177,6 +187,12 @@ export function bossModel(stage:number){
     for(let i=0;i<4;i++){const a=i*Math.PI/2+.4;const m=block(body,bronze,Math.cos(a)*1.2,Math.sin(a)*1.2+.1,1.5,.52,.36,.20);m.rotation.z=a;}
     vents(body,0,1.62,1.1,alloy,6,.8);
   }
+  if(stage===0)for(const side of[-1,1]){block(body,dark,side*2.0,1.7,.4,.6,3.4,.25);for(let j=0;j<5;j++)block(body,navy,side*2.0,.4+j*.65,.6,.53,.56,.05);}
+  if(stage===1)for(const side of[-1,1]){hull(body,[[side*1.1,2],[side*2.3,3.4],[side*2.4,1.2],[side*1.5,-.2]],.16,alloy,.4);vents(body,side*1.6,1.4,.65,steel,8,.35);}
+  if(stage===2)for(const side of[-1,1]){block(body,bronze,side*1.65,1.9,1,.6,2.0,.7);block(body,accent,side*1.65,1.9,1.37,.12,1.7,.06);}
+  if(stage===3)for(let i=0;i<5;i++){const x=(i-2)*.65;hull(body,[[x-.22,1.5],[x-.30,2.5],[x,3.6-Math.abs(i-2)*.3],[x+.30,2.5],[x+.22,1.5]],.18,metal(0x9ebfcf),.6);}
+  if(stage===4)for(const side of[-1,1]){hull(body,[[side*.5,1.8],[side*2.0,3.6],[side*2.7,2.8],[side*1.7,1.0]],.25,metal(0x658b77),.4);for(let i=0;i<4;i++)block(body,accent,side*(1.0+i*.22),2+i*.2,.72,.12,.30,.05);}
+  if(stage===5)for(const side of[-1,1]){hull(body,[[side*1.2,1.2],[side*2.2,3.0],[side*2.8,2.5],[side*1.9,.1]],.3,bronze,.5);for(let j=0;j<4;j++)block(body,accent,side*1.75,.3+j*.42,1.24,.30,.08,.06);}
   g.add(batch(body));
   for(let i=0;i<2;i++){
     const wing=new T.Group(),side=i===0?-1:1;
