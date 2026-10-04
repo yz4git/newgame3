@@ -1,5 +1,5 @@
 import './style.css';
-import { Game, STEP, STAGES, W, BOTTOM, TOP, type Difficulty, type Mode } from './sim.ts';
+import { Game, STEP, GAME_SPEED, STAGES, W, BOTTOM, TOP, type Difficulty, type Mode } from './sim.ts';
 import { View } from './render.ts';
 import { AudioEngine } from './audio.ts';
 import { CanvasView } from './canvas.ts';
@@ -115,7 +115,7 @@ function updateUI(now:number){
   el('nova-button').classList.toggle('ready',game.energy>=100);el('nova-button').classList.toggle('unavailable',game.bombs===0&&game.energy<100);
   el('energy').style.width=game.energy+'%';const boss=game.boss;
   el('boss-hud').hidden=!boss||boss.dead||game.state==='result'||game.state==='title';
-  if(boss){el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.age))+'s':'');}
+  if(boss){el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
   if(now>messageUntil)el('message').classList.remove('show');if(now>toastUntil)el('toast').classList.remove('show');if(now>tipUntil)el('touch-tip').hidden=true;
 }
 function scorePopup(text:string,x:number,y:number,type='score'){
@@ -146,7 +146,7 @@ function loop(now:number){
   accumulator+=dt;const controls=input();let count=0;
   while(accumulator>=STEP&&count<4){game.update(STEP,controls);accumulator-=STEP;count++;}
   if(game.state!==lastState){lastState=game.state;if(game.state==='result')result();else screens();}
-  events();audio.update(game.state==='playing',game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt,frameMs);drawPopups(now);updateUI(now);
+  events();audio.update(game.state==='playing',game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt*GAME_SPEED,frameMs);drawPopups(now);updateUI(now);
   requestAnimationFrame(loop);
 }
 async function boot(){

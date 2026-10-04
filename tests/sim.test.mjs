@@ -85,7 +85,7 @@ test('Breaking a separated boss wing cancels its bullets and keeps other sources
 });
 
 test('Boss encounters end within a bounded time instead of permitting endless score farming',()=>{
-  const g=new Game();g.start();g.time=100;g.spawnBoss();g.boss.age=89.8;g.boss.y=9;g.player.x=10;g.player.y=-14;
+  const g=new Game();g.start();g.time=100;g.spawnBoss();g.boss.encounterTime=89.8;g.boss.y=9;g.player.x=10;g.player.y=-14;
   for(let i=0;i<30&&g.state==='playing';i++){g.invulnerable=3;g.update(STEP,still);}
   assert.equal(g.state,'result');assert.equal(g.won,false);assert.equal(g.failureReason,'timeout');assert.ok(g.boss.hp>0);
 });

@@ -2,6 +2,7 @@ export const W = 10.2;
 export const BOTTOM = -14.4;
 export const TOP = 14.8;
 export const STEP = 1 / 60;
+export const GAME_SPEED = 1.5;
 export type Weapon = 'wide' | 'laser' | 'homing';
 export type Mode = 'campaign' | 'caravan';
 export type Difficulty = 'casual' | 'normal' | 'expert';
@@ -21,7 +22,7 @@ export interface Bullet {
 }
 export interface Pickup { id: number; x: number; y: number; type: 'power' | 'medal' | 'repair'; age: number; dead: boolean; }
 export interface Boss {
-  id: number; x: number; y: number; age: number; hp: number; maxHp: number;
+  id: number; x: number; y: number; age: number; encounterTime: number; hp: number; maxHp: number;
   parts: number[]; maxPart: number; shoot: number; attack: number; cycle: number;
   warning: number; beam: number; beamX: number; dead: boolean; flash: number;
   phase: number; rest: boolean; spread: number;
@@ -289,15 +290,15 @@ export class Game {
   }
   spawnBoss() {
     const maxHp=460+this.stage*220;
-    this.boss={id:++this.uid,x:0,y:23,age:0,hp:maxHp,maxHp,parts:[100+this.stage*45,100+this.stage*45],
+    this.boss={id:++this.uid,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[100+this.stage*45,100+this.stage*45],
       maxPart:100+this.stage*45,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0};
     this.emit('warning',{text:'WARNING / '+STAGES[this.stage].boss});
   }
   private updateBoss(dt: number) {
     const b=this.boss;if(!b||b.dead)return;
-    b.age+=dt;b.flash=Math.max(0,b.flash-dt);
-    if(this.mode==='campaign'&&b.age>=90){this.finish(false,'timeout');return;}
-    if(this.mode==='campaign'&&b.age>=70&&b.age-dt<70)this.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
+    b.age+=dt;b.encounterTime+=dt/GAME_SPEED;b.flash=Math.max(0,b.flash-dt);
+    if(this.mode==='campaign'&&b.encounterTime>=90){this.finish(false,'timeout');return;}
+    if(this.mode==='campaign'&&b.encounterTime>=70&&b.encounterTime-dt/GAME_SPEED<70)this.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
     b.y+=((b.age<3?9.2:9+Math.sin(b.age*.65)*.7)-b.y)*dt*1.9;
     b.x=Math.sin(b.age*.55)*(this.stage===2?3.3:2.8);
     if(b.age<3)return;
@@ -376,10 +377,18 @@ export class Game {
     this.emit('score',{x:b.x,y:b.y-3,text:'TIME BONUS +'+timeBonus*this.multiplier});
     this.emit('bosskill',{x:b.x,y:b.y,size:5.5,text:'TARGET DESTROYED'});
     for(const e of this.enemies)e.dead=true;for(const shot of this.bullets)shot.dead=true;
-    if(this.mode==='caravan'){this.boss=null;this.schedule.push(
-      {at:this.time+2,kind:'drone',count:9,formation:1},{at:this.time+5,kind:'cruiser',count:2,formation:0},
-      {at:this.time+9,kind:'dart',count:8,formation:2},{at:this.time+13,kind:'fighter',count:3,formation:0}
-    );return;}
+    if(this.mode==='caravan'){
+      this.boss=null;
+      // Combat reaches the boss earlier at 1.5x; fill the remaining real
+      // two-minute session instead of leaving a silent final stretch.
+      for(let at=this.time+2,cycle=0;at<120*GAME_SPEED;at+=16,cycle++)this.schedule.push(
+        {at,kind:'drone',count:9,formation:cycle%2?4:1},
+        {at:at+3,kind:'cruiser',count:2,formation:0},
+        {at:at+7,kind:'dart',count:8,formation:2},
+        {at:at+11,kind:'fighter',count:3,formation:0}
+      );
+      return;
+    }
     this.state='transition';this.transitionTime=3.5;
   }
   private nextStage() {
@@ -391,10 +400,13 @@ export class Game {
   }
   finish(won: boolean,reason:'hull'|'timeout'='hull') {this.won=won;this.failureReason=won?null:reason;this.state='result';this.emit('finish',{text:won?'MISSION COMPLETE':'SIGNAL LOST'});}
   update(dt: number,input: Input) {
+    // The caller supplies real fixed-step seconds. Combat runs at 1.5x,
+    // while advertised time limits and results retain real seconds.
+    const realDt=dt;dt*=GAME_SPEED;
     this.visualTime+=dt;
     if(this.state==='transition'){this.transitionTime-=dt;if(this.transitionTime<=0)this.nextStage();return;}
     if(this.state!=='playing')return;
-    this.time+=dt;this.totalTime+=dt;
+    this.time+=dt;this.totalTime+=realDt;
     if(this.mode==='caravan'&&this.totalTime>=120){this.finish(true);return;}
     this.invulnerable=Math.max(0,this.invulnerable-dt);this.novaTime=Math.max(0,this.novaTime-dt);
     this.overdrive=Math.max(0,this.overdrive-dt);this.chainTime=Math.max(0,this.chainTime-dt);
