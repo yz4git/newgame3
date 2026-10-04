@@ -1,9 +1,10 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 import {shipSprite,bossSprite,tankSprite,warpedSprite} from './canvas-art.ts';
 import {CanvasFortressBackground} from './canvas-background.ts';
-import {explosionAtlasMap,smokeMap,visualAssetStatus} from './visual-assets.ts';
+import {explosionAtlasMap,smokeMap,livingMaps,visualAssetStatus} from './visual-assets.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState,type ShipPose} from './motion.ts';
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
+import {CanvasCombatEffects} from './canvas-combat.ts';
 
 // Compatibility view for browsers where all GPU contexts are unavailable.
 // It shares the same fixed-step combat, controls, scores and progression.
@@ -14,6 +15,7 @@ export class CanvasView {
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
   private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
+  private combatEffects=new CanvasCombatEffects();
   private wrecks:{x:number;y:number;kind:Kind|'boss';age:number;life:number;stage:number;parts?:number[];spread?:number;deploy?:number}[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];private lastBoss:Game['boss']=null;
   constructor(private canvas:HTMLCanvasElement){}
   async init(_forceWebGL=false){this.ctx=this.canvas.getContext('2d',{alpha:false})!;if(!this.ctx)throw new Error('No graphics context');this.resize();}
@@ -32,7 +34,10 @@ export class CanvasView {
     if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
     const c=this.ctx;c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
     const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player||kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
-    if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')for(const s of[-1,1])canvasGlow(c,s*(large?1.35:kind==='bomber'?1.38:player?.50:small?.35:.62),large?2.2:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:small?.78:1.05,.3*pose.thrust,color,.7);
+    if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')for(const side of[-1,1]){
+      const ex=side*(large?1.35:kind==='bomber'?1.38:player?.50:small?.35:.62),ey=large?2.2:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:small?.78:1.05;
+      canvasGlow(c,ex,ey,.3*pose.thrust,color,.65);c.save();c.translate(ex,ey);if(!player)c.rotate(Math.PI);c.scale(1,-1);c.globalAlpha=.6;c.globalCompositeOperation='lighter';const length=1.65*pose.thrust*(.9+Math.sin(t*36)*.1),width=.48*pose.thrust;c.drawImage(livingMaps.plume.image,-width/2,-length*.05,width,length);c.restore();
+    }
     if(kind!=='carrier'&&kind!=='relic'&&pose.recoil>.04)for(const s of[-1,1])canvasGlow(c,s*(kind==='tank'?.24:large?1.35:player?.50:.62),kind==='tank'||kind==='strider'?-1.27:large?-2.15:kind==='lancer'?-2.16:player?.90:-1.05,.20+pose.recoil*.35,player?'#a8eaff':'#ffdfb0',pose.recoil*.9);
     if(player||kind==='fighter'||kind==='lancer'||large){c.fillStyle=player?'#afc8d4':'#ac9695';for(const s of[-1,1]){const xx=s*(large?1.48:player?.74:.78)+s*pose.flex*.08;c.save();c.translate(xx,player?-.76:.4);c.rotate(s*pose.flex*.18);c.fillRect(-.055,-.22,.11,.45);c.restore();}}
     if(kind==='carrier'){c.fillStyle='#576f89';for(const s of[-1,1])c.fillRect(s*(.23+pose.flex*.30)-.2,-.58,.40,.98);}
@@ -41,6 +46,7 @@ export class CanvasView {
     if(flash){this.ctx.globalAlpha=.50;this.circle(x,y,.35,'#fff8d9');this.ctx.globalAlpha=1;}
   }
   event(e:GameEvent){
+    this.combatEffects.event(e);
     if(e.type==='stage'){this.sparks=[];this.explosions=[];this.wrecks=[];this.cascades=[];this.pulse=0;this.ring.age=2;}
     if(e.type==='explode'&&e.kind&&e.kind!=='player'&&e.kind!=='boss'&&this.wrecks.length<12)this.wrecks.push({x:e.x||0,y:e.y||0,kind:e.kind,stage:this.stage,age:0,life:e.kind==='cruiser'?1.65:.85});
     if(e.type==='bosskill'){
@@ -63,7 +69,8 @@ export class CanvasView {
     c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle='#'+STAGES[stage].sky.toString(16).padStart(6,'0');c.fillRect(0,0,this.width,this.height);
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
     this.background.draw(c,g);
-    this.stageEffects.draw(c,g,window.matchMedia('(prefers-reduced-motion: reduce)').matches);this.enemyAnimations={};
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.stageEffects.draw(c,g,reduced);this.combatEffects.step(g,dt,reduced);this.combatEffects.drawEchoes(c);this.enemyAnimations={};
     for(const e of g.enemies){const pose=enemyPose(e,g.player);this.enemyAnimations[pose.mode]=(this.enemyAnimations[pose.mode]||0)+1;this.ship(e.kind,e.x,e.y,pose,1,e.flash>0,e.age);}
     const b=g.boss;
     if(b&&!b.dead){
@@ -88,16 +95,17 @@ export class CanvasView {
     }
     const p=g.player,pose=playerPose(g),depart=state==='transition'?smooth((3.5-g.transitionTime)/3.5):g.state==='result'&&g.won&&g.boss?.dead?1:0;this.playerAnimation=state==='transition'?'depart':pose.mode;
     const playerVisible=title||g.hull>0&&(g.time<2.6||g.invulnerable<=0||Math.floor(g.invulnerable*12)%3!==0);
-    if(playerVisible)this.ship('player',title?Math.sin(g.visualTime*.5)*.4:p.x,title?1.9:p.y+depart*34,pose,title?2:1);
+    if(playerVisible)this.ship('player',title?Math.sin(g.visualTime*.5)*.4:p.x,title?1.9:p.y+depart*34,pose,title?2:1,false,g.visualTime);
     if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();}
     if(!title&&g.power===4)for(const s of[-1,1]){this.circle(p.x+s*1.45,p.y-.15,.25,'#aedce8');this.circle(p.x+s*1.45,p.y-.05,.13,'#87f9ff');}
     if(active&&playerVisible){const y=p.y+depart*34,length=(1.3+Math.sin(g.visualTime*36)*.15)*pose.thrust;for(const s of[-1,1]){c.save();c.translate(p.x+s*.5,y-1.65);c.scale(.12,length);canvasGlow(c,0,-.5,.75,'#57d6ff',.8);c.restore();}}
     for(const q of this.cascades)q.at-=dt;const due=this.cascades.filter(q=>q.at<=0);this.cascades=this.cascades.filter(q=>q.at>0);for(const q of due)this.event({type:'explode',x:q.x,y:q.y,size:q.size});
     this.wrecks=this.wrecks.filter(w=>{w.age+=dt;if(w.age>=w.life)return false;w.y-=dt*(w.kind==='boss'?.6:2.3);const t=w.age/w.life;c.save();c.translate(w.x,w.y);c.rotate(w.age*(w.x>0?1:-1)*(w.kind==='boss'?.13:1.3));c.globalAlpha=(1-t)*.45;if(w.kind==='boss'){this.asset(bossSprite(w.stage,'core'),0,0);for(let i=0;i<2;i++)if(w.parts![i]>0)this.asset(bossSprite(w.stage,i===0?'wing0':'wing1'),(i===0?-1:1)*(w.spread!+(1-w.deploy!)*1.2),-w.spread!*.65);}else this.asset(shipSprite(w.kind),0,0);c.restore();return true;});
     for(const e of this.explosions){e.age+=dt;if(e.age<0)continue;const t=e.age/e.life,s=e.size*(e.smoke?.45+t*.7:.25+Math.sin(Math.min(1,t)*Math.PI/2)*.75);c.save();c.globalAlpha=Math.max(0,(1-t)*(e.smoke?.75:1));c.translate(e.x,e.y);c.scale(1,-1);if(e.smoke)c.drawImage(smokeMap.image,-s/2,-s/2,s,s);else{const frame=Math.min(3,Math.floor(t*4)),im=explosionAtlasMap.image,w=im.width/2,h=im.height/2;c.drawImage(im,frame%2*w,Math.floor(frame/2)*h,w,h,-s/2,-s/2,s,s);}c.restore();}this.explosions=this.explosions.filter(e=>e.age<e.life);
+    this.combatEffects.drawImpacts(c);
     for(const s of this.sparks){s.life-=dt;if(s.life<=0)continue;s.x+=s.vx*dt;s.y+=s.vy*dt;c.globalAlpha=s.life/s.max;this.rect(s.x,s.y,s.size,s.size*1.5,s.color);}c.globalAlpha=1;this.sparks=this.sparks.filter(s=>s.life>0);
     this.ring.age+=dt;if(this.ring.age<.8){c.globalAlpha=1-this.ring.age/.8;c.strokeStyle='#92f3ff';c.lineWidth=.13;c.beginPath();c.arc(this.ring.x,this.ring.y,this.ring.age*34,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }

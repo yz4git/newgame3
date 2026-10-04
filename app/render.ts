@@ -9,6 +9,7 @@ import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 import {StageEffects} from './stage-effects.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState} from './motion.ts';
 import {addShipRig,addBossRig,cloneAnimatedModel,disposeAnimatedModel,animateShip,animateBoss} from './animation-rig.ts';
+import {CombatEffects} from './combat-effects.ts';
 
 const boxGeometry=new T.BoxGeometry(1,1,1);
 const shotGeometry=new T.SphereGeometry(1,10,6);
@@ -41,13 +42,14 @@ export class View {
   private stageEffects=new StageEffects();private wrecks:Wreck[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];
   private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};
   private lastBoss:Game['boss']=null;
+  private combatEffects=new CombatEffects();
   constructor(private canvas:HTMLCanvasElement){
     this.scene.background=new T.Color(0x030914);this.scene.environment=environmentTexture();this.camera.position.set(0,-12.5,40);this.camera.lookAt(0,0,0);
     this.scene.add(new T.HemisphereLight(0xb5d1ef,0x080d18,1.15));
     this.key=new T.DirectionalLight(0xffe8d2,3.8);this.key.position.set(-12,18,25);this.key.castShadow=true;
     this.key.shadow.mapSize.set(1024,1024);Object.assign(this.key.shadow.camera,{left:-19,right:19,top:30,bottom:-30,near:1,far:80});this.key.shadow.bias=-.0006;this.key.shadow.normalBias=.09;this.scene.add(this.key);
     const rim=new T.DirectionalLight(0x7096cf,1.8);rim.position.set(16,-5,12);this.scene.add(rim,this.blastLight);
-    this.scene.add(this.background.root,this.atmosphere,this.stageEffects.root);this.player.position.z=1.0;this.scene.add(this.player);
+    this.scene.add(this.background.root,this.atmosphere,this.stageEffects.root,this.combatEffects.root);this.player.position.z=1.0;this.scene.add(this.player);
     for(const s of[-1,1]){const satellite=new T.Group();ball(satellite,white,0,0,0,.3,.4,.23);ball(satellite,cyan,0,.15,.22,.14,.2,.06);satellite.position.z=1;this.satellites.push(satellite);this.scene.add(satellite);}
     const bulletMat=new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
     this.shots=new T.InstancedMesh(shotGeometry,bulletMat,740);this.shots.setColorAt(0,new T.Color(0xffffff));this.shots.instanceColor!.setUsage(T.DynamicDrawUsage);
@@ -124,6 +126,7 @@ export class View {
     this.scene.background=new T.Color(theme.sky);
   }
   event(e:GameEvent){
+    this.combatEffects.event(e);
     const x=e.x||0,y=e.y||0;
     if(e.type==='stage'){
       this.cascades=[];this.particles=[];for(const f of this.flares){this.scene.remove(f.sprite);f.sprite.material.dispose();}this.flares=[];
@@ -167,8 +170,9 @@ export class View {
     dt=animationClockRunning(game)?dt:0;this.epoch=game.visualTime;this.setTheme(game.stage);
     const state=presentationState(game),active=state==='playing'||state==='transition',title=state==='title';
     const scroll=active?4.4:title?1.4:0;
-    this.background.draw(game);
+    this.background.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.stageEffects.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.combatEffects.draw(game,dt,window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.atmosphere.position.y=-this.background.distance*.018;
     for(let i=0;i<200;i++){
       this.starData[i*4+1]-=scroll*dt*.25;if(this.starData[i*4+1]<-40)this.starData[i*4+1]+=80;
@@ -280,6 +284,6 @@ export class View {
     if(this.pixelRatio<=1.01&&this.frames>300&&this.epoch-this.lastDprChange>7&&this.frameAverage>32){this.useBloom=false;this.key.castShadow=false;this.quality='PERFORMANCE';}
     if(this.useBloom&&this.pipeline)this.pipeline.render();else if(this.useBloom&&this.composer)this.composer.render();else this.renderer.render(this.scene,this.camera);
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
 }
 function shipTint(kind:Kind){return kind==='dart'?0xb69add:kind==='lancer'?0xd2ddf7:0xffffff;}

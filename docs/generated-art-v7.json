@@ -1,0 +1,53 @@
+{
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "name": "ocean-swell",
+      "path": "app/textures/ocean-swell-v7.webp",
+      "transparent_background": false,
+      "prompt": "Use case: stylized-concept. Asset type: seamless square albedo texture for the animated ocean surface of NOVA STRIKE, a detailed top-down sci-fi arcade shooter. Primary request: premium realistic deep blue ocean water viewed straight down, broad low rolling swells mixed with fine ripples, layered navy / cobalt / teal depths, muted silver-blue reflected light, subtle occasional foam flecks. No shoreline or objects, no horizon, no perspective, no sunlight hot spot, no text. Even illumination; avoid excessive white baked foam. Tile seamlessly on all four edges. 1024 square, full opaque image, sharp natural water detail suitable to animate with continuous mesh waves, UV flow and separate foam overlays."
+    },
+    {
+      "name": "wave-foam",
+      "path": "app/textures/wave-foam-v7.webp",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: transparent top-down game effect cutout. Primary request: one organically curved ocean wave crest and spreading sea foam, irregular broken ribbon of pearl-white froth with pale cyan water droplets and lace-like transparent gaps. Long horizontal crest centered, soft sparse foam trailing downward. Visually detailed natural bubbles and thin spray, clean alpha cutout. Orthographic top-down, neutral lighting, entire effect visible with generous transparent margins. No sea background, no blue rectangle, no island, no border, no text, no shadow outside foam. Genuine transparent background. This will be drawn repeatedly at varied angles and animated as real moving wave crests over deep ocean."
+    },
+    {
+      "name": "water-caustics",
+      "path": "app/textures/water-caustics-v7.webp",
+      "transparent_background": false,
+      "prompt": "Use case: stylized-concept. Asset type: seamless light texture for animated water caustics. Primary request: square overhead water caustic network, luminous thin meandering light lines connecting rounded irregular cells of varied sizes, delicate broken highlights and fine light speckles, white and very pale cyan light on pure black. Premium realistic underwater light refraction, subdued contrast in dark gaps, intricate irregular network without a recognizable central object. Seamlessly tile on all four edges. Flat top-down, uniform light density; no horizon, no text, no borders. Black will disappear with additive blending; only refracted light remains."
+    },
+    {
+      "name": "waterfall-stream",
+      "path": "app/textures/waterfall-stream-v7.webp",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: transparent animated waterfall game cutout. Primary request: a detailed continuous vertical sheet of falling water, long slender waterfall stream viewed from a slightly top-down arcade camera, pale aqua transparent ribbons, bright white narrow streaks, separated strands and droplets, frothy spray pooling at the bottom. Rectangular portrait composition but the water has an irregular outline and transparent holes; broad enough upper stream, feathered edges. Entire water only, no rock, no landscape, no background or solid rectangle, no text. True transparent alpha. Premium realistic water detail consistent with a sci-fi jungle canyon shooter. Generous transparent margins."
+    },
+    {
+      "name": "lava-splash-atlas",
+      "path": "app/textures/lava-splash-atlas-v7.webp",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: transparent 2 by 2 animation atlas for a top-down volcanic game environment. Primary request: four sequential frames of ONE localized molten lava vent eruption viewed straight down. Equal square cells in a strict 2 columns by 2 rows grid, sequence upper left -> upper right -> lower left -> lower right. Frame 1 a small glowing amber fissure spitting molten drops, frame 2 expanding irregular fiery orange and gold splash, frame 3 broken fluid arcs and falling bright lava droplets with a dark crust middle, frame 4 scattered dim hot embers and fading wisps. Consistent center and scale; generous transparent margin in EACH cell; isolated lava and droplets only. Realistic high-detail molten material, not an explosion cloud or circular graphic ring, no labels or border lines. Genuine transparent background throughout the gaps. Square atlas."
+    },
+    {
+      "name": "engine-plume",
+      "path": "app/textures/engine-plume-v7.webp",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: transparent game thruster plume texture. Primary request: a single vertical tapered spacecraft exhaust jet, nozzle end at TOP and long taper downward. Bright white narrow core, several subtle diamond-shaped pressure cells along the axis, detailed smoky wisps and fine turbulent filaments, very pale neutral silver-white glow and feathered edges. Entire effect grayscale / near neutral white so the game can tint it cyan or amber. Premium photorealistic sci-fi VFX, centered, ample transparent margins. No engine, no spaceship, no background, no dark rectangle, no text, no ring. Genuine alpha transparency, portrait aspect."
+    },
+    {
+      "name": "plasma-impact-atlas",
+      "path": "app/textures/plasma-impact-atlas-v7.webp",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: transparent 2 by 2 animation atlas for energy weapon impacts. Primary request: four sequential frames of ONE compact cyan-white plasma impact. Equal square cells in strict two columns and two rows. Reading order upper left, upper right, lower left, lower right: 1 pinpoint white spark with short jagged cyan branches, 2 intense irregular plasma flash with branching electric filaments, 3 expanding broken corona of electric shards and fading wisps, 4 scattered dim cyan fragments. Same center in each cell, ample clear transparent margin in EVERY cell. High-detail cinematic sci-fi VFX, delicate fine particles. No solid circular outline, no backgrounds, no squares, no labels or borders; true alpha transparent all around. Square atlas."
+    },
+    {
+      "name": "cloud-bank",
+      "path": "app/textures/cloud-bank-v7.webp",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: transparent top-down atmosphere cutout for a detailed arcade game. Primary request: one softly lit irregular bank of coastal sea mist and low cloud seen straight down, layered off-white / very pale silver vapor curls, wispy feathery edges, subtle translucent gaps, central cloud mass with fine real vapor detail. Low contrast natural light, no strong shadow, soft volume with thin tendrils. Entire cloud visible, generous transparent margins on all sides. True transparent alpha; no sky background, no land, no water, no dark rectangle, no text. The cloud will drift and rotate gently over an animated ocean and ice canyon."
+    }
+  ]
+}

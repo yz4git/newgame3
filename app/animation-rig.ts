@@ -1,6 +1,6 @@
 import * as T from 'three/webgpu';
 import {block} from './art.ts';
-import {armourMap} from './visual-assets.ts';
+import {armourMap,livingMaps} from './visual-assets.ts';
 import {skinWarp,type ShipPose} from './motion.ts';
 import type {Kind} from './sim.ts';
 
@@ -15,7 +15,7 @@ export function addShipRig(g:T.Group,kind:Kind|'player'){
   const back=large?2.20:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:kind==='drone'||kind==='dart'?.78:1.05;
   const front=ground?-1.27:large?-2.15:kind==='lancer'?-2.16:kind==='bomber'?-1.0:player?.90:kind==='drone'||kind==='dart'?-.7:-1.05;
   const color=player||kind==='carrier'?0x63dfff:kind==='weaver'||kind==='lancer'||kind==='sentinel'?0xff8cc8:0xffa950;
-  if(!ground)for(const s of[-1,1])light(rig,'engine'+(s<0?0:1),s*x,back,color);
+  if(!ground)for(const s of[-1,1]){const e=light(rig,'engine'+(s<0?0:1),s*x,back,color);e.material.map=livingMaps.plume;e.center.set(.5,.95);}
   if(kind!=='carrier'&&kind!=='relic')for(const s of[-1,1]){const m=light(rig,'muzzle'+(s<0?0:1),s*x,front,player?0x99eaff:0xffdca0);if(ground)m.position.set(s*x,front,.82);}
   if(player||large||kind==='fighter'||kind==='lancer'||kind==='interceptor')for(const s of[-1,1])panel(rig,'flap'+(s<0?0:1),s*(large?1.48:player?.74:.78),player?-.76:.40,large?.23:.15,large?.78:.45,player?0xb3cfdb:0xa38782);
   if(kind==='carrier')for(const s of[-1,1])panel(rig,'door'+(s<0?0:1),s*.23,-.1,.42,.98,0x526c87);
@@ -40,7 +40,7 @@ export function animateShip(g:T.Group,pose:ShipPose,t:number,kind:Kind|'player')
   const n=nodes(g),pulse=.9+Math.sin(t*36)*.1;
   const skin=n.get('skin');if(skin instanceof T.Mesh&&skin.userData.deformSkin&&kind!=='player'){const v=skin.geometry.getAttribute('position'),uv=skin.geometry.getAttribute('uv');for(let i=0;i<v.count;i++){const [x,y]=skinWarp(kind,uv.getX(i)-.5,uv.getY(i)-.5,t,pose.flex);v.setXYZ(i,x*skin.userData.skinWidth,y*skin.userData.skinHeight,0);}v.needsUpdate=true;}
   for(let i=0;i<2;i++){
-    const engine=n.get('engine'+i) as T.Sprite|undefined;if(engine){engine.scale.set(.30*pose.thrust,.65*pose.thrust*pulse,1);engine.material.opacity=.78;}
+    const engine=n.get('engine'+i) as T.Sprite|undefined;if(engine){engine.scale.set(.48*pose.thrust,1.65*pose.thrust*pulse,1);engine.material.opacity=.72;engine.material.rotation=pose.roll+(kind==='player'?0:Math.PI);}
     const muzzle=n.get('muzzle'+i) as T.Sprite|undefined;if(muzzle){muzzle.visible=pose.recoil>.04;muzzle.scale.set(.20+pose.recoil*.23,.30+pose.recoil*.6,1);muzzle.material.opacity=pose.recoil*.85;if(kind==='tank'){const x=muzzle.userData.baseX,y=muzzle.userData.baseY;muzzle.position.x=x*Math.cos(pose.turret)-y*Math.sin(pose.turret);muzzle.position.y=x*Math.sin(pose.turret)+y*Math.cos(pose.turret)+pose.recoil*.18;}}
     const flap=n.get('flap'+i);if(flap){flap.rotation.y=(i===0?-1:1)*(pose.flex*.46+pose.bank*.5);flap.position.x=flap.userData.baseX+(i===0?-1:1)*pose.flex*.08;}
     const door=n.get('door'+i);if(door)door.position.x=door.userData.baseX+(i===0?-1:1)*pose.flex*.30;
