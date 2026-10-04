@@ -50,6 +50,9 @@ export class AudioEngine {
     if(['power','repair','formation','extend','relic'].includes(e.type)){
       const t=this.ctx?.currentTime||0;for(let i=0;i<4;i++)this.tone([523,659,784,1047][i],.12,'triangle',.12,t+i*.055);
     }
+    if(e.type==='lock')this.tone(1300,.075,'sine',.06,undefined,1800);
+    if(e.type==='resonance'){this.hiss(.35,.16,2400);this.tone(230,.27,'sine',.2,undefined,45);}
+    if(e.type==='part'||e.type==='phase')this.tone(500,.19,'triangle',.14,undefined,950);
     if(e.type==='weapon')this.tone(680,.08,'sine',.12);
     if(e.type==='warning'||e.type==='beam'){const t=this.ctx?.currentTime||0;this.tone(440,.15,'square',.08,t);this.tone(660,.15,'square',.07,t+.2);}
   }

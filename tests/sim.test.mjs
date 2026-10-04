@@ -43,3 +43,49 @@ test('Caravan always ends at two minutes, including during a boss fight',()=>{
   for(let i=0;i<60*122&&g.state!=='result';i++){g.invulnerable=1;g.update(STEP,still);g.drainEvents();}
   assert.equal(g.state,'result');assert.equal(g.won,true);assert.ok(Math.abs(g.totalTime-120)<STEP*1.1);
 });
+
+test('Guided weapons preserve speed and cannot exceed their turning limit',async()=>{
+  const {turnToward}=await import('../app/sim.ts');
+  const v=turnToward(0,40,100,0,.2);
+  assert.ok(Math.abs(Math.hypot(v.vx,v.vy)-40)<1e-9);
+  assert.ok(Math.abs(Math.atan2(v.vy,v.vx)-(Math.PI/2-.2))<1e-9);
+});
+test('Focus acquires multiple targets and releases locks when focus ends',()=>{
+  const g=new Game();g.start();g.weapon='homing';g.power=2;
+  g.spawn('fighter',-3,11);g.spawn('fighter',3,11);
+  for(let i=0;i<28;i++)g.update(STEP,{...still,focus:true});
+  assert.equal(g.locks.filter(l=>l.progress===1).length,2);
+  assert.ok(g.bullets.some(b=>b.targetId!==undefined&&b.trail.length>0));
+  g.update(STEP,still);assert.equal(g.locks.length,0);
+});
+function enemyBullet(id,x,y,source){return {id,x,y,px:x,py:y,vx:0,vy:-5,radius:.24,damage:1,enemy:true,homing:false,weapon:'wide',age:0,dead:false,grazed:false,hits:[],color:0xffcc88,source};}
+test('A reactor detonation damages neighbours and cancels only local threats',()=>{
+  const g=new Game();g.start();const cruiser=g.spawn('cruiser',0,3),near=g.spawn('fighter',2,3),far=g.spawn('fighter',8,3);
+  g.bullets.push(enemyBullet(300,1,2),enemyBullet(301,9,2));
+  g.damageEnemy(cruiser,100);
+  assert.ok(near.dead);assert.ok(!far.dead);assert.equal(g.resonances,1);assert.equal(g.cancelled,1);
+  assert.equal(g.bullets[0].dead,true);assert.equal(g.bullets[1].dead,false);
+});
+test('A turret snapshots its aim with a visible preparation window',()=>{
+  const g=new Game();g.start();const tank=g.spawn('tank',5,8);tank.shoot=-2;g.player.x=-4;
+  g.update(STEP,still);assert.equal(tank.charging,true);assert.equal(tank.aimX,-4);
+  assert.ok(tank.shoot>.45);assert.ok(!g.bullets.some(b=>b.enemy));
+  g.player.x=8;for(let i=0;i<32;i++)g.update(STEP,still);
+  const bullet=g.bullets.find(b=>b.enemy&&b.source===tank.id);assert.ok(bullet);assert.ok(bullet.vx<0,'The shot must travel to the locked position, not the new player position');
+});
+test('Breaking a separated boss wing cancels its bullets and keeps other sources',async()=>{
+  const {bossPartPosition}=await import('../app/sim.ts');
+  const g=new Game();g.start();g.stage=1;g.spawnBoss();g.boss.y=9;g.boss.age=12;g.boss.x=Math.sin(12*.55)*2.8;g.boss.spread=1.6;
+  g.boss.parts[0]=1;const pos=bossPartPosition(g.boss,0);
+  g.bullets.push(enemyBullet(401,4,-8,g.boss.id+1),enemyBullet(402,7,-8,g.boss.id+2));
+  g.bullets.push({...enemyBullet(403,pos.x,pos.y-.5),enemy:false,vy:60,damage:10,weapon:'laser'});
+  g.update(STEP,still);
+  assert.equal(g.boss.parts[0],0);assert.equal(g.cancelled,1);
+  assert.ok(g.bullets.some(b=>b.id===402));assert.ok(!g.bullets.some(b=>b.id===401));
+});
+
+test('Boss encounters end within a bounded time instead of permitting endless score farming',()=>{
+  const g=new Game();g.start();g.time=100;g.spawnBoss();g.boss.age=89.8;g.boss.y=9;g.player.x=10;g.player.y=-14;
+  for(let i=0;i<30&&g.state==='playing';i++){g.invulnerable=3;g.update(STEP,still);}
+  assert.equal(g.state,'result');assert.equal(g.won,false);assert.equal(g.failureReason,'timeout');assert.ok(g.boss.hp>0);
+});

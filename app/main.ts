@@ -11,12 +11,14 @@ let toastUntil=0,messageUntil=0,tipUntil=0,lastTime=0,accumulator=0,lastUI=0;
 const keys=new Set<string>();let pointerId:number|null=null,lastPointer={x:0,y:0};
 let target:{x:number;y:number}|undefined,focusPointer:number|null=null;
 let record:Record<string,number>={},padButtons:boolean[]=[];
+const popups:{element:HTMLSpanElement;x:number;y:number;at:number}[]=[];
 try{record=JSON.parse(localStorage.getItem('nova-strike-records-v1')||'{}');const d=localStorage.getItem('nova-strike-difficulty');if(d==='casual'||d==='normal'||d==='expert')difficulty=d;audio.muted=localStorage.getItem('nova-strike-muted')==='true';}catch{/* Storage can be disabled in private browsing. */}
 const scoreText=(s:number)=>Math.floor(s).toString().padStart(7,'0');
 const keyFor=(mode=game.mode)=>mode+':'+difficulty;
 const best=(mode:Mode)=>Math.max(0,Number(record[keyFor(mode)])||0);
 function selectDifficulty(d:Difficulty){difficulty=d;document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.classList.toggle('selected',b.dataset.difficulty===d));el('title-best').textContent=scoreText(best('campaign'));try{localStorage.setItem('nova-strike-difficulty',d);}catch{/* Optional storage. */}}
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
+function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
 function screens(){
   el('title-screen').hidden=game.state!=='title';el('pause-screen').hidden=game.state!=='paused'||!el('help-screen').hidden;
@@ -31,21 +33,21 @@ function showMessage(title:string,caption:string,seconds=2.3,danger=false){
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
   if(!ready)return;void audio.unlock().catch(()=>toast('音声はサウンドボタンで再試行できます'));
-  clearInput();el('help-screen').hidden=true;game.start(mode,difficulty);lastState='title';
+  clearInput();clearPopups();el('help-screen').hidden=true;game.start(mode,difficulty);lastState='title';
   tipUntil=performance.now()+6500;el('touch-tip').hidden=!matchMedia('(pointer:coarse)').matches;
   el('message').classList.remove('show');el('toast').classList.remove('show');screens();
 }
 function pause(){game.pause();clearInput();screens();}
 function resume(){el('help-screen').hidden=true;game.resume();clearInput();lastTime=performance.now();accumulator=0;screens();void audio.unlock().catch(()=>{});}
-function title(){game.state='title';game.enemies=[];game.bullets=[];game.pickups=[];game.boss=null;game.hull=3;game.stage=0;game.player.vx=0;game.player.vy=0;clearInput();el('help-screen').hidden=true;el('touch-tip').hidden=true;el('message').classList.remove('show');el('toast').classList.remove('show');screens();}
+function title(){clearPopups();game.locks=[];game.state='title';game.enemies=[];game.bullets=[];game.pickups=[];game.boss=null;game.hull=3;game.stage=0;game.player.vx=0;game.player.vy=0;clearInput();el('help-screen').hidden=true;el('touch-tip').hidden=true;el('message').classList.remove('show');el('toast').classList.remove('show');screens();}
 function help(){helpFrom=game.state;if(game.state==='playing'||game.state==='transition')pause();el('help-screen').hidden=false;el('pause-screen').hidden=true;}
 function result(){
   clearInput();let newRecord=game.score>best(game.mode);
   if(newRecord){record[keyFor()]=game.score;try{localStorage.setItem('nova-strike-records-v1',JSON.stringify(record));}catch{/* Records remain available during this session. */}}
-  el('result-title').textContent=game.won?game.mode==='caravan'?'TIME COMPLETE':'MISSION COMPLETE':'SIGNAL LOST';
-  el('result-subtitle').textContent=game.won?game.mode==='caravan'?'2分間の戦果。次は、さらに高く。':'星核を回収。夜明けは、ここから。':'機体ロスト。次の出撃へ、経験をつなぐ。';
+  el('result-title').textContent=game.won?game.mode==='caravan'?'TIME COMPLETE':'MISSION COMPLETE':game.failureReason==='timeout'?'TIME LIMIT':'SIGNAL LOST';
+  el('result-subtitle').textContent=game.won?game.mode==='caravan'?'2分間の戦果。次は、さらに高く。':'星核を回収。夜明けは、ここから。':game.failureReason==='timeout'?'制限時間を超過。砲台を壊し、攻撃の合間に本体を狙おう。':'機体ロスト。次の出撃へ、経験をつなぐ。';
   el('final-score').textContent=scoreText(game.score);el('new-record').hidden=!newRecord;
-  el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['秘密のコア',String(game.relics)],['到達セクター',String(game.stage+1)+' / 3'],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
+  el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['ロック撃破',String(game.lockKills)],['弾消し',String(game.cancelled)],['最高メダル',String(game.bestMedal)+' / 5'],['到達セクター',String(game.stage+1)+' / 3'],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
   for(const[label,value]of values){const d=document.createElement('div');d.textContent=label;const s=document.createElement('strong');s.textContent=value;d.append(s);el('result-stats').append(d);}
   el('message').classList.remove('show');el('boss-hud').hidden=true;el('touch-tip').hidden=true;screens();
 }
@@ -101,6 +103,8 @@ function updateUI(now:number){
   if(now-lastUI<65)return;lastUI=now;
   el('score').textContent=scoreText(game.score);el('high').textContent='BEST '+scoreText(Math.max(best(game.mode),game.score));
   el('multiplier').textContent='×'+game.multiplier;
+  el('chain-readout').firstChild!.textContent='CHAIN '+game.chain.toString().padStart(3,'0')+' ';el('chain-fill').style.width=Math.min(100,game.chainTime/3.4*100)+'%';
+  el('focus-caption').textContent=game.weapon==='homing'?'LOCK '+game.locks.filter(l=>l.progress>=1).length:game.weapon==='laser'?'貫通強化':'集中射撃';
   el('hull').innerHTML=Array.from({length:4},(_,i)=>'<i'+(i>=game.hull?' class="empty"':'')+'></i>').join('');
   el('hull').setAttribute('aria-label','残り耐久 '+game.hull);
   el('sector').textContent=game.mode==='caravan'?'残り '+Math.max(0,Math.ceil(120-game.totalTime)).toString().padStart(3,'0')+' s':'SECTOR 0'+(game.stage+1)+' / 03';
@@ -111,16 +115,25 @@ function updateUI(now:number){
   el('nova-button').classList.toggle('ready',game.energy>=100);el('nova-button').classList.toggle('unavailable',game.bombs===0&&game.energy<100);
   el('energy').style.width=game.energy+'%';const boss=game.boss;
   el('boss-hud').hidden=!boss||boss.dead||game.state==='result'||game.state==='title';
-  if(boss){el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ');}
+  if(boss){el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.age))+'s':'');}
   if(now>messageUntil)el('message').classList.remove('show');if(now>toastUntil)el('toast').classList.remove('show');if(now>tipUntil)el('touch-tip').hidden=true;
+}
+function scorePopup(text:string,x:number,y:number,type='score'){
+  if(popups.length>=14){popups.shift()!.element.remove();}
+  const element=document.createElement('span');element.className='score-popup '+(text.startsWith('LOCK')?'lock':type);element.textContent=text;el('score-popups').append(element);popups.push({element,x,y,at:performance.now()});
+}
+function drawPopups(now:number){
+  for(let i=popups.length-1;i>=0;i--){const p=popups[i],age=(now-p.at)/1000;if(age>1){p.element.remove();popups.splice(i,1);continue;}
+    const pos=view.worldToScreen(p.x,p.y);p.element.style.left=pos.x+'px';p.element.style.top=(pos.y-age*28)+'px';p.element.style.opacity=String(Math.min(1,(1-age)*2.8));}
 }
 function events(){
   for(const e of game.drainEvents()){
     view.event(e);audio.event(e);
+    if(e.type==='score'||e.type==='medal'){scorePopup(e.type==='medal'?'MEDAL +'+e.value:e.text||'',e.x??0,e.y??0,e.type);continue;}
     if(e.type==='stage')showMessage(e.text||'','SECTOR 0'+(game.stage+1)+' / '+STAGES[game.stage].jp,2.6);
     else if(e.type==='warning')showMessage('WARNING',e.text||'',2.8,true);
     else if(e.type==='bosskill')showMessage('SECTOR CLEAR',game.mode==='campaign'&&game.stage<2?'TARGET DESTROYED / HULL +1':'TARGET DESTROYED',3.1);
-    else if(e.type==='finish')result();
+    else if(e.type==='finish')continue;
     else if(e.text)toast(e.text);
     if(e.type==='damage'||e.type==='nova'){
       el('flash').className='screen-flash';void el('flash').offsetWidth;el('flash').classList.add(e.type==='damage'?'hit':'nova');
@@ -132,8 +145,8 @@ function loop(now:number){
   const frameMs=lastTime?now-lastTime:16.67;lastTime=now;const dt=Math.min(.05,frameMs/1000);
   accumulator+=dt;const controls=input();let count=0;
   while(accumulator>=STEP&&count<4){game.update(STEP,controls);accumulator-=STEP;count++;}
-  if(game.state!==lastState){lastState=game.state;screens();}
-  events();audio.update(game.state==='playing',game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt,frameMs);updateUI(now);
+  if(game.state!==lastState){lastState=game.state;if(game.state==='result')result();else screens();}
+  events();audio.update(game.state==='playing',game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt,frameMs);drawPopups(now);updateUI(now);
   requestAnimationFrame(loop);
 }
 async function boot(){
