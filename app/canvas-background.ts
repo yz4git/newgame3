@@ -1,0 +1,32 @@
+import {FortressBackground,fortressVariant} from './fortress.ts';
+import {meshSprite} from './canvas-art.ts';
+import {LANDMARKS,stageDistance,zoneAt} from './bg-map.ts';
+import {makeCloud} from './bg-art.ts';
+import {planetMap} from './visual-assets.ts';
+import {Game} from './sim.ts';
+
+/** CPU view caches the same textured meshes, rather than rebuilding a flat map. */
+export class CanvasFortressBackground {
+  private fortress=new FortressBackground();private cloud=makeCloud();private distance=0;private stage=0;
+  private planet?:HTMLCanvasElement;
+  private asset(c:CanvasRenderingContext2D,asset:ReturnType<typeof meshSprite>,x:number,y:number,scale=1){c.save();c.translate(x,y);c.scale(scale,-scale);c.drawImage(asset.canvas,asset.left,-asset.top,asset.width,asset.height);c.restore();}
+  private planetCanvas(){
+    if(this.planet)return this.planet;const canvas=document.createElement('canvas');canvas.width=canvas.height=768;const c=canvas.getContext('2d')!;
+    c.beginPath();c.arc(384,384,350,0,Math.PI*2);c.clip();c.drawImage(planetMap.image,0,0,768,768);
+    const night=c.createLinearGradient(0,0,768,768);night.addColorStop(0,'#071327f2');night.addColorStop(.35,'#072657a0');night.addColorStop(.65,'#07152900');night.addColorStop(1,'#00051290');c.fillStyle=night;c.fillRect(0,0,768,768);
+    c.strokeStyle='#80caff';c.lineWidth=5;c.beginPath();c.arc(384,384,350,0,Math.PI*2);c.stroke();this.planet=canvas;return canvas;
+  }
+  draw(c:CanvasRenderingContext2D,g:Game){
+    this.stage=g.stage;this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(g.time);
+    c.save();c.translate(-14,2-this.distance*.018);c.scale(1,-1);c.drawImage(this.planetCanvas(),-24,-24,48,48);c.restore();
+    c.save();c.globalAlpha=.5;
+    for(let i=0;i<7;i++)this.asset(c,meshSprite('fortress-far-'+g.stage+i,this.fortress.getTemplate(g.stage,i),20),(i%2?1:-1)*17,((i*13-this.distance*.3)%91+91)%91-45,.45);
+    c.globalAlpha=1;const centre=Math.floor(this.distance/8);
+    for(let row=centre-4;row<=centre+5;row++){
+      const v=fortressVariant(g.stage,row),asset=meshSprite('fortress-'+g.stage+'-'+v,this.fortress.getTemplate(g.stage,v),32);this.asset(c,asset,0,row*8-this.distance);
+    }
+    for(let i=0;i<5;i++){const entry=LANDMARKS[g.stage][i],y=entry.distance-this.distance;if(Math.abs(y)>36)continue;this.asset(c,meshSprite('fortress-landmark-'+g.stage+i,this.fortress.getLandmark(g.stage,i),32),entry.x,y);}
+    c.globalAlpha=.13;for(let i=0;i<4;i++){const x=(i%2?1:-1)*18,y=((i*37-this.distance*(i<2?1.38:.16))%126+126)%126-63;c.drawImage(this.cloud,x-15,y-13,30,26);}c.restore();
+  }
+  diagnostics(){return {technique:'TEXTURED 3D BG CHIPS / CPU CACHE',zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:4,speeds:[.30,1,1.38,.16],landmarks:5};}
+}

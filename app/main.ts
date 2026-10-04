@@ -1,4 +1,5 @@
 import './style.css';
+import {loadVisualAssets} from './visual-assets.ts';
 import { Game, STEP, GAME_SPEED, STAGES, W, BOTTOM, TOP, type Difficulty, type Mode } from './sim.ts';
 import { View } from './render.ts';
 import { AudioEngine } from './audio.ts';
@@ -151,6 +152,8 @@ function loop(now:number){
 }
 async function boot(){
   try{
+    el('boot-text').textContent='装甲テクスチャを読み込み中';
+    await loadVisualAssets();
     const rendererMode=new URLSearchParams(location.search).get('renderer');
     try{
       view=rendererMode==='canvas'?new CanvasView(canvas):new View(canvas);

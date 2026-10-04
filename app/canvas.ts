@@ -1,6 +1,7 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 import {shipSprite,bossSprite} from './canvas-art.ts';
-import {CanvasBackground} from './background.ts';
+import {CanvasFortressBackground} from './canvas-background.ts';
+import {explosionMap,visualAssetStatus} from './visual-assets.ts';
 
 // Compatibility view for browsers where all GPU contexts are unavailable.
 // It shares the same fixed-step combat, controls, scores and progression.
@@ -8,7 +9,8 @@ interface Spark {x:number;y:number;vx:number;vy:number;life:number;max:number;co
 export class CanvasView {
   engine='Canvas 2D';quality='COMPATIBLE';
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
-  private background=new CanvasBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
+  private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
+  private explosions:{x:number;y:number;size:number;age:number;life:number}[]=[];
   constructor(private canvas:HTMLCanvasElement){}
   async init(_forceWebGL=false){this.ctx=this.canvas.getContext('2d',{alpha:false})!;if(!this.ctx)throw new Error('No graphics context');this.resize();}
   resize(){const r=this.canvas.parentElement!.getBoundingClientRect();this.width=r.width;this.height=r.height;this.ratio=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(r.width*this.ratio);this.canvas.height=Math.round(r.height*this.ratio);}
@@ -35,6 +37,7 @@ export class CanvasView {
       this.sparks.push({x:e.x||0,y:e.y||0,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life,max:life,color,size:.05+Math.random()*.14});
     }
     if(e.type==='nova'||e.type==='bosskill'||e.type==='resonance'){this.ring={x:e.x||0,y:e.y||0,age:0};this.pulse=.3;}
+    if(['explode','bosskill','damage'].includes(e.type)&&this.explosions.length<32)this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.4,age:0,life:.7});
   }
   draw(g:Game,dt:number,_frameMs:number){
     const c=this.ctx,title=g.state==='title',active=g.state==='playing'||g.state==='transition',stage=g.stage;
@@ -62,9 +65,10 @@ export class CanvasView {
     if(!title&&g.hull>0){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();}
     if(!title&&g.power===4)for(const s of[-1,1]){this.circle(p.x+s*1.45,p.y-.15,.25,'#aedce8');this.circle(p.x+s*1.45,p.y-.05,.13,'#87f9ff');}
     if(active){c.shadowColor='#63dfff';c.shadowBlur=10;this.shape([[p.x-.5,p.y-1.2],[p.x-.62,p.y-1.7-Math.random()*.3],[p.x-.38,p.y-1.7-Math.random()*.3]],'#6bdbff');this.shape([[p.x+.5,p.y-1.2],[p.x+.38,p.y-1.7-Math.random()*.3],[p.x+.62,p.y-1.7-Math.random()*.3]],'#6bdbff');c.shadowBlur=0;}
+    for(const e of this.explosions){e.age+=dt;const t=e.age/e.life,s=e.size*(.25+Math.sin(Math.min(1,t)*Math.PI/2)*.75);c.save();c.globalAlpha=Math.max(0,1-t);c.translate(e.x,e.y);c.scale(1,-1);c.drawImage(explosionMap.image,-s/2,-s/2,s,s);c.restore();}this.explosions=this.explosions.filter(e=>e.age<e.life);
     for(const s of this.sparks){s.life-=dt;if(s.life<=0)continue;s.x+=s.vx*dt;s.y+=s.vy*dt;c.globalAlpha=s.life/s.max;this.rect(s.x,s.y,s.size,s.size*1.5,s.color);}c.globalAlpha=1;this.sparks=this.sparks.filter(s=>s.life>0);
     this.ring.age+=dt;if(this.ring.age<.8){c.globalAlpha=1-this.ring.age/.8;c.strokeStyle='#92f3ff';c.lineWidth=.13;c.beginPath();c.arc(this.ring.x,this.ring.y,this.ring.age*34,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }

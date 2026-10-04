@@ -1,26 +1,14 @@
 import * as T from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Kind } from './sim.ts';
+import {armourMap,planetMap,shipSkin} from './visual-assets.ts';
 
-let panelMap:T.CanvasTexture|undefined;
-function panels(){
-  if(panelMap)return panelMap;
-  const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d')!;
-  ctx.fillStyle='#e5e9eb';ctx.fillRect(0,0,256,256);
-  for(let j=0;j<4;j++)for(let i=0;i<4;i++){
-    const x=i*64,y=j*64;ctx.fillStyle=(i+j)%3===0?'#cdd2d6':'#eef0f1';ctx.fillRect(x+2,y+2,60,60);
-    ctx.strokeStyle='#828d94';ctx.lineWidth=1;ctx.strokeRect(x+2.5,y+2.5,59,59);
-    ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(x+4,y+60);ctx.lineTo(x+59,y+60);ctx.stroke();
-    ctx.fillStyle='#7e8d98';for(const [rx,ry]of[[6,6],[58,6],[6,58],[58,58]])ctx.fillRect(x+rx,y+ry,1.5,1.5);
-    if((i+j)%2===0){ctx.fillStyle='#9aa9b1';ctx.fillRect(x+12,y+19,2,28);ctx.fillRect(x+48,y+36,7,1);}
-  }
-  panelMap=new T.CanvasTexture(canvas);panelMap.colorSpace=T.SRGBColorSpace;panelMap.wrapS=panelMap.wrapT=T.RepeatWrapping;panelMap.anisotropy=4;return panelMap;
-}
-export const metal=(c: number,emission=0)=>new T.MeshStandardMaterial({color:c,map:panels(),metalness:.72,roughness:.34,emissive:c,emissiveIntensity:emission,envMapIntensity:.8});
+export const metal=(c:number,emission=0)=>new T.MeshStandardMaterial({color:c,map:armourMap,bumpMap:armourMap,bumpScale:.027,metalness:.55,roughness:.34,emissive:c,emissiveIntensity:emission,envMapIntensity:1.0});
 export const glow=(c: number,p=2)=>new T.MeshBasicMaterial({color:new T.Color(c).multiplyScalar(p),toneMapped:false});
 const boxGeometry=new T.BoxGeometry(1,1,1);
 const sphereGeometry=new T.IcosahedronGeometry(1,1);
 const shotGeometry=new T.SphereGeometry(1,6,4);
+const shadowProxy=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false});
 const dummy=new T.Object3D();
 export const cyan=glow(0x52e7ff,2.6),gold=glow(0xffc765,2.6),pink=glow(0xff668f,2.0);
 export const white=metal(0xd6e8ee),navy=metal(0x203d60),dark=metal(0x101d30),steel=metal(0x617787);
@@ -30,6 +18,8 @@ export function block(g: T.Group,mat: T.Material,x: number,y: number,z: number,s
 export function hull(g:T.Group,points:number[][],depth:number,mat:T.Material,z=0){
   const s=new T.Shape();s.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)s.lineTo(points[i][0],points[i][1]);s.closePath();
   const geo=new T.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.055,bevelThickness:.045});
+  const pos=geo.getAttribute('position'),uv=geo.getAttribute('uv'),norm=geo.getAttribute('normal');geo.computeBoundingBox();const bounds=geo.boundingBox!;
+  for(let i=0;i<pos.count;i++)if(Math.abs(norm.getZ(i))>.7)uv.setXY(i,(pos.getX(i)-bounds.min.x)/(bounds.max.x-bounds.min.x||1),(pos.getY(i)-bounds.min.y)/(bounds.max.y-bounds.min.y||1));
   const m=new T.Mesh(geo,mat);m.position.z=z;g.add(m);return m;
 }
 export function ball(g:T.Group,mat:T.Material,x:number,y:number,z:number,sx:number,sy=sx,sz=sx){const m=new T.Mesh(sphereGeometry,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m);return m;}
@@ -39,7 +29,7 @@ export function batch(group:T.Group){
     const geo=(o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone()).applyMatrix4(o.matrixWorld);
     const list=bucket.get(o.material)||[];list.push(geo);bucket.set(o.material,list);
   }});
-  const result=new T.Group();for(const [mat,list]of bucket){const geo=mergeGeometries(list,false);if(geo)result.add(new T.Mesh(geo,mat));for(const item of list)item.dispose();}
+  const result=new T.Group();for(const [mat,list]of bucket){const geo=mergeGeometries(list,false);if(geo){const mesh=new T.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;result.add(mesh);}for(const item of list)item.dispose();}
   return result;
 }
 const cockpit=new T.MeshPhysicalMaterial({color:0x163457,metalness:.65,roughness:.13,clearcoat:1,clearcoatRoughness:.08,emissive:0x15516b,emissiveIntensity:.18});
@@ -57,12 +47,18 @@ function vents(g:T.Group,x:number,y:number,z:number,mat:T.Material,count=5,wide=
   block(g,dark,x,y,z,wide+.08,count*.11+.05,.07);
   for(let i=0;i<count;i++)block(g,mat,x,y+(i-(count-1)/2)*.11,z+.05,wide,.035,.035);
 }
+function loft(g:T.Group,sections:number[][],mat:T.Material){
+  const positions:number[]=[],uvs:number[]=[];
+  const point=(i:number,j:number)=>{const[y,w,h,z]=sections[i],a=j/8*Math.PI*2;return [Math.cos(a)*w,y,z+Math.sin(a)*h];};
+  for(let i=0;i<sections.length-1;i++)for(let j=0;j<8;j++)for(const[a,b]of[[i,j],[i+1,j+1],[i+1,j],[i,j],[i,j+1],[i+1,j+1]]){positions.push(...point(a,b));uvs.push(b/8,a/(sections.length-1));}
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.computeVertexNormals();g.add(new T.Mesh(geo,mat));
+}
 export function shipModel(kind:Kind|'player'){
   const g=new T.Group();
   if(kind==='player'){
-    hull(g,[[0,1.9],[-.35,.75],[-.5,-.85],[-.30,-1.35],[.3,-1.35],[.5,-.85],[.35,.75]],.32,white);
+    loft(g,[[1.9,.015,.035,.09],[1.1,.15,.17,.14],[.35,.36,.30,.17],[-.55,.39,.25,.13],[-1.35,.20,.16,.10]],white);
     hull(g,[[0,1.75],[-.14,.9],[-.18,.55],[.18,.55],[.14,.9]],.05,alloy,.34);
-    hull(g,[[0,.85],[-.26,.15],[-.21,-.55],[.21,-.55],[.26,.15]],.23,cockpit,.36);
+    loft(g,[[.88,.025,.025,.36],[.45,.19,.13,.47],[-.10,.22,.19,.46],[-.54,.14,.06,.39]],cockpit);
     block(g,navy,0,-.78,.4,.31,.65,.09);vents(g,0,-.79,.48,alloy,4,.22);
     // Raised canopy frame, nose avionics and split control surfaces.
     hull(g,[[0,1.48],[-.065,1.12],[-.045,.91],[.045,.91],[.065,1.12]],.035,navy,.42);
@@ -90,6 +86,8 @@ export function shipModel(kind:Kind|'player'){
     const paint=kind==='dart'?violet:red,accent=kind==='dart'?pink:gold;
     hull(g,[[0,-1.1],[-.36,-.35],[-.85,.55],[-.68,.85],[-.22,.43],[0,.85],[.22,.43],[.68,.85],[.85,.55],[.36,-.35]],.23,paint);
     hull(g,[[0,-.9],[-.19,-.1],[-.13,.45],[.13,.45],[.19,-.1]],.08,alloy,.25);
+    loft(g,[[.72,.09,.07,.26],[.17,.19,.16,.32],[-.43,.13,.11,.26],[-1.08,.01,.01,.17]],white);
+    for(const s of[-1,1])hull(g,[[s*.28,.20],[s*.73,.60],[s*.67,.77],[s*.26,.40]],.035,white,.28);
     hull(g,[[0,-.45],[-.12,.1],[.12,.1]],.10,cockpit,.34);
     for(const side of[-1,1]){vents(g,side*.49,.44,.27,steel,3,.22);block(g,accent,side*.62,-.02,.28,.065,.36,.05);}
     turbine(g,0,.57,.27,.18,accent);
@@ -97,6 +95,8 @@ export function shipModel(kind:Kind|'player'){
     const paint=kind==='lancer'?alloy:red,accent=kind==='lancer'?pink:gold;
     hull(g,[[0,-1.45],[-.35,-.55],[-1.45,.43],[-1.2,1.02],[-.47,.55],[0,1.20],[.47,.55],[1.2,1.02],[1.45,.43],[.35,-.55]],.4,paint);
     hull(g,[[0,-1.15],[-.22,-.25],[-.19,.55],[.19,.55],[.22,-.25]],.14,dark,.42);
+    loft(g,[[.97,.13,.08,.52],[.25,.32,.23,.57],[-.4,.24,.18,.55],[-1.45,.015,.02,.37]],white);
+    for(const s of[-1,1])hull(g,[[s*.42,.32],[s*1.33,.50],[s*1.10,.86],[s*.40,.53]],.05,white,.44);
     hull(g,[[0,-.75],[-.13,-.25],[.13,-.25]],.09,cockpit,.57);
     for(const side of[-1,1]){
       block(g,steel,side*.85,.21,.44,.36,1,.18);vents(g,side*.85,.31,.57,alloy,5,.25);
@@ -128,15 +128,27 @@ export function shipModel(kind:Kind|'player'){
     const core=ball(g,gold,0,0,.5,.35,.35,.20);core.rotation.z=Math.PI/4;
     for(const side of[-1,1]){block(g,alloy,side*.67,0,.34,.18,1.1,.13);block(g,navy,0,side*.67,.34,1.1,.18,.13);}
   }else{
-    hull(g,[[0,-2.4],[-1.35,-1.3],[-1.85,.9],[-1.5,2],[1.5,2],[1.85,.9],[1.35,-1.3]],.70,navy);
-    hull(g,[[-.8,-1.3],[-.68,1.0],[.68,1.0],[.8,-1.3]],.30,bronze,.70);turbine(g,0,-.15,1.05,.55,gold);
+    hull(g,[[0,-2.4],[-1.1,-1.3],[-1.85,.9],[-1.5,2],[1.5,2],[1.85,.9],[1.1,-1.3]],.66,dark);
+    loft(g,[[2.05,.24,.20,.65],[1.2,.44,.40,.72],[-.15,.49,.37,.75],[-1.7,.24,.19,.61],[-2.48,.025,.03,.42]],white);
+    hull(g,[[-.16,-2.1],[-.29,-.45],[-.26,1.6],[.26,1.6],[.29,-.45],[.16,-2.1]],.10,red,1.12);
+    hull(g,[[-.12,-.95],[-.2,-.12],[.2,-.12],[.12,-.95]],.15,cockpit,1.24);
     for(const side of[-1,1]){
-      block(g,alloy,side*1.25,-.15,.70,.40,2.8,.36);vents(g,side*1.25,.28,.92,steel,9,.32);
-      block(g,gold,side*1.25,-1.5,.81,.28,.12,.08);turbine(g,side*.75,1.30,.83,.27,pink);
-      block(g,red,side*1.2,1.15,.87,.32,.10,.04);
+      hull(g,[[side*.78,-1.3],[side*1.50,-1.8],[side*1.78,-.7],[side*1.69,1.72],[side*.84,1.89]],.60,white,.55);
+      block(g,red,side*1.25,.36,1.19,.33,2.33,.08);vents(g,side*1.25,.28,1.26,steel,8,.38);
+      block(g,alloy,side*1.25,-1.3,.77,.38,1.12,.28);turbine(g,side*1.25,-1.38,1.09,.42,gold);
+      const gun=new T.Mesh(new T.CylinderGeometry(.12,.15,2.5,12),steel);gun.position.set(side*.69,-1.0,.92);g.add(gun);
+      for(let j=0;j<3;j++)block(g,alloy,side*.69,-1.8+j*.70,1.0,.37,.17,.13);
+      block(g,gold,side*.69,-2.3,.93,.13,.10,.10);turbine(g,side*.75,1.56,.94,.27,gold);
+      for(let j=0;j<4;j++)block(g,alloy,side*1.58,-.8+j*.58,1.12,.16,.11,.06);
     }
   }
-  return batch(g);
+  const result=batch(g);if(kind==='player')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(.8,1.14,1.2);});
+  if(kind==='cruiser')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(1.25,1.22,1);});
+  const skin=shipSkin(kind);if(skin){
+    result.traverse(o=>{if(o instanceof T.Mesh)o.material=shadowProxy;});
+    const sprite=new T.Sprite(new T.SpriteMaterial({map:skin.map,color:skin.color,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false}));sprite.name='skin';sprite.position.z=1.62;sprite.scale.set(skin.width,skin.height,1);result.add(sprite);
+  }
+  return result;
 }
 export function bossModel(stage:number){
   const g=new T.Group(),paint=metal([0x627b8c,0x746284,0x666778][stage]),accent=[cyan,pink,gold][stage];
@@ -203,11 +215,8 @@ export function effectTexture(kind:'fire'|'smoke'|'shadow'){
   const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;return texture;
 }
 export function planetModel(){
-  const c=document.createElement('canvas');c.width=1024;c.height=512;const ctx=c.getContext('2d')!;
-  for(let row=0;row<512;row++){
-    const v=.5+.25*Math.sin(row*.037)+.09*Math.sin(row*.171);ctx.fillStyle=`rgb(${Math.round(62+v*46)},${Math.round(66+v*45)},${Math.round(92+v*75)})`;ctx.fillRect(0,row,1024,1);
-  }
-  const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
-  const planet=new T.Mesh(new T.SphereGeometry(18,48,32),new T.MeshStandardMaterial({map:tex,roughness:1,metalness:0}));
-  planet.position.set(-10,27,-27);planet.rotation.z=.27;return planet;
+  const planet=new T.Group();
+  const surface=new T.Mesh(new T.SphereGeometry(23,48,32).toNonIndexed(),new T.MeshStandardMaterial({map:planetMap,roughness:1,metalness:0,color:0x8bb8ec}));surface.rotation.set(.2,1.85,.38);planet.add(surface);
+  const halo=new T.Mesh(new T.SphereGeometry(23.17,48,32).toNonIndexed(),new T.MeshBasicMaterial({color:0x43a3e9,side:T.BackSide,transparent:true,opacity:.54}));planet.add(halo);
+  planet.position.set(-16,9,-50);return planet;
 }

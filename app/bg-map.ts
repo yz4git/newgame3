@@ -5,6 +5,7 @@ export const ATLAS_COLS=8;
 export const CHIP_TYPES=12;
 export const VARIANTS=4;
 export function noise(x:number,y:number,seed=0){let n=Math.imul(x+71,374761393)^Math.imul(y+317,668265263)^Math.imul(seed+1,1274126177);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;}
+export function fortressVariant(stage:number,row:number){const region=Math.floor(Math.max(0,row)/9);return (Math.floor(noise(row,stage,41)*8)+region)%8;}
 export function zoneAt(stage:number,distance:number){
   const zones=stage===0?['harbor','city','garden','spaceport','defense']:stage===1?['debris','crystal','wreck','gate','sanctum']:['intake','foundry','coolant','reactor','heart'];
   const limits=stage===0?[44,112,160,234]:stage===1?[56,126,204,276]:[62,144,224,306];
