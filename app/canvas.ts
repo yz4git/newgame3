@@ -1,5 +1,6 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 import {shipSprite,bossSprite} from './canvas-art.ts';
+import {CanvasBackground} from './background.ts';
 
 // Compatibility view for browsers where all GPU contexts are unavailable.
 // It shares the same fixed-step combat, controls, scores and progression.
@@ -7,7 +8,7 @@ interface Spark {x:number;y:number;vx:number;vy:number;life:number;max:number;co
 export class CanvasView {
   engine='Canvas 2D';quality='COMPATIBLE';
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
-  private scroll=0;private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
+  private background=new CanvasBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   constructor(private canvas:HTMLCanvasElement){}
   async init(_forceWebGL=false){this.ctx=this.canvas.getContext('2d',{alpha:false})!;if(!this.ctx)throw new Error('No graphics context');this.resize();}
   resize(){const r=this.canvas.parentElement!.getBoundingClientRect();this.width=r.width;this.height=r.height;this.ratio=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(r.width*this.ratio);this.canvas.height=Math.round(r.height*this.ratio);}
@@ -37,26 +38,9 @@ export class CanvasView {
   }
   draw(g:Game,dt:number,_frameMs:number){
     const c=this.ctx,title=g.state==='title',active=g.state==='playing'||g.state==='transition',stage=g.stage;
-    this.scroll+=dt*(active?4.4:title?1.4:0);
     c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle=['#060e1b','#0a0621','#110c13'][stage];c.fillRect(0,0,this.width,this.height);
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
-    if(stage===1){
-      for(const[x,y,color]of[[-7,6,'#573572'],[7,-3,'#204a6c']]as[number,number,string][]){const glow=c.createRadialGradient(x,y,0,x,y,17);glow.addColorStop(0,color);glow.addColorStop(1,'#0a062100');c.fillStyle=glow;c.fillRect(-12,-22,24,44);}
-      for(let i=0;i<100;i++){const x=Math.sin(i*48.5)*11.7,y=((i*13.381-this.scroll*.25+12000)%44)-22;this.circle(x,y,i%4===0?.05:.025,i%3===0?'#709ca8':'#506183');}
-      for(let row=-4;row<5;row++){const y=row*6-this.scroll%6;for(const s of[-1,1]){
-        c.save();c.translate(s*11.7,y);c.rotate(row*.3);this.shape([[-1.8,-1],[-1.2,1.8],[.6,2.2],[2,0],[1,-2]],'#343053','#525077');c.restore();this.circle(s*10.6,y+.6,.28,'#9580c3');}}
-    }else{
-      this.rect(-12,-22,24,44,stage===0?'#0d202d':'#202028');
-      for(let row=-6;row<=6;row++){const y=row*4-this.scroll%4;
-        this.rect(-5.5,y,11,3.75,stage===0?'#142b3c':'#24222a');this.rect(-5.5,y+.04,11,.07,'#070f18');
-        for(const s of[-1,1]){
-          this.rect(s*9.0-2.6,y,5.2,3.8,stage===0?'#173b50':'#4c3c3b');this.rect(s*5.75,y,.05,3.7,stage===0?'#3b95ab':'#b35c3d');
-          for(let j=0;j<4;j++)this.rect(s*9.0-2.2+j*1.1,y+.35,.65,.6,stage===0?'#0a1c2c':'#201e24');
-          this.rect(s*8.8-.9,y+1.4,1.8,1.85,stage===0?'#0c2537':'#242a32');this.rect(s*8.8-.32,y+2,.64,.62,stage===0?'#378f9f':'#c67552');
-          if(stage===2){this.rect(s*4.9,y,.12,3.5,'#bd633e');this.rect(s*4.2,y,.04,3.5,'#813d36');}
-        }
-      }
-    }
+    this.background.draw(c,g);
     for(const e of g.enemies)this.ship(e.kind,e.x,e.y,1,e.kind==='dart'?Math.sin(e.age*1.5)*.15:0,e.flash>0);
     const b=g.boss;
     if(b&&!b.dead){
@@ -82,5 +66,5 @@ export class CanvasView {
     this.ring.age+=dt;if(this.ring.age<.8){c.globalAlpha=1-this.ring.age/.8;c.strokeStyle='#92f3ff';c.lineWidth=.13;c.beginPath();c.arc(this.ring.x,this.ring.y,this.ring.age*34,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }

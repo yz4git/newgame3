@@ -29,7 +29,7 @@ export function block(g: T.Group,mat: T.Material,x: number,y: number,z: number,s
 }
 export function hull(g:T.Group,points:number[][],depth:number,mat:T.Material,z=0){
   const s=new T.Shape();s.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)s.lineTo(points[i][0],points[i][1]);s.closePath();
-  const geo=new T.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.07,bevelThickness:.05});
+  const geo=new T.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.055,bevelThickness:.045});
   const m=new T.Mesh(geo,mat);m.position.z=z;g.add(m);return m;
 }
 export function ball(g:T.Group,mat:T.Material,x:number,y:number,z:number,sx:number,sy=sx,sz=sx){const m=new T.Mesh(sphereGeometry,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m);return m;}
@@ -64,6 +64,17 @@ export function shipModel(kind:Kind|'player'){
     hull(g,[[0,1.75],[-.14,.9],[-.18,.55],[.18,.55],[.14,.9]],.05,alloy,.34);
     hull(g,[[0,.85],[-.26,.15],[-.21,-.55],[.21,-.55],[.26,.15]],.23,cockpit,.36);
     block(g,navy,0,-.78,.4,.31,.65,.09);vents(g,0,-.79,.48,alloy,4,.22);
+    // Raised canopy frame, nose avionics and split control surfaces.
+    hull(g,[[0,1.48],[-.065,1.12],[-.045,.91],[.045,.91],[.065,1.12]],.035,navy,.42);
+    for(const s of[-1,1]){
+      hull(g,[[s*.25,.12],[s*.22,-.55],[s*.28,-.58],[s*.32,.13]],.045,alloy,.53);
+      hull(g,[[s*.28,.68],[s*.73,.35],[s*.72,.18],[s*.34,.38]],.065,white,.14);
+      hull(g,[[s*.83,-.72],[s*1.48,-1.10],[s*1.20,-1.20],[s*.78,-.94]],.045,alloy,.28);
+      block(g,dark,s*.60,-.05,.51,.19,.28,.10);
+      block(g,white,s*.62,-.71,.57,.18,.38,.035);
+      for(let i=0;i<3;i++)block(g,red,s*.60,-.58-i*.055,.60,.13,.018,.012);
+      block(g,s<0?pink:cyan,s*1.64,-.87,.24,.055,.12,.035);
+    }
     for(const side of[-1,1]){
       hull(g,[[side*.35,.5],[side*1.78,-.63],[side*1.65,-1.2],[side*.38,-.84]],.16,navy);
       hull(g,[[side*.48,.2],[side*1.6,-.67],[side*1.48,-.95],[side*.50,-.61]],.07,white,.18);
@@ -199,57 +210,4 @@ export function planetModel(){
   const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
   const planet=new T.Mesh(new T.SphereGeometry(18,48,32),new T.MeshStandardMaterial({map:tex,roughness:1,metalness:0}));
   planet.position.set(-10,27,-27);planet.rotation.z=.27;return planet;
-}
-export function terrainDetail(group:T.Group,stage:number,n:number,mats:T.Material[],edge:T.Material,lights:T.Material){
-  if(stage===0){
-    for(const side of[-1,1]){
-      const x=side*(8.2+n%3*.50),y=(n%2?1:-1)*1.1;
-      block(group,mats[2],x,y,-2.8,2.5,3.4,.22);
-      block(group,mats[1],x,y,-2.05,2.10,2.7,1.5+n%3*.28);
-      block(group,mats[0],x,y,-1.14,1.88,2.5,.16);
-      for(let j=0;j<5;j++)block(group,lights,x-side*1.065,y-1.15+j*.48,-1.65,.035,.25,.25);
-      for(let j=0;j<3;j++){block(group,mats[2],x-.6+j*.6,y+.5,-.96,.42,.80,.24);vents(group,x-.6+j*.6,y+.5,-.83,mats[1],4,.27);}
-      block(group,mats[1],x+side*.56,y-.70,-.60,.42,.50,.6);block(group,edge,x+side*.56,y-.70,-.28,.15,.18,.03);
-      // Street trenches, rails and service conduits sit below the flight plane.
-      block(group,mats[2],side*5.35,0,-3.25,.32,8.6,.30);
-      for(let j=0;j<3;j++)block(group,mats[1],side*(5.38+j*.12),0,-3.04,.065,8.5,.055);
-      for(let j=0;j<4;j++)block(group,mats[1],side*6.0,-3+j*2,-2.76,.35,.35,.8);
-    }
-    if(n%3===0){
-      block(group,mats[2],0,1.0,-3.3,10.2,1.6,.18);
-      for(let j=0;j<8;j++)block(group,mats[1],-4.1+j*1.2,1,-3.18,.65,1.1,.025);
-    }
-    for(let j=0;j<5;j++){block(group,lights,0,-3.5+j*1.6,-3.29,.04,.55,.025);for(const side of[-1,1])block(group,mats[1],side*3.5,-3.5+j*1.6,-3.28,.07,.55,.025);}
-    if(n===3||n===8){
-      for(const side of[-1,1]){block(group,mats[1],side*11.2,0,-.1,2.8,6.2,5.0);block(group,mats[0],side*11.2,0,2.4,2.4,5.9,.2);
-        for(let j=0;j<8;j++){block(group,lights,side*9.77,-2.5+j*.7,1.5,.025,.35,.6);block(group,edge,side*11.2,-2.5+j*.7,2.55,1.8,.025,.025);}}
-      block(group,mats[1],0,2.2,-3.0,20,1.3,.85);block(group,mats[2],0,2.2,-2.52,18.7,.85,.13);
-      for(let j=0;j<18;j++)block(group,lights,-8.5+j,2.2,-2.44,.27,.36,.02);
-    }
-  }else if(stage===1){
-    for(const side of[-1,1]){
-      for(let j=0;j<4;j++){
-        const shard=new T.Mesh(new T.ConeGeometry(.46,3.6+j*.4,5),mats[j%2]);shard.position.set(side*(9.1+j*.5),-2+j*1.6,-3.2);shard.rotation.set(.42,0,-side*(.2+j*.07));group.add(shard);
-        const vein=block(group,lights,side*(9.1+j*.5),-.3+j*1.6,-2.1,.055,1.2,.03);vein.rotation.z=-side*.32;
-      }
-      if(n%3===1){const debris=ball(group,mats[2],side*7.2,.5,-5.4,1.4,.7,.6);debris.rotation.z=n*.5;block(group,mats[1],side*7.2,.5,-4.8,2.8,.3,.2);}
-    }
-    if(n%4===1){
-      const arch=new T.Mesh(new T.TorusGeometry(13,.40,8,64),mats[0]);arch.position.set(0,0,-6);arch.rotation.x=.30;group.add(arch);
-      for(let j=0;j<16;j++){const a=j*Math.PI/8,m=block(group,mats[1],Math.cos(a)*13,Math.sin(a)*13,-5.5,1.3,.7,.7);m.rotation.z=a;block(group,edge,Math.cos(a)*12.45,Math.sin(a)*12.45,-5.0,.21,.26,.05);}
-    }
-  }else{
-    for(const side of[-1,1]){
-      for(let j=0;j<7;j++){block(group,mats[2],side*7.3,-3.7+j*1.15,-2.65,1.8,.80,.15);block(group,mats[1],side*7.3,-3.7+j*1.15,-2.42,1.5,.15,.37);}
-      block(group,mats[0],side*9.5,0,-1.7,1.4,7.8,.6);
-      for(let j=0;j<10;j++)block(group,mats[2],side*9.5,-3.4+j*.74,-1.32,1.0,.13,.03);
-      if(n%2===0){const pipe=new T.Mesh(new T.CylinderGeometry(.24,.24,8,10),mats[1]);pipe.position.set(side*6.05,0,-2.85);group.add(pipe);}
-    }
-    if(n%3===1){
-      const vessel=new T.Mesh(new T.CylinderGeometry(3.65,3.65,.45,40),mats[2]);vessel.rotation.x=Math.PI/2;vessel.position.z=-3.45;group.add(vessel);
-      const ring=new T.Mesh(new T.TorusGeometry(3.3,.17,8,48),edge);ring.position.z=-3.12;group.add(ring);
-      disc(group,mats[1],0,0,-3.15,2.8,.2);disc(group,lights,0,0,-2.95,1.8,.025);disc(group,mats[2],0,0,-2.9,1.4,.05);
-      for(let j=0;j<12;j++){const a=j*Math.PI/6,m=block(group,mats[1],Math.cos(a)*2.6,Math.sin(a)*2.6,-2.92,.30,1.10,.25);m.rotation.z=a;}
-    }
-  }
 }

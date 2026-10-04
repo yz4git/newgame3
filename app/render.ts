@@ -1,7 +1,8 @@
 import * as T from 'three/webgpu';
+import { TileBackground } from './background.ts';
 import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import {metal,glow,block,ball,batch,shipModel,bossModel,radialTexture,environmentTexture,effectTexture,planetModel,terrainDetail,cyan,gold,white,steel} from './art.ts';
+import {glow,block,ball,shipModel,bossModel,radialTexture,environmentTexture,effectTexture,planetModel,cyan,gold,white} from './art.ts';
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 
 const boxGeometry=new T.BoxGeometry(1,1,1);
@@ -16,13 +17,13 @@ export class View {
   pipeline: T.RenderPipeline | null=null;engine='';quality='';
   private player=shipModel('player');private satellites:T.Group[]=[];
   private models=new Map<number,T.Group>();private templates=new Map<Kind,T.Group>();private boss:T.Group|null=null;private bossStage=-1;
-  private theme=-1;private terrain:T.Group[]=[];private terrainRoot=new T.Group();private terrainMaterials:T.Material[]=[];private atmosphere=new T.Group();
+  private theme=-1;private background=new TileBackground();private atmosphere=new T.Group();
   private stars:T.InstancedMesh;private starData:Float32Array;
   private shots:T.InstancedMesh;private shotColor=new T.Color();private particles:Particle[]=[];private sparkMesh:T.InstancedMesh;
   private shotRims:T.InstancedMesh;private shotCores:T.InstancedMesh;private trails:T.InstancedMesh;private shadows:T.InstancedMesh;
   private markers:T.InstancedMesh;private aimLines:T.InstancedMesh;private flames:T.Sprite[]=[];private flares:Flare[]=[];
   private fireMap=effectTexture('fire');private smokeMap=effectTexture('smoke');
-  private lockMarkers=new Map<number,T.Group>();private terrainRotors:T.Object3D[]=[];
+  private lockMarkers=new Map<number,T.Group>();
   private pickups=new Map<number,T.Group>();private ring:T.Mesh;private indicator:T.Group;
   private beam:T.Mesh;private warning:T.Mesh;private shake=0;private spriteTexture=radialTexture();
   private frameAverage=16.6;private frames=0;private pixelRatio=1.5;private lastDprChange=0;
@@ -33,7 +34,7 @@ export class View {
     this.scene.add(new T.HemisphereLight(0xb9e7ff,0x18162c,2.0));
     const key=new T.DirectionalLight(0xe6f8ff,3.0);key.position.set(-10,18,28);this.scene.add(key);
     const rim=new T.DirectionalLight(0x526bff,2.0);rim.position.set(16,-5,12);this.scene.add(rim);
-    this.scene.add(this.terrainRoot,this.atmosphere);this.player.position.z=1.0;this.scene.add(this.player);
+    this.scene.add(this.background.root,this.atmosphere);this.player.position.z=1.0;this.scene.add(this.player);
     for(const s of[-1,1]){const satellite=new T.Group();ball(satellite,white,0,0,0,.3,.4,.23);ball(satellite,cyan,0,.15,.22,.14,.2,.06);satellite.position.z=1;this.satellites.push(satellite);this.scene.add(satellite);}
     const bulletMat=new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
     this.shots=new T.InstancedMesh(shotGeometry,bulletMat,740);this.shots.setColorAt(0,new T.Color(0xffffff));this.shots.instanceColor!.setUsage(T.DynamicDrawUsage);
@@ -94,51 +95,6 @@ export class View {
       const cloud=new T.Sprite(new T.SpriteMaterial({map:this.spriteTexture,color:[0x7650d3,0x3158ac,0x78418f][i],transparent:true,opacity:.24,depthWrite:false}));
       cloud.position.set((i-1)*9,6-i*9,-25);cloud.scale.set(46,45,1);this.atmosphere.add(cloud);
     }
-    for(const chunk of this.terrain){chunk.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.terrainRoot.remove(chunk);}this.terrain=[];this.terrainRotors=[];
-    for(const m of this.terrainMaterials)m.dispose();this.terrainMaterials=[];
-    const mats=stage===1?[new T.MeshStandardMaterial({color:0x463b69,metalness:.08,roughness:.66,flatShading:true}),new T.MeshStandardMaterial({color:0x536d86,metalness:.12,roughness:.56,flatShading:true}),metal(0x1d2135)]:[metal([0x294453,0,0x37313a][stage]),metal([0x2e4c5d,0,0x61504b][stage]),metal([0x0d1c2b,0,0x1a1c24][stage])];
-    const lights=glow(STAGES[stage].color,.48),edge=glow(STAGES[stage].color,1.15);this.terrainMaterials=[...mats,lights,edge];
-    for(let n=0;n<11;n++){
-      const group=new T.Group();
-      if(stage!==1){
-        block(group,mats[2],0,0,-3.9,29,9,.3);
-        for(let i=0;i<4;i++){
-          const y=-3.75+i*2.25;
-          block(group,mats[0],0,y,-3.6,stage===0?11:6,2.1,.18);
-          for(const s of[-1,1]){
-            block(group,mats[1],s*8.4,y,-3.4,4.5,2,.35);
-            block(group,lights,s*(stage===0?5.8:3.3),y,-3.3,.055,1.7,.02);
-            for(let j=0;j<3;j++)block(group,mats[2],s*(6.8+j*.8),y+.25,-3.13,.6,1.0,.14);
-          }
-        }
-      }
-      for(const s of[-1,1]){
-        const h=1.4+(n%3)*1.2;
-        if(stage===0){
-          block(group,mats[1],s*12.6,.3,-2.0,3,6.5,h);block(group,mats[0],s*12.6,.3,-2+h*.5,2.5,5.7,.15);
-          for(let i=0;i<6;i++){block(group,lights,s*11.0,-2+i*1.0,-2+h*.35,.03,.45,.18);block(group,edge,s*12.7,-2+i*.9,-1+h*.5,.9,.035,.025);}
-          block(group,mats[1],s*7.4,2,-2.65,2.3,2.1,.9);block(group,mats[0],s*7.4,2,-2.0,1.7,1.5,.3);block(group,lights,s*7.4,2,-1.8,.7,.7,.035);
-        }else if(stage===1){
-          for(let j=0;j<3;j++){
-            const b=ball(group,mats[j%2],s*(11.5+(n%2)),j*2.5-2,-4+j*.6,2.2,2.4,2.0);b.rotation.set(n*.7,j*.8,n);
-            const shard=new T.Mesh(new T.ConeGeometry(.30,1.3,5),lights);shard.position.set(s*10.5,j*2.5-1.8,-3+j*.6);shard.rotation.z=n;group.add(shard);
-          }
-          if(n%3===0){const ring=new T.Mesh(new T.TorusGeometry(14,.25,6,64),mats[1]);ring.position.set(0,1,-7);ring.rotation.x=.3;group.add(ring);
-            for(let j=0;j<12;j++){const a=j/12*Math.PI*2;block(group,edge,Math.cos(a)*14,Math.sin(a)*14+1,-6.5,.17,.85,.05);}}
-        }else{
-          block(group,mats[1],s*10.8,0,-2.6,5,8,1.4);
-          for(let j=0;j<4;j++){block(group,mats[0],s*10.8,-3+j*2,-1.25,4.8,.6,.8);block(group,edge,s*8.6,-3+j*2,-1,.05,.5,.1);}
-          block(group,lights,s*4.5,0,-3.4,1.0,8.5,.03);block(group,mats[2],s*4.5,0,-3.3,.55,8.7,.08);
-          if(n%2===0){block(group,mats[0],s*7,1,-2.3,2,2,1.4);ball(group,edge,s*7,1,-1.55,.45,.45,.1);}
-        }
-      }
-      terrainDetail(group,stage,n,mats,edge,lights);
-      const chunk=batch(group);chunk.position.y=n*9-40;this.terrain.push(chunk);this.terrainRoot.add(chunk);
-      if(stage===2&&n%3===1){
-        const rotor=new T.Mesh(new T.TorusGeometry(2.05,.10,8,40),mats[1]);rotor.position.z=-2.82;chunk.add(rotor);this.terrainRotors.push(rotor);
-        for(let j=0;j<4;j++){const m=block(chunk,mats[0],Math.cos(j*Math.PI/2)*2.1,Math.sin(j*Math.PI/2)*2.1,-2.75,.8,.28,.12);this.terrainRotors.push(m);}
-      }
-    }
     this.scene.background=new T.Color([0x040c18,0x09051b,0x0c080e][stage]);
   }
   event(e:GameEvent){
@@ -169,8 +125,7 @@ export class View {
     this.epoch+=dt;this.setTheme(game.stage);
     const active=game.state==='playing'||game.state==='transition',title=game.state==='title';
     const scroll=active?4.4:title?1.4:0;
-    for(const chunk of this.terrain){chunk.position.y-=scroll*dt;if(chunk.position.y<-47)chunk.position.y+=99;}
-    for(const rotor of this.terrainRotors)rotor.rotation.z+=dt*.4;
+    this.background.draw(game);
     for(let i=0;i<200;i++){
       this.starData[i*4+1]-=scroll*dt*.25;if(this.starData[i*4+1]<-40)this.starData[i*4+1]+=80;
       dummy.position.set(this.starData[i*4],this.starData[i*4+1],this.starData[i*4+2]);dummy.scale.setScalar(this.starData[i*4+3]);dummy.rotation.set(0,0,0);dummy.updateMatrix();this.stars.setMatrixAt(i,dummy.matrix);
@@ -267,5 +222,5 @@ export class View {
     if(this.pipeline&&this.useBloom&&this.pixelRatio<=1.01&&this.frames>300&&this.epoch-this.lastDprChange>7&&this.frameAverage>32){this.useBloom=false;this.quality='PERFORMANCE';}
     if(this.pipeline&&this.useBloom)this.pipeline.render();else this.renderer.render(this.scene,this.camera);
   }
-  getDiagnostics(){return {engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
 }
