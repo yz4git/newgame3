@@ -1,0 +1,98 @@
+[
+  {
+    "name": "aegis",
+    "file": "app/textures/boss-aegis-v8.webp",
+    "originalFile": "exec-608b08a7-133b-4eae-b8b8-2e3241d0ec6a.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production game boss cutout texture for NOVA STRIKE, a realistic top-down science fiction vertical shooter. Render a single complete original mechanical boss spacecraft in a high-detail physically shaded game art style. Wide 3:2 canvas, exactly overhead view, perfectly bilateral symmetry. Entire silhouette visible with generous transparent margins, no ground, no shadow outside silhouette, no stars, no lettering, no watermark. The FRONT faces DOWN. Layout for an articulated renderer: narrow central reactor/spine fits the middle vertical third; two separated weapon/engine pods occupy the left and right thirds, connected only by slim struts. Keep each outer pod mostly in its own third. Central exposed round reactor at x50%, y62%; two downward firing muzzles on pods at x19% and81%, y73%. Small cyan lights, tiny maintenance panels, rivets, layered armor, real depth. Preserve clean readable edges, lighting from upper left, rich midtone detail. Transparent background with genuine alpha. Design: AEGIS, orbital ring defense commander. Navy gunmetal and ivory aerospace plates, violet reactor; two chunky segmented half-ring outrigger pods, brass coil cannons and solar radiator fins. Sophisticated industrial satellite architecture, powerful readable silhouette."
+  },
+  {
+    "name": "leviathan",
+    "file": "app/textures/boss-leviathan-v8.webp",
+    "originalFile": "exec-0b69b347-030f-4f65-8249-f79073a39a62.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production game boss cutout texture for NOVA STRIKE, a realistic top-down science fiction vertical shooter. Render a single complete original mechanical boss spacecraft in a high-detail physically shaded game art style. Wide 3:2 canvas, exactly overhead view, perfectly bilateral symmetry. Entire silhouette visible with generous transparent margins, no ground, no shadow outside silhouette, no stars, no lettering, no watermark. The FRONT faces DOWN. Layout for an articulated renderer: narrow central reactor/spine fits the middle vertical third; two separated weapon/engine pods occupy the left and right thirds, connected only by slim struts. Keep each outer pod mostly in its own third. Central exposed round reactor at x50%, y62%; two downward firing muzzles on pods at x19% and81%, y73%. Small cyan lights, tiny maintenance panels, rivets, layered armor, real depth. Preserve clean readable edges, lighting from upper left, rich midtone detail. Transparent background with genuine alpha. Design: LEVIATHAN, ocean fleet suppression craft. Long pale silver catamaran-style armored hydrofoil hull; two broad rounded naval weapon pods, blue-black deck plates and brass twin guns. Central sleek ship bow, teal reactor, rear turbine vents. No water and no wake baked into the art."
+  },
+  {
+    "name": "helix",
+    "file": "app/textures/boss-helix-v8.webp",
+    "originalFile": "exec-3a421ab8-05bd-46fe-b657-9c57cc03b99b.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production game boss cutout texture for NOVA STRIKE, a realistic top-down science fiction vertical shooter. Render a single complete original mechanical boss spacecraft in a high-detail physically shaded game art style. Wide 3:2 canvas, exactly overhead view, perfectly bilateral symmetry. Entire silhouette visible with generous transparent margins, no ground, no shadow outside silhouette, no stars, no lettering, no watermark. The FRONT faces DOWN. Layout for an articulated renderer: narrow central reactor/spine fits the middle vertical third; two separated weapon/engine pods occupy the left and right thirds, connected only by slim struts. Keep each outer pod mostly in its own third. Central exposed round reactor at x50%, y62%; two downward firing muzzles on pods at x19% and81%, y73%. Small cyan lights, tiny maintenance panels, rivets, layered armor, real depth. Preserve clean readable edges, lighting from upper left, rich midtone detail. Transparent background with genuine alpha. Design: HELIX, orbital citadel reactor carrier. Angular white ceramic and dark titanium fortress core; two enormous rectilinear hexagonal turret pods, cobalt luminous reactor, gold heat pipes, nested fortress plates, railgun housings. Monumental precision engineering, no red paint."
+  },
+  {
+    "name": "borealis",
+    "file": "app/textures/boss-borealis-v8.webp",
+    "originalFile": "exec-4c8aa6c4-6514-4930-b15c-7692dc5c3626.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production game boss cutout texture for NOVA STRIKE, a realistic top-down science fiction vertical shooter. Render a single complete original mechanical boss spacecraft in a high-detail physically shaded game art style. Wide 3:2 canvas, exactly overhead view, perfectly bilateral symmetry. Entire silhouette visible with generous transparent margins, no ground, no shadow outside silhouette, no stars, no lettering, no watermark. The FRONT faces DOWN. Layout for an articulated renderer: narrow central reactor/spine fits the middle vertical third; two separated weapon/engine pods occupy the left and right thirds, connected only by slim struts. Keep each outer pod mostly in its own third. Central exposed round reactor at x50%, y62%; two downward firing muzzles on pods at x19% and81%, y73%. Small cyan lights, tiny maintenance panels, rivets, layered armor, real depth. Preserve clean readable edges, lighting from upper left, rich midtone detail. Transparent background with genuine alpha. Design: BOREALIS, arctic guardian. Silver and blue-grey plated spine, cyan reactor. Broad outer turbine pods clad in sharp translucent ice-blue crystalline armor, distinct layered angular crystalline fins at rear. Elegant icy geometry with precise bronze hardware visible underneath; no floating loose ice and no frost background."
+  },
+  {
+    "name": "verdant",
+    "file": "app/textures/boss-verdant-v8.webp",
+    "originalFile": "exec-12f4c883-f39a-42e3-aeba-8e0d6e35f19f.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production game boss cutout texture for NOVA STRIKE, a realistic top-down science fiction vertical shooter. Render a single complete original mechanical boss spacecraft in a high-detail physically shaded game art style. Wide 3:2 canvas, exactly overhead view, perfectly bilateral symmetry. Entire silhouette visible with generous transparent margins, no ground, no shadow outside silhouette, no stars, no lettering, no watermark. The FRONT faces DOWN. Layout for an articulated renderer: narrow central reactor/spine fits the middle vertical third; two separated weapon/engine pods occupy the left and right thirds, connected only by slim struts. Keep each outer pod mostly in its own third. Central exposed round reactor at x50%, y62%; two downward firing muzzles on pods at x19% and81%, y73%. Small cyan lights, tiny maintenance panels, rivets, layered armor, real depth. Preserve clean readable edges, lighting from upper left, rich midtone detail. Transparent background with genuine alpha. Design: VERDANT, ancient jungle guardian machine. Moss-green weathered bronze and basalt-black panels; jade reactor, fan-like segmented mechanical leaf armor around the outer turret pods. Ancient sacred geometry fused with highly detailed precision machinery, angular gold filigree and exposed green heat channels. No plants outside the silhouette."
+  },
+  {
+    "name": "pyra",
+    "file": "app/textures/boss-pyra-v8.webp",
+    "originalFile": "exec-fd8a38fe-be85-4932-841f-30455fa891e9.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production game boss cutout texture for NOVA STRIKE, a realistic top-down science fiction vertical shooter. Render a single complete original mechanical boss spacecraft in a high-detail physically shaded game art style. Wide 3:2 canvas, exactly overhead view, perfectly bilateral symmetry. Entire silhouette visible with generous transparent margins, no ground, no shadow outside silhouette, no stars, no lettering, no watermark. The FRONT faces DOWN. Layout for an articulated renderer: narrow central reactor/spine fits the middle vertical third; two separated weapon/engine pods occupy the left and right thirds, connected only by slim struts. Keep each outer pod mostly in its own third. Central exposed round reactor at x50%, y62%; two downward firing muzzles on pods at x19% and81%, y73%. Small cyan lights, tiny maintenance panels, rivets, layered armor, real depth. Preserve clean readable edges, lighting from upper left, rich midtone detail. Transparent background with genuine alpha. Design: PYRA, volcanic foundry siege craft. Charcoal armored central furnace, amber reactor, heavy copper-orange outer industrial gun pods. Open glowing orange vent slits, overlapping heat-shield plates, hydraulics, blast doors, brass siege cannons. No smoke or flame outside silhouette; keep clear readable unglowing armor detail."
+  },
+  {
+    "name": "nova",
+    "file": "app/textures/nova-shockwave-v8.webp",
+    "originalFile": "exec-c3113769-516d-4988-8d38-34d127fc4f8c.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: transparent energy shockwave VFX for a polished top-down sci-fi shooter. A single circular expanding blast front seen exactly face on, bright white-cyan irregular plasma rim, several fine layered curling filaments, fractured electric spray, soft atmospheric diffusion. Very large empty genuinely transparent center, all corners fully transparent; pale neutral light suitable for additive tinting. Thin energetic ring occupies 65 percent of square canvas. No solid disc, no UI markings, no text, no black background, no checker pattern baked in. High-detail physically rendered cinematic shockwave."
+  },
+  {
+    "name": "debris",
+    "file": "app/textures/metal-debris-v8.webp",
+    "originalFile": "exec-f2df86bd-fb49-4ec2-bd4d-58b7164a299f.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: game VFX sprite atlas, genuine transparent alpha, square 2 by 2 grid with four separate metal fragments, one object centered in each identical cell, generous clear transparent padding. Upper left: jagged torn titanium armor plate with rivets and a tiny orange hot cut edge. Upper right: shattered brass turbine fragment with exposed wiring. Lower left: pale ceramic panel chunk with charcoal fracture and faint ember. Lower right: fractured dark gunmetal mechanical strut with copper cable. High-detail realistic top-down game rendering, consistent upper-left light, distinct silhouettes, no ground shadows, no smoke, no labels, no text, no contact between cells."
+  },
+  {
+    "name": "scorch",
+    "file": "app/textures/scorch-decal-v8.webp",
+    "originalFile": "exec-2d311e25-93d7-4417-9979-b7a4f46b410e.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: transparent battle damage overlay for a sci-fi ship, flat face-on decal. A single irregular scorched impact cavity: dark charcoal chipped metal, radial hairline fracture, a few tiny warm ember flecks, subtle gray soot tapering outward into genuine transparent alpha. Broad shallow elliptical patch, centered, no perspective, no separate plate, no material outside the burn decal, no scene, no text, no black rectangle, no checker pattern. Fine physically realistic surface damage, soft edges, very low orange glow so it can overlay pale ship armor."
+  },
+  {
+    "name": "nebula",
+    "file": "app/textures/nebula-veil-v8.webp",
+    "originalFile": "exec-f1add0fa-6eba-429b-bda6-9a1bf34bc199.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: genuinely transparent foreground nebula veil for layered backgrounds in a realistic top-down space shooter. A wide 3:2 diffuse wispy ion-cloud formation, dim violet and cobalt-blue dust filaments, tiny pale internal glows, branching organic structure, physically realistic astronomical texture. Soft sparse translucent opacity, most of the canvas is transparent; completely transparent perimeter and corners, no stars, no planet, no ship, no hard edge, no scene background, no lettering. Designed for gentle additive parallax over black space, keep the middle relatively clear for reading gameplay."
+  },
+  {
+    "name": "aurora",
+    "file": "app/textures/aurora-curtain-v8.webp",
+    "originalFile": "exec-5990359a-87d2-4d3e-9544-13c34645a7d0.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: transparent flowing aurora-light ribbon for a glacial sci-fi game's background. Wide 3:2 composition. One elegant wide curved cyan and pale emerald auroral curtain, delicate vertically striated luminous folds, misty blue edge, slight flowing S shape across the canvas. Center relatively thin and open. Genuine translucent alpha, diffuse transparent perimeter and corners, no sky, no mountains, no stars, no landscape, no text, no opaque black backdrop. Sophisticated subtle physically rendered atmospheric light for animated additive compositing."
+  },
+  {
+    "name": "shafts",
+    "file": "app/textures/sunlight-shafts-v8.webp",
+    "originalFile": "exec-779fb8c2-47b1-470f-b97a-294945755964.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: transparent volumetric sunlight shafts for a top-down jungle and ocean game's layered scenery. Wide 3:2 image of several very soft broad diagonal light rays running from upper left to lower right, pale warm white sunbeam ribbons with tiny sparse motes, naturally diffuse broken edges, realistic atmospheric scattering. Dim low-contrast translucent alpha so objects behind remain readable. Entire perimeter feathers to complete transparency, no scene, no trees, no ground, no sky, no flare point, no text, no opaque rectangle, no black background."
+  }
+]

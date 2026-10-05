@@ -2,7 +2,8 @@ import './style.css';
 import {loadVisualAssets} from './visual-assets.ts';
 import { Game, STEP, GAME_SPEED, STAGES, W, BOTTOM, TOP, type Difficulty, type Mode } from './sim.ts';
 import { View } from './render.ts';
-import { AudioEngine } from './audio.ts';
+import { AudioEngine } from './audio-engine.ts';
+import type {SoundBus} from './sound-design.ts';
 import { CanvasView } from './canvas.ts';
 import {stageCue} from './motion.ts';
 import {zoneAt,stageDistance} from './bg-map.ts';
@@ -29,7 +30,7 @@ selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND O
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
 function screens(){
-  el('title-screen').hidden=game.state!=='title';el('pause-screen').hidden=game.state!=='paused'||!el('help-screen').hidden;
+  el('title-screen').hidden=game.state!=='title';el('pause-screen').hidden=game.state!=='paused'||!el('help-screen').hidden||!el('audio-screen').hidden;
   el('result-screen').hidden=game.state!=='result';const active=['playing','paused','transition'].includes(game.state);
   el('hud').hidden=!active;el('controls').hidden=!active||game.state==='paused';
   if(game.state==='title'){el('title-best').textContent=scoreText(best('campaign'));el('boss-hud').hidden=true;}
@@ -41,7 +42,7 @@ function showMessage(title:string,caption:string,seconds=2.3,danger=false){
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
   if(!ready)return;void audio.unlock().catch(()=>toast('音声はサウンドボタンで再試行できます'));
-  clearInput();clearPopups();el('help-screen').hidden=true;game.start(mode,difficulty,selectedStage);lastState='title';
+  clearInput();clearPopups();el('help-screen').hidden=true;el('audio-screen').hidden=true;game.start(mode,difficulty,selectedStage);lastState='title';
   tipUntil=performance.now()+6500;el('touch-tip').hidden=!matchMedia('(pointer:coarse)').matches;
   el('message').classList.remove('show');el('toast').classList.remove('show');screens();
 }
@@ -71,6 +72,12 @@ actionButton('help-back',()=>{el('help-screen').hidden=true;if(helpFrom==='title
 actionButton('weapon-button',()=>{if(game.state==='playing')game.cycleWeapon();},true);
 actionButton('nova-button',()=>{if(!game.nova()&&game.state==='playing')toast('撃破・かすりでゲージを充填');},true);
 actionButton('sound-button',()=>{void audio.unlock().catch(()=>{});const muted=audio.toggle();el('sound-button').textContent=muted?'SOUND OFF':'SOUND ON';try{localStorage.setItem('nova-strike-muted',String(muted));}catch{/* Optional storage. */}});
+function soundSettings(){if(game.state==='playing'||game.state==='transition')pause();el('audio-screen').hidden=false;screens();el('audio-toggle').textContent=audio.muted?'SOUND OFF':'SOUND ON';for(const bus of ['master','music','effects'] as SoundBus[]){el<HTMLInputElement>('volume-'+bus).value=String(Math.round(audio.volumes[bus]*100));el('level-'+bus).textContent=Math.round(audio.volumes[bus]*100)+'%';}}
+actionButton('audio-settings-button',soundSettings);actionButton('pause-audio-button',soundSettings);
+actionButton('audio-back',()=>{el('audio-screen').hidden=true;screens();});
+actionButton('audio-preview',()=>{void audio.unlock().then(()=>audio.preview()).catch(()=>toast('サウンドボタンからもう一度お試しください'));});
+actionButton('audio-toggle',()=>{void audio.unlock().catch(()=>{});audio.toggle();const text=audio.muted?'SOUND OFF':'SOUND ON';el('sound-button').textContent=text;el('audio-toggle').textContent=text;try{localStorage.setItem('nova-strike-muted',String(audio.muted));}catch{/* Optional storage. */}});
+for(const bus of ['master','music','effects'] as SoundBus[])el<HTMLInputElement>('volume-'+bus).addEventListener('input',e=>{audio.setVolume(bus,Number((e.target as HTMLInputElement).value)/100);el('level-'+bus).textContent=Math.round(audio.volumes[bus]*100)+'%';});
 document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>selectDifficulty(b.dataset.difficulty as Difficulty)));
 function bindCanvas(){canvas.addEventListener('pointerdown',e=>{
   if(game.state!=='playing'||pointerId!==null)return;e.preventDefault();pointerId=e.pointerId;lastPointer=view.pointerToWorld(e.clientX,e.clientY);target={x:game.player.x,y:game.player.y};canvas.setPointerCapture(e.pointerId);el('touch-tip').hidden=true;
@@ -84,10 +91,10 @@ canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercan
 el('focus-button').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();focusPointer=e.pointerId;el('focus-button').setPointerCapture(e.pointerId);el('focus-button').classList.add('held');});
 for(const event of['pointerup','pointercancel','lostpointercapture'])el('focus-button').addEventListener(event,e=>{if((e as PointerEvent).pointerId===focusPointer){focusPointer=null;el('focus-button').classList.remove('held');}});
 window.addEventListener('keydown',e=>{
-  if(e.target instanceof HTMLSelectElement)return;
+  if((e.target instanceof HTMLSelectElement||e.target instanceof HTMLInputElement)&&!(e.code==='Escape'&&!el('audio-screen').hidden))return;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab'].includes(e.code)&&e.code!=='Tab')e.preventDefault();
   if(e.repeat)return;keys.add(e.code);
-  if(e.code==='Escape'||e.code==='KeyP'){if(!el('help-screen').hidden){el('help-screen').hidden=true;screens();}else if(game.state==='paused')resume();else pause();}
+  if(e.code==='Escape'||e.code==='KeyP'){if(!el('audio-screen').hidden){el('audio-screen').hidden=true;screens();}else if(!el('help-screen').hidden){el('help-screen').hidden=true;screens();}else if(game.state==='paused')resume();else pause();}
   if(e.code==='KeyC'&&game.state==='playing')game.cycleWeapon();
   if(['Space','KeyX'].includes(e.code))game.nova();
   if(e.code==='Enter'&&game.state==='title')start('campaign');
@@ -149,7 +156,7 @@ function drawPopups(now:number){
 }
 function events(){
   for(const e of game.drainEvents()){
-    view.event(e);audio.event(e);
+    view.event(e);audio.event(e.type==='shot'?{...e,x:game.player.x}:e,game.weapon);
     if(e.type==='score'||e.type==='medal'){scorePopup(e.type==='medal'?'MEDAL +'+e.value:e.text||'',e.x??0,e.y??0,e.type);continue;}
     if(e.type==='stage'){lastCueKey='';el('message').classList.remove('show');}
     else if(e.type==='warning')el('touch-tip').hidden=true;
@@ -168,7 +175,7 @@ function loop(now:number){
   accumulator+=dt;const controls=input();let count=0;
   while(accumulator>=STEP&&count<4){game.update(STEP,controls);accumulator-=STEP;count++;}
   if(game.state!==lastState){lastState=game.state;if(game.state==='result')result();else screens();}
-  events();audio.update(game.state==='playing',game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt*GAME_SPEED,frameMs);drawPopups(now);updateUI(now);
+  events();audio.update(game.state,game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt*GAME_SPEED,frameMs);drawPopups(now);updateUI(now);
   requestAnimationFrame(loop);
 }
 async function boot(){
@@ -187,7 +194,7 @@ async function boot(){
     bindCanvas();ready=true;el('boot').hidden=true;screens();
     new ResizeObserver(()=>view.resize()).observe(el('frame'));
     window.addEventListener('pageshow',e=>{if(e.persisted){clearInput();lastTime=performance.now();accumulator=0;}});
-    Object.assign(window,{__nova:{game,view,start,pause,resume,snapshot:()=>({...game.snapshot(),render:view.getDiagnostics()})}});
+    Object.assign(window,{__nova:{game,view,audio,start,pause,resume,snapshot:()=>({...game.snapshot(),render:view.getDiagnostics(),sound:audio.diagnostics()})}});
     if('serviceWorker'in navigator&&!import.meta.env.DEV){
       void navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
         void reg.update();reg.addEventListener('updatefound',()=>{const sw=reg.installing;sw?.addEventListener('statechange',()=>{if(sw.state==='installed'&&navigator.serviceWorker.controller)el('update-button').hidden=false;});});

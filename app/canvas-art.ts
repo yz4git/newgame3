@@ -1,7 +1,7 @@
 import * as T from 'three/webgpu';
 import { shipModel, bossModel } from './art.ts';
 import type { Kind } from './sim.ts';
-import {shipSkin} from './visual-assets.ts';
+import {shipSkin,bossSkin,bossMaps} from './visual-assets.ts';
 import {skinWarp} from './motion.ts';
 
 interface SpriteAsset { canvas:HTMLCanvasElement;left:number;top:number;width:number;height:number; }
@@ -62,6 +62,13 @@ export function shipSprite(kind:Kind|'player'){
 }
 export function bossSprite(stage:number,part:'core'|'wing0'|'wing1'){
   const key='boss'+stage+part,existing=cache.get(key);if(existing)return existing;
+  const index=part==='core'?0:part==='wing0'?1:2,skin=bossSkin(stage,index);
+  if(skin){
+    for(const k of cache.keys())if(k.startsWith('boss')&&!k.startsWith('boss'+stage))cache.delete(k);
+    const image=bossMaps[stage].image as unknown as HTMLImageElement,col=[1,0,2][index],canvas=document.createElement('canvas');canvas.width=Math.round(image.width/3);canvas.height=image.height;
+    canvas.getContext('2d')!.drawImage(image,col*image.width/3,0,image.width/3,image.height,0,0,canvas.width,canvas.height);
+    const result={canvas,left:skin.x-skin.width/2,top:skin.height/2,width:skin.width,height:skin.height};cache.set(key,result);return result;
+  }
   const model=bossModel(stage);
   if(part==='core'){for(let i=0;i<2;i++)model.remove(model.getObjectByName('wing'+i)!);}
   else {const wing=model.getObjectByName(part)!;model.clear();model.add(wing);}

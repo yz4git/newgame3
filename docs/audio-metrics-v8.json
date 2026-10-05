@@ -1,0 +1,66 @@
+[
+  {
+    "file": "app/soundtracks/asteroids-v8.mp3",
+    "seconds": 28.235283446712018,
+    "peak": 0.4278937578201294,
+    "rms": 0.07864674180746078,
+    "loopBoundaryJump": 0.010109400376677513,
+    "sha256": "90534f7f0a77867edd5025967f522a78b87b914ae85b30ae41d515baa4df0660"
+  },
+  {
+    "file": "app/soundtracks/ocean-v8.mp3",
+    "seconds": 27.042244897959183,
+    "peak": 0.42446964979171753,
+    "rms": 0.07401347160339355,
+    "loopBoundaryJump": 0.013464105315506458,
+    "sha256": "0dc497b7e859d4c164cab0e5a1c62611aa078192e76ac3c20761300da210a35e"
+  },
+  {
+    "file": "app/soundtracks/fortress-v8.mp3",
+    "seconds": 26.666666666666668,
+    "peak": 0.429853230714798,
+    "rms": 0.07968480885028839,
+    "loopBoundaryJump": 0.004818250425159931,
+    "sha256": "66eda81ba5bf30a16d0a443c9d3b09e32036f6865c00ee491836dcc82a40b74b"
+  },
+  {
+    "file": "app/soundtracks/ice-v8.mp3",
+    "seconds": 29.09090702947846,
+    "peak": 0.40725472569465637,
+    "rms": 0.06999655067920685,
+    "loopBoundaryJump": 0.01623416692018509,
+    "sha256": "7de934f8f8e97f0568510d848e987187b6448f1801cb381dfa4ef063d42ac580"
+  },
+  {
+    "file": "app/soundtracks/jungle-v8.mp3",
+    "seconds": 27.428571428571427,
+    "peak": 0.4733455777168274,
+    "rms": 0.07821056991815567,
+    "loopBoundaryJump": 0.01855514757335186,
+    "sha256": "2cde2de4ffbec1d87000777d8fb3c51ee1bf84c69581f8e454b4b17acf0ba835"
+  },
+  {
+    "file": "app/soundtracks/lava-v8.mp3",
+    "seconds": 25.9459410430839,
+    "peak": 0.4123743772506714,
+    "rms": 0.08088399469852448,
+    "loopBoundaryJump": 0.006158177740871906,
+    "sha256": "f54caa862f13909d42355ec86dda6e0f97a997b823e40fd59817d4e687f8d9f5"
+  },
+  {
+    "file": "app/soundtracks/title-v8.mp3",
+    "seconds": 20.0,
+    "peak": 0.33560070395469666,
+    "rms": 0.06649231165647507,
+    "loopBoundaryJump": 0.001883788499981165,
+    "sha256": "647b049214c25dfd2c8dd49635e357564b9b3ca25aec17ea75ee1c5d0a1d88d9"
+  },
+  {
+    "file": "app/soundtracks/boss-v8.mp3",
+    "seconds": 24.615374149659864,
+    "peak": 0.38112637400627136,
+    "rms": 0.07960034906864166,
+    "loopBoundaryJump": 0.012594357132911682,
+    "sha256": "8e9b7a28fa78bca077fb5c340c7eb8e2fffb6a50f3c8004357e2a0e1d9702815"
+  }
+]

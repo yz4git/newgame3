@@ -1,0 +1,74 @@
+[
+  {
+    "file": "app/soundtracks/asteroids-v8.mp3",
+    "title": "Orbital Pulse",
+    "bpm": 136,
+    "bars": 16,
+    "seconds": 28.235283446712018,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 452718
+  },
+  {
+    "file": "app/soundtracks/ocean-v8.mp3",
+    "title": "Blue Squadron",
+    "bpm": 142,
+    "bars": 16,
+    "seconds": 27.042244897959183,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 433910
+  },
+  {
+    "file": "app/soundtracks/fortress-v8.mp3",
+    "title": "Citadel Circuit",
+    "bpm": 144,
+    "bars": 16,
+    "seconds": 26.666666666666668,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 427643
+  },
+  {
+    "file": "app/soundtracks/ice-v8.mp3",
+    "title": "Prismatic Flight",
+    "bpm": 132,
+    "bars": 16,
+    "seconds": 29.09090702947846,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 466514
+  },
+  {
+    "file": "app/soundtracks/jungle-v8.mp3",
+    "title": "Emerald Mechanism",
+    "bpm": 140,
+    "bars": 16,
+    "seconds": 27.428571428571427,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 439766
+  },
+  {
+    "file": "app/soundtracks/lava-v8.mp3",
+    "title": "Foundry Pressure",
+    "bpm": 148,
+    "bars": 16,
+    "seconds": 25.9459410430839,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 416359
+  },
+  {
+    "file": "app/soundtracks/title-v8.mp3",
+    "title": "The Last Signal",
+    "bpm": 96,
+    "bars": 8,
+    "seconds": 20.0,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 321063
+  },
+  {
+    "file": "app/soundtracks/boss-v8.mp3",
+    "title": "Reactor Pursuit",
+    "bpm": 156,
+    "bars": 16,
+    "seconds": 24.615374149659864,
+    "composition": "Original synthesized score; no third-party samples",
+    "bytes": 395042
+  }
+]

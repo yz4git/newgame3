@@ -1,10 +1,12 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 import {shipSprite,bossSprite,tankSprite,warpedSprite} from './canvas-art.ts';
 import {CanvasFortressBackground} from './canvas-background.ts';
-import {explosionAtlasMap,smokeMap,livingMaps,visualAssetStatus} from './visual-assets.ts';
+import {explosionAtlasMap,smokeMap,livingMaps,finishMaps,visualAssetStatus} from './visual-assets.ts';
+import {bossWingAngle,bossScars,scarPositions} from './boss-finish.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState,type ShipPose} from './motion.ts';
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
 import {CanvasCombatEffects} from './canvas-combat.ts';
+import {drawAirCanvas} from './air-effects.ts';
 
 // Compatibility view for browsers where all GPU contexts are unavailable.
 // It shares the same fixed-step combat, controls, scores and progression.
@@ -16,6 +18,7 @@ export class CanvasView {
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
   private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
   private combatEffects=new CanvasCombatEffects();
+  private air={clock:0,layers:0,kind:'none'};
   private wrecks:{x:number;y:number;kind:Kind|'boss';age:number;life:number;stage:number;parts?:number[];spread?:number;deploy?:number}[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];private lastBoss:Game['boss']=null;
   constructor(private canvas:HTMLCanvasElement){}
   async init(_forceWebGL=false){this.ctx=this.canvas.getContext('2d',{alpha:false})!;if(!this.ctx)throw new Error('No graphics context');this.resize();}
@@ -70,14 +73,16 @@ export class CanvasView {
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
     this.background.draw(c,g);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.stageEffects.draw(c,g,reduced);this.combatEffects.step(g,dt,reduced);this.combatEffects.drawEchoes(c);this.enemyAnimations={};
+    this.air=drawAirCanvas(c,g,reduced);
+    this.stageEffects.draw(c,g,reduced);this.combatEffects.step(g,dt,reduced);this.combatEffects.drawWaves(c);this.combatEffects.drawEchoes(c);this.enemyAnimations={};
     for(const e of g.enemies){const pose=enemyPose(e,g.player);this.enemyAnimations[pose.mode]=(this.enemyAnimations[pose.mode]||0)+1;this.ship(e.kind,e.x,e.y,pose,1,e.flash>0,e.age);}
     const b=g.boss;
     if(b&&!b.dead){
       this.lastBoss=b;
       const pose=bossPose(b);this.bossAnimation=pose.mode;
       this.asset(bossSprite(stage,'core'),b.x,b.y);
-      for(let i=0;i<2;i++)if(b.parts[i]>0){this.asset(bossSprite(stage,i===0?'wing0':'wing1'),b.x+(i===0?-1:1)*(b.spread+(1-pose.deploy)*1.2),b.y-b.spread*.65);if(pose.recoil>.01)canvasGlow(c,b.x+(i===0?-1:1)*(3+b.spread),b.y-b.spread*.65-1.5,.6+pose.recoil*.4,'#ffd9ad',pose.recoil);}
+      for(let i=0;i<2;i++)if(b.parts[i]>0){this.asset(bossSprite(stage,i===0?'wing0':'wing1'),b.x+(i===0?-1:1)*(b.spread+(1-pose.deploy)*1.2),b.y-b.spread*.65,1,bossWingAngle(stage,i===0?-1:1,b.age,pose.deploy));if(pose.recoil>.01)canvasGlow(c,b.x+(i===0?-1:1)*(3+b.spread),b.y-b.spread*.65-1.5,.6+pose.recoil*.4,'#ffd9ad',pose.recoil);}
+      for(const [x,y,size]of scarPositions){c.save();c.translate(b.x+x,b.y+y);c.scale(1,-1);c.globalAlpha=bossScars(b);c.drawImage(finishMaps.scorch.image,-size/2,-size/2,size,size);c.restore();}
       c.save();c.translate(b.x,b.y-.85);c.rotate(pose.rotor);c.strokeStyle='#c9dce5';c.lineWidth=.065;for(let i=0;i<6;i++){const a=i*Math.PI/3;c.beginPath();c.moveTo(Math.cos(a)*.65,Math.sin(a)*.65);c.lineTo(Math.cos(a)*.89,Math.sin(a)*.89);c.stroke();}c.restore();
       for(let i=0;i<4;i++){const a=i*Math.PI/2,x=b.x+Math.cos(a)*(.45+pose.open*.52),y=b.y-.85+Math.sin(a)*(.45+pose.open*.52);c.save();c.translate(x,y);c.rotate(a);this.rect(-.15,-.30,.30,.6,'#738a9b');c.restore();}
       canvasGlow(c,b.x,b.y-.85,.7+pose.open*.65,'#'+STAGES[stage].color.toString(16).padStart(6,'0'),.2+pose.open*.4);
@@ -102,10 +107,10 @@ export class CanvasView {
     for(const q of this.cascades)q.at-=dt;const due=this.cascades.filter(q=>q.at<=0);this.cascades=this.cascades.filter(q=>q.at>0);for(const q of due)this.event({type:'explode',x:q.x,y:q.y,size:q.size});
     this.wrecks=this.wrecks.filter(w=>{w.age+=dt;if(w.age>=w.life)return false;w.y-=dt*(w.kind==='boss'?.6:2.3);const t=w.age/w.life;c.save();c.translate(w.x,w.y);c.rotate(w.age*(w.x>0?1:-1)*(w.kind==='boss'?.13:1.3));c.globalAlpha=(1-t)*.45;if(w.kind==='boss'){this.asset(bossSprite(w.stage,'core'),0,0);for(let i=0;i<2;i++)if(w.parts![i]>0)this.asset(bossSprite(w.stage,i===0?'wing0':'wing1'),(i===0?-1:1)*(w.spread!+(1-w.deploy!)*1.2),-w.spread!*.65);}else this.asset(shipSprite(w.kind),0,0);c.restore();return true;});
     for(const e of this.explosions){e.age+=dt;if(e.age<0)continue;const t=e.age/e.life,s=e.size*(e.smoke?.45+t*.7:.25+Math.sin(Math.min(1,t)*Math.PI/2)*.75);c.save();c.globalAlpha=Math.max(0,(1-t)*(e.smoke?.75:1));c.translate(e.x,e.y);c.scale(1,-1);if(e.smoke)c.drawImage(smokeMap.image,-s/2,-s/2,s,s);else{const frame=Math.min(3,Math.floor(t*4)),im=explosionAtlasMap.image,w=im.width/2,h=im.height/2;c.drawImage(im,frame%2*w,Math.floor(frame/2)*h,w,h,-s/2,-s/2,s,s);}c.restore();}this.explosions=this.explosions.filter(e=>e.age<e.life);
-    this.combatEffects.drawImpacts(c);
+    this.combatEffects.drawFragments(c);this.combatEffects.drawImpacts(c);
     for(const s of this.sparks){s.life-=dt;if(s.life<=0)continue;s.x+=s.vx*dt;s.y+=s.vy*dt;c.globalAlpha=s.life/s.max;this.rect(s.x,s.y,s.size,s.size*1.5,s.color);}c.globalAlpha=1;this.sparks=this.sparks.filter(s=>s.life>0);
-    this.ring.age+=dt;if(this.ring.age<.8){c.globalAlpha=1-this.ring.age/.8;c.strokeStyle='#92f3ff';c.lineWidth=.13;c.beginPath();c.arc(this.ring.x,this.ring.y,this.ring.age*34,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
+    this.ring.age+=dt;
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }

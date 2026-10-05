@@ -2,7 +2,7 @@ import * as T from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Kind } from './sim.ts';
 import {STAGES} from './stages.ts';
-import {armourMap,planetMap,shipSkin} from './visual-assets.ts';
+import {armourMap,planetMap,shipSkin,bossSkin} from './visual-assets.ts';
 
 export const metal=(c:number,emission=0)=>new T.MeshStandardMaterial({color:c,map:armourMap,bumpMap:armourMap,bumpScale:.027,metalness:.55,roughness:.34,emissive:c,emissiveIntensity:emission,envMapIntensity:1.0});
 export const glow=(c: number,p=2)=>new T.MeshBasicMaterial({color:new T.Color(c).multiplyScalar(p),toneMapped:false});
@@ -164,6 +164,17 @@ export function shipModel(kind:Kind|'player'){
   return result;
 }
 export function bossModel(stage:number){
+  if(bossSkin(stage)){
+    const g=new T.Group();g.userData.texturedBoss=true;g.userData.stage=stage;
+    for(let part=0;part<3;part++){
+      const skin=bossSkin(stage,part)!,group=part===0?g:new T.Group();if(part){group.name='wing'+(part-1);g.add(group);}
+      const sprite=new T.Sprite(new T.SpriteMaterial({map:skin.map,transparent:true,alphaTest:.02,depthWrite:false,toneMapped:false}));sprite.name='boss-skin'+part;sprite.position.set(skin.x,0,1.62);sprite.scale.set(skin.width,skin.height,1);sprite.userData.animated=true;group.add(sprite);
+      const proxy=block(group,shadowProxy,skin.x,0,.4,2.7,4.5,.7);proxy.castShadow=true;
+    }
+    const rotor=new T.Group();rotor.name='rotor';rotor.position.set(0,-.85,1.82);
+    for(let i=0;i<6;i++){const a=i*Math.PI/3,fin=block(rotor,glow(STAGES[stage].color,.9),Math.cos(a)*.73,Math.sin(a)*.73,0,.035,.19,.03);fin.rotation.z=a;fin.userData.animated=true;}
+    g.add(rotor);return g;
+  }
   const style=STAGES[stage].bossStyle;
   const g=new T.Group(),paint=metal([0x627b8c,0x746284,0x666778][style]),accent=glow(STAGES[stage].color,2.2);
   const body=new T.Group();
