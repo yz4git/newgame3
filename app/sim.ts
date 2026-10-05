@@ -6,6 +6,7 @@ export const GAME_SPEED = 2.25;
 import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {updateEncounters} from './encounters.ts';
+import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
 export {STAGES} from './stages.ts';
 export type Weapon = 'wide' | 'laser' | 'homing';
@@ -166,16 +167,16 @@ export class Game {
   }
   nova() {
     if(this.state!=='playing'||this.novaTime>0)return false;
-    if(this.energy>=100){this.energy=0;this.overdrive=6;this.emit('overdrive',{text:'OVERDRIVE / 6 SEC'});}
+    if(this.energy>=100){this.energy=0;this.overdrive=6;this.emit('overdrive',{text:'OVERDRIVE / DAMAGE ×'+PLAYER_BALANCE.overdriveMultiplier});}
     else if(this.bombs>0)this.bombs--;else return false;
     this.novaTime=1.2; this.invulnerable=Math.max(this.invulnerable,2.3);
     let converted=0; for(const b of this.bullets)if(b.enemy&&!b.dead){b.dead=true;converted++;}
     this.cancelled+=converted;
     this.addScore(converted*35); this.energy=Math.min(100,this.energy+converted*.3);
     for(const e of [...this.enemies])if(!e.dead)this.damageEnemy(e,70,'nova');
-    if(this.boss&&!this.boss.dead){this.boss.hp-=105;for(let i=0;i<2;i++)this.damagePart(i,60);if(this.boss.hp<=0)this.killBoss();}
+    if(this.boss&&!this.boss.dead){this.boss.hp-=PLAYER_BALANCE.novaBossDamage;for(let i=0;i<2;i++)this.damagePart(i,PLAYER_BALANCE.novaPartDamage);if(this.boss.hp<=0)this.killBoss();}
     for(const t of this.threats)t.dead=true;
-    for(const n of [...this.nodes])this.damageNode(n,70);if(this.encounter)this.damageMiniboss(70);
+    for(const n of [...this.nodes])this.damageNode(n,70);if(this.encounter)this.damageMiniboss(PLAYER_BALANCE.novaMinibossDamage);
     this.emit('nova',{x:this.player.x,y:this.player.y,size:18}); return true;
   }
   spawn(kind: Kind, x: number, y: number, group=0, pattern=0): Enemy {
@@ -238,26 +239,28 @@ export class Game {
     });
   }
   private fire() {
-    const p=this.player,level=this.power,boost=this.overdrive>0?1.65:1;
+    const p=this.player,level=this.power,boost=this.overdrive>0?PLAYER_BALANCE.overdriveMultiplier:1;
     if(this.weapon==='wide'){
-      const n=level===1?2:level===2?3:5;
+      const n=WEAPON_BALANCE.wide.pellets[level-1];
       for(let i=0;i<n;i++){
         const a=(i-(n-1)/2)*(p.focus?.045:.12);
-        this.projectile(p.x+(i-(n-1)/2)*.19,p.y+.7,Math.sin(a)*53,Math.cos(a)*53,false,1.8*boost);
+        this.projectile(p.x+(i-(n-1)/2)*.19,p.y+.7,Math.sin(a)*53,Math.cos(a)*53,false,WEAPON_BALANCE.wide.damage*boost);
       }
     }else if(this.weapon==='laser'){
-      for(const s of [-1,1])this.projectile(p.x+s*.24,p.y+.8,0,72,false,(2.2+level*.55)*boost*(p.focus?1.15:1));
+      const profile=WEAPON_BALANCE.laser;
+      for(const s of [-1,1])this.projectile(p.x+s*.24,p.y+.8,0,72,false,(profile.baseDamage+level*profile.levelDamage)*boost*(p.focus?profile.focusMultiplier:1));
     }else{
       const n=Math.min(4,level+1);
+      const profile=WEAPON_BALANCE.homing;
       const locked=this.locks.filter(l=>l.progress>=1);
       for(let i=0;i<n;i++){
         const lock=locked[(i+this.volley)%Math.max(1,locked.length)];
-        this.projectile(p.x+(i-(n-1)/2)*.3,p.y+.6,(i-(n-1)/2)*12,34,false,(1.9+level*.2)*boost*(lock?1.45:1),true,0x81ffd4,{targetId:lock?.id,trail:[]});
+        this.projectile(p.x+(i-(n-1)/2)*.3,p.y+.6,(i-(n-1)/2)*12,34,false,(profile.baseDamage+level*profile.levelDamage)*boost*(lock?profile.lockMultiplier:1),true,0x81ffd4,{targetId:lock?.id,trail:[]});
       }
     }
-    if(level===4)for(const s of [-1,1])this.projectile(p.x+s*1.45,p.y-.05,0,52,false,1.6*boost,true);
+    if(level===4&&this.volley%PLAYER_BALANCE.satelliteEvery===0)for(const s of [-1,1])this.projectile(p.x+s*1.45,p.y-.05,0,52,false,PLAYER_BALANCE.satelliteDamage*boost,true);
     if(++this.volley%3===0)this.emit('shot');
-    this.shotTimer=this.weapon==='homing'?.145:.10;
+    this.shotTimer=WEAPON_BALANCE[this.weapon].interval;
   }
   damageEnemy(e: Enemy, damage: number,cause:'shot'|'nova'|'pulse'='shot') {
     if(e.dead)return;e.hp-=damage;e.flash=.08;
@@ -443,9 +446,7 @@ export class Game {
           else if(e.kind==='cruiser'){this.fan(e.x,e.y-1.5,9,7.5,-Math.PI/2,.22,e.id);e.shoot=2.3;}
           else if(e.kind==='weaver'){this.fan(e.x,e.y-1,e.volley%2?6:7,7.8,-Math.PI/2,.23,e.id,0xffa8da);e.shoot=1.85;}
           else if(e.kind==='lancer'){this.aimed(e.x,e.y,5.5,3,.13,e.id,aim,5.0);e.shoot=2.15;}
-          else if(e.pattern===5)e.x=e.origin*Math.cos(e.age*.75);
-      else if(e.pattern===6)e.x=e.origin+Math.sin(e.age*.95+e.phase)*2.0;
-      else if(e.kind==='dart'){this.aimed(e.x,e.y,9,1,.15,e.id,aim);e.shoot=3.8;}
+          else if(e.kind==='dart'){this.aimed(e.x,e.y,9,1,.15,e.id,aim);e.shoot=3.8;}
           else if(e.kind==='drone'&&(this.stage>0||e.id%3===0)){this.aimed(e.x,e.y,8,1,.15,e.id,aim);e.shoot=6;}
           else if(e.kind==='interceptor'){this.aimed(e.x,e.y,9.5,2,.20,e.id,aim);e.shoot=2.05;}
           else if(e.kind==='bomber'){this.aimed(e.x,e.y-.8,5.5,3,.25,e.id,aim,1.7);e.shoot=2.75;}

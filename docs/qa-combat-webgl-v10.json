@@ -1,0 +1,183 @@
+{
+  "renderer": "webgl",
+  "version": "1.10",
+  "environment": "Chromium mobile 480x854; WebGL uses software rendering; fixed 60 Hz tracking with invulnerability tests damage/progression, not human survival",
+  "formations": [
+    {
+      "kind": "dart",
+      "pattern": 5,
+      "count": 1,
+      "expected": 1,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 3.8
+    },
+    {
+      "kind": "dart",
+      "pattern": 6,
+      "count": 1,
+      "expected": 1,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 3.8
+    },
+    {
+      "kind": "drone",
+      "pattern": 5,
+      "count": 1,
+      "expected": 1,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 6
+    },
+    {
+      "kind": "drone",
+      "pattern": 6,
+      "count": 1,
+      "expected": 1,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 6
+    },
+    {
+      "kind": "interceptor",
+      "pattern": 5,
+      "count": 2,
+      "expected": 2,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.05
+    },
+    {
+      "kind": "interceptor",
+      "pattern": 6,
+      "count": 2,
+      "expected": 2,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.05
+    },
+    {
+      "kind": "bomber",
+      "pattern": 5,
+      "count": 3,
+      "expected": 3,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.75
+    },
+    {
+      "kind": "bomber",
+      "pattern": 6,
+      "count": 3,
+      "expected": 3,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.75
+    },
+    {
+      "kind": "corvette",
+      "pattern": 5,
+      "count": 4,
+      "expected": 4,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.65
+    },
+    {
+      "kind": "corvette",
+      "pattern": 6,
+      "count": 4,
+      "expected": 4,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.65
+    },
+    {
+      "kind": "sentinel",
+      "pattern": 5,
+      "count": 8,
+      "expected": 8,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.4
+    },
+    {
+      "kind": "sentinel",
+      "pattern": 6,
+      "count": 8,
+      "expected": 8,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.4
+    },
+    {
+      "kind": "strider",
+      "pattern": 5,
+      "count": 2,
+      "expected": 2,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.35
+    },
+    {
+      "kind": "strider",
+      "pattern": 6,
+      "count": 2,
+      "expected": 2,
+      "charging": true,
+      "preparedAim": -8,
+      "cooldown": 2.35
+    }
+  ],
+  "output": [
+    {
+      "weapon": "wide",
+      "damagePerSecond": 141
+    },
+    {
+      "weapon": "laser",
+      "damagePerSecond": 154.24
+    },
+    {
+      "weapon": "homing",
+      "damagePerSecond": 159.87
+    }
+  ],
+  "fights": [
+    {
+      "power": 1,
+      "seconds": 14.95,
+      "killed": true,
+      "phases": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "power": 4,
+      "seconds": 9.8,
+      "killed": true,
+      "phases": [
+        1,
+        2,
+        3
+      ]
+    }
+  ],
+  "mini": {
+    "killed": true,
+    "seconds": 3,
+    "nodesRemaining": 0,
+    "kills": 1
+  },
+  "nova": {
+    "bombs": 0,
+    "hull": 3,
+    "bossHp": 280,
+    "bossMaxHp": 460
+  },
+  "errors": [],
+  "warnings": []
+}

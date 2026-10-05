@@ -1,0 +1,37 @@
+{
+  "version": "1.10",
+  "simulationTests": 62,
+  "typecheck": true,
+  "productionBuild": true,
+  "mobileViewport": "390x844 Chromium; WebGL software rendering",
+  "renderers": {
+    "webgl": {
+      "controls": true,
+      "multitouch": true,
+      "pauseAndRetry": true,
+      "sixSectors": true,
+      "realTimeLimits": true,
+      "offlineTextures": 57,
+      "offlineMusicLoops": 8,
+      "errors": [],
+      "warnings": []
+    },
+    "canvas": {
+      "controls": true,
+      "multitouch": true,
+      "pauseAndRetry": true,
+      "sixSectors": true,
+      "realTimeLimits": true,
+      "offlineTextures": 57,
+      "offlineMusicLoops": 8,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "cacheUpgrade": {
+    "from": "1.9",
+    "to": "1.10",
+    "updateButton": true,
+    "offlineReload": true
+  }
+}

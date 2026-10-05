@@ -1,0 +1,2246 @@
+{
+  "baselineVersion": "1.9",
+  "baselineCommit": "bba94389ca0ed428b13f48c9684238f94ebf92ce",
+  "updatedVersion": "1.10",
+  "baseline": {
+    "conditions": "Normal; fixed 60 Hz; seconds are real time; invulnerable tracking player at y=-9, no NOVA; boss entry skipped, miniboss starts at age 3.1. Perfect tracking tests collision/progression, not human survivability. Emitted damage includes every projectile before misses and piercing.",
+    "output": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "focus": false,
+        "damagePerSecond": 72,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "focus": true,
+        "damagePerSecond": 72,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "wide",
+        "power": 2,
+        "focus": false,
+        "damagePerSecond": 108,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "wide",
+        "power": 2,
+        "focus": true,
+        "damagePerSecond": 108,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "wide",
+        "power": 3,
+        "focus": false,
+        "damagePerSecond": 180,
+        "shotsPerSecond": 100
+      },
+      {
+        "weapon": "wide",
+        "power": 3,
+        "focus": true,
+        "damagePerSecond": 180,
+        "shotsPerSecond": 100
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "focus": false,
+        "damagePerSecond": 244,
+        "shotsPerSecond": 140
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 244,
+        "shotsPerSecond": 140
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "focus": false,
+        "damagePerSecond": 110,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "focus": true,
+        "damagePerSecond": 126.5,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 2,
+        "focus": false,
+        "damagePerSecond": 132,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 2,
+        "focus": true,
+        "damagePerSecond": 151.8,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 3,
+        "focus": false,
+        "damagePerSecond": 154,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 3,
+        "focus": true,
+        "damagePerSecond": 177.1,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "focus": false,
+        "damagePerSecond": 240,
+        "shotsPerSecond": 80
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 266.4,
+        "shotsPerSecond": 80
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "focus": false,
+        "damagePerSecond": 63,
+        "shotsPerSecond": 30
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "focus": true,
+        "damagePerSecond": 91.35,
+        "shotsPerSecond": 30
+      },
+      {
+        "weapon": "homing",
+        "power": 2,
+        "focus": false,
+        "damagePerSecond": 103.5,
+        "shotsPerSecond": 45
+      },
+      {
+        "weapon": "homing",
+        "power": 2,
+        "focus": true,
+        "damagePerSecond": 150.07,
+        "shotsPerSecond": 45
+      },
+      {
+        "weapon": "homing",
+        "power": 3,
+        "focus": false,
+        "damagePerSecond": 150,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "homing",
+        "power": 3,
+        "focus": true,
+        "damagePerSecond": 217.5,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "focus": false,
+        "damagePerSecond": 210,
+        "shotsPerSecond": 90
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 282.9,
+        "shotsPerSecond": 90
+      }
+    ],
+    "enemy": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "drone",
+        "seconds": 0.15,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "fighter",
+        "seconds": 0.33,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "cruiser",
+        "seconds": 0.95,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "corvette",
+        "seconds": 0.63,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "drone",
+        "seconds": 0.18,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "fighter",
+        "seconds": 0.23,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "cruiser",
+        "seconds": 0.38,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "corvette",
+        "seconds": 0.33,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "drone",
+        "seconds": 0.12,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "fighter",
+        "seconds": 0.22,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "cruiser",
+        "seconds": 0.58,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "corvette",
+        "seconds": 0.4,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "drone",
+        "seconds": 0.12,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "fighter",
+        "seconds": 0.17,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "cruiser",
+        "seconds": 0.35,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "corvette",
+        "seconds": 0.25,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "drone",
+        "seconds": 0.17,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "fighter",
+        "seconds": 0.37,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "cruiser",
+        "seconds": 0.87,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "corvette",
+        "seconds": 0.63,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "drone",
+        "seconds": 0.17,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "fighter",
+        "seconds": 0.2,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "cruiser",
+        "seconds": 0.42,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "corvette",
+        "seconds": 0.32,
+        "killed": true,
+        "volleys": 0
+      }
+    ],
+    "miniboss": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 0,
+        "seconds": 1.73,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 2,
+        "seconds": 4.13,
+        "killed": true,
+        "volleys": 5,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 5,
+        "seconds": 3.08,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 0,
+        "seconds": 0.62,
+        "killed": true,
+        "volleys": 0,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 2,
+        "seconds": 1.38,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 5,
+        "seconds": 1.02,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 0,
+        "seconds": 1,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 2,
+        "seconds": 2.25,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 5,
+        "seconds": 1.8,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 0,
+        "seconds": 0.55,
+        "killed": true,
+        "volleys": 0,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 2,
+        "seconds": 1.22,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 5,
+        "seconds": 0.9,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 0,
+        "seconds": 1.43,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 2,
+        "seconds": 3.1,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 5,
+        "seconds": 2.5,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 0,
+        "seconds": 0.57,
+        "killed": true,
+        "volleys": 0,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 2,
+        "seconds": 1.03,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 5,
+        "seconds": 0.97,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      }
+    ],
+    "boss": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 0,
+        "seconds": 11.02,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 22,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 2,
+        "seconds": 11.58,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 13,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 5,
+        "seconds": 19.58,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 26,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 0,
+        "seconds": 5,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 8,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 2,
+        "seconds": 4.43,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 4,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 5,
+        "seconds": 7.58,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 14,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 0,
+        "seconds": 8.2,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 17,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 2,
+        "seconds": 7.25,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 8,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 5,
+        "seconds": 11.3,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 18,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 0,
+        "seconds": 3.95,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 5,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 2,
+        "seconds": 3.5,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 3,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 5,
+        "seconds": 6,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 9,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 0,
+        "seconds": 8.3,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 11,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 2,
+        "seconds": 11.08,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 13,
+        "powerAtEnd": 3
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 5,
+        "seconds": 22.17,
+        "killed": true,
+        "attacks": [
+          0,
+          1,
+          2
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 22,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 0,
+        "seconds": 2.97,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 3,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 2,
+        "seconds": 4.7,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 4,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 5,
+        "seconds": 7.77,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 5,
+        "powerAtEnd": 4
+      }
+    ],
+    "overdrive": [
+      {
+        "weapon": "wide",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 402.6,
+        "shotsPerSecond": 140
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 439.56,
+        "shotsPerSecond": 80
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 466.78,
+        "shotsPerSecond": 90
+      }
+    ]
+  },
+  "updated": {
+    "conditions": "Normal; fixed 60 Hz; seconds are real time; invulnerable tracking player at y=-9, no NOVA; boss entry skipped, miniboss starts at age 3.1. Perfect tracking tests collision/progression, not human survivability. Emitted damage includes every projectile before misses and piercing.",
+    "output": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "focus": false,
+        "damagePerSecond": 50,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "focus": true,
+        "damagePerSecond": 50,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "wide",
+        "power": 2,
+        "focus": false,
+        "damagePerSecond": 75,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "wide",
+        "power": 2,
+        "focus": true,
+        "damagePerSecond": 75,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "wide",
+        "power": 3,
+        "focus": false,
+        "damagePerSecond": 100,
+        "shotsPerSecond": 80
+      },
+      {
+        "weapon": "wide",
+        "power": 3,
+        "focus": true,
+        "damagePerSecond": 100,
+        "shotsPerSecond": 80
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "focus": false,
+        "damagePerSecond": 141,
+        "shotsPerSecond": 120
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 141,
+        "shotsPerSecond": 120
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "focus": false,
+        "damagePerSecond": 86,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "focus": true,
+        "damagePerSecond": 92.88,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 2,
+        "focus": false,
+        "damagePerSecond": 100,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 2,
+        "focus": true,
+        "damagePerSecond": 108,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 3,
+        "focus": false,
+        "damagePerSecond": 114,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 3,
+        "focus": true,
+        "damagePerSecond": 123.12,
+        "shotsPerSecond": 40
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "focus": false,
+        "damagePerSecond": 144,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 154.24,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "focus": false,
+        "damagePerSecond": 52.5,
+        "shotsPerSecond": 30
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "focus": true,
+        "damagePerSecond": 63,
+        "shotsPerSecond": 30
+      },
+      {
+        "weapon": "homing",
+        "power": 2,
+        "focus": false,
+        "damagePerSecond": 83.25,
+        "shotsPerSecond": 45
+      },
+      {
+        "weapon": "homing",
+        "power": 2,
+        "focus": true,
+        "damagePerSecond": 99.9,
+        "shotsPerSecond": 45
+      },
+      {
+        "weapon": "homing",
+        "power": 3,
+        "focus": false,
+        "damagePerSecond": 117,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "homing",
+        "power": 3,
+        "focus": true,
+        "damagePerSecond": 140.4,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "focus": false,
+        "damagePerSecond": 135.27,
+        "shotsPerSecond": 75.33
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 159.87,
+        "shotsPerSecond": 75.33
+      }
+    ],
+    "enemy": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "drone",
+        "seconds": 0.18,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "fighter",
+        "seconds": 0.38,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "cruiser",
+        "seconds": 1.33,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "kind": "corvette",
+        "seconds": 0.88,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "drone",
+        "seconds": 0.18,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "fighter",
+        "seconds": 0.3,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "cruiser",
+        "seconds": 0.55,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "kind": "corvette",
+        "seconds": 0.53,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "drone",
+        "seconds": 0.12,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "fighter",
+        "seconds": 0.22,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "cruiser",
+        "seconds": 0.73,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "kind": "corvette",
+        "seconds": 0.5,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "drone",
+        "seconds": 0.12,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "fighter",
+        "seconds": 0.17,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "cruiser",
+        "seconds": 0.48,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "kind": "corvette",
+        "seconds": 0.35,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "drone",
+        "seconds": 0.17,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "fighter",
+        "seconds": 0.37,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "cruiser",
+        "seconds": 1.12,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "kind": "corvette",
+        "seconds": 0.77,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "drone",
+        "seconds": 0.17,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "fighter",
+        "seconds": 0.25,
+        "killed": true,
+        "volleys": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "cruiser",
+        "seconds": 0.55,
+        "killed": true,
+        "volleys": 1
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "kind": "corvette",
+        "seconds": 0.43,
+        "killed": true,
+        "volleys": 0
+      }
+    ],
+    "miniboss": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 0,
+        "seconds": 2.38,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 2,
+        "seconds": 6.53,
+        "killed": true,
+        "volleys": 8,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 5,
+        "seconds": 4.38,
+        "killed": true,
+        "volleys": 5,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 0,
+        "seconds": 0.93,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 2,
+        "seconds": 2.28,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 5,
+        "seconds": 1.65,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 0,
+        "seconds": 1.35,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 2,
+        "seconds": 3,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 5,
+        "seconds": 2.4,
+        "killed": true,
+        "volleys": 3,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 0,
+        "seconds": 0.85,
+        "killed": true,
+        "volleys": 1,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 2,
+        "seconds": 1.9,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 5,
+        "seconds": 1.47,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 0,
+        "seconds": 1.97,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 2,
+        "seconds": 4.03,
+        "killed": true,
+        "volleys": 5,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 5,
+        "seconds": 3.5,
+        "killed": true,
+        "volleys": 4,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 0,
+        "seconds": 0.83,
+        "killed": true,
+        "volleys": 0,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 2,
+        "seconds": 1.97,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 5,
+        "seconds": 1.5,
+        "killed": true,
+        "volleys": 2,
+        "hpRemaining": 0
+      }
+    ],
+    "boss": [
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 0,
+        "seconds": 13.58,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 23,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 2,
+        "seconds": 16.33,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 17,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 1,
+        "stage": 5,
+        "seconds": 27.62,
+        "killed": true,
+        "attacks": [
+          0,
+          1,
+          2
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 34,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 0,
+        "seconds": 8.68,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 19,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 2,
+        "seconds": 7.83,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 10,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "wide",
+        "power": 4,
+        "stage": 5,
+        "seconds": 11.98,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 18,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 0,
+        "seconds": 9.85,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 21,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 2,
+        "seconds": 9.55,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 12,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 1,
+        "stage": 5,
+        "seconds": 14.95,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 20,
+        "powerAtEnd": 1
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 0,
+        "seconds": 6.75,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 14,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 2,
+        "seconds": 5.95,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 7,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "stage": 5,
+        "seconds": 9.8,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 18,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 0,
+        "seconds": 9.7,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 13,
+        "powerAtEnd": 3
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 2,
+        "seconds": 15.02,
+        "killed": true,
+        "attacks": [
+          0,
+          1,
+          2
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 16,
+        "powerAtEnd": 3
+      },
+      {
+        "weapon": "homing",
+        "power": 1,
+        "stage": 5,
+        "seconds": 24.02,
+        "killed": true,
+        "attacks": [
+          0,
+          1,
+          2
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 25,
+        "powerAtEnd": 3
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 0,
+        "seconds": 4.83,
+        "killed": true,
+        "attacks": [
+          0
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 6,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 2,
+        "seconds": 7.97,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 8,
+        "powerAtEnd": 4
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "stage": 5,
+        "seconds": 13.17,
+        "killed": true,
+        "attacks": [
+          0,
+          1
+        ],
+        "phases": [
+          1,
+          2,
+          3
+        ],
+        "volleys": 9,
+        "powerAtEnd": 4
+      }
+    ],
+    "overdrive": [
+      {
+        "weapon": "wide",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 190.35,
+        "shotsPerSecond": 120
+      },
+      {
+        "weapon": "laser",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 208.22,
+        "shotsPerSecond": 60
+      },
+      {
+        "weapon": "homing",
+        "power": 4,
+        "focus": true,
+        "damagePerSecond": 215.82,
+        "shotsPerSecond": 75.33
+      }
+    ]
+  },
+  "formationComparison": [
+    {
+      "kind": "dart",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 1
+      }
+    },
+    {
+      "kind": "dart",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 1
+      }
+    },
+    {
+      "kind": "drone",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 1
+      }
+    },
+    {
+      "kind": "drone",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 1
+      }
+    },
+    {
+      "kind": "interceptor",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 2
+      }
+    },
+    {
+      "kind": "interceptor",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 2
+      }
+    },
+    {
+      "kind": "bomber",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 3
+      }
+    },
+    {
+      "kind": "bomber",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 3
+      }
+    },
+    {
+      "kind": "corvette",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 4
+      }
+    },
+    {
+      "kind": "corvette",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 4
+      }
+    },
+    {
+      "kind": "sentinel",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 8
+      }
+    },
+    {
+      "kind": "sentinel",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 8
+      }
+    },
+    {
+      "kind": "strider",
+      "pattern": 5,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 2
+      }
+    },
+    {
+      "kind": "strider",
+      "pattern": 6,
+      "before": {
+        "shotEvents": 0,
+        "bullets": 0
+      },
+      "after": {
+        "shotEvents": 1,
+        "bullets": 2
+      }
+    }
+  ],
+  "heldLevelBoss": [
+    {
+      "weapon": "wide",
+      "power": 1,
+      "stage": 0,
+      "seconds": 13.58,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 23,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "wide",
+      "power": 1,
+      "stage": 1,
+      "seconds": 12.38,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 19,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "wide",
+      "power": 1,
+      "stage": 2,
+      "seconds": 16.33,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 17,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "wide",
+      "power": 1,
+      "stage": 3,
+      "seconds": 20.48,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 31,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "wide",
+      "power": 1,
+      "stage": 4,
+      "seconds": 25.88,
+      "killed": true,
+      "attacks": [
+        0,
+        1,
+        2
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 36,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "wide",
+      "power": 1,
+      "stage": 5,
+      "seconds": 27.62,
+      "killed": true,
+      "attacks": [
+        0,
+        1,
+        2
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 34,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "laser",
+      "power": 1,
+      "stage": 0,
+      "seconds": 9.85,
+      "killed": true,
+      "attacks": [
+        0
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 21,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "laser",
+      "power": 1,
+      "stage": 1,
+      "seconds": 7.45,
+      "killed": true,
+      "attacks": [
+        0
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 14,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "laser",
+      "power": 1,
+      "stage": 2,
+      "seconds": 9.55,
+      "killed": true,
+      "attacks": [
+        0
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 12,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "laser",
+      "power": 1,
+      "stage": 3,
+      "seconds": 11.2,
+      "killed": true,
+      "attacks": [
+        0
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 19,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "laser",
+      "power": 1,
+      "stage": 4,
+      "seconds": 13,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 15,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "laser",
+      "power": 1,
+      "stage": 5,
+      "seconds": 14.95,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 20,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "homing",
+      "power": 1,
+      "stage": 0,
+      "seconds": 11.97,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 20,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "homing",
+      "power": 1,
+      "stage": 1,
+      "seconds": 14.82,
+      "killed": true,
+      "attacks": [
+        0,
+        1
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 15,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "homing",
+      "power": 1,
+      "stage": 2,
+      "seconds": 19.08,
+      "killed": true,
+      "attacks": [
+        0,
+        1,
+        2
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 18,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "homing",
+      "power": 1,
+      "stage": 3,
+      "seconds": 23.68,
+      "killed": true,
+      "attacks": [
+        0,
+        1,
+        2
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 27,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "homing",
+      "power": 1,
+      "stage": 4,
+      "seconds": 30.97,
+      "killed": true,
+      "attacks": [
+        0,
+        1,
+        2
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 35,
+      "powerAtEnd": 1
+    },
+    {
+      "weapon": "homing",
+      "power": 1,
+      "stage": 5,
+      "seconds": 31.62,
+      "killed": true,
+      "attacks": [
+        0,
+        1,
+        2
+      ],
+      "phases": [
+        1,
+        2,
+        3
+      ],
+      "volleys": 30,
+      "powerAtEnd": 1
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import type {Game,Enemy,Boss,Kind} from './sim.ts';
 import {STAGES} from './stages.ts';
 import {ENCOUNTERS,encounterTimes} from './encounter-design.ts';
+import {WEAPON_BALANCE} from './player-balance.ts';
 
 export const clamp=(v:number,a=0,b=1)=>Math.max(a,Math.min(b,v));
 export const smooth=(v:number)=>{v=clamp(v);return v*v*(3-2*v);};
@@ -13,7 +14,7 @@ export function playerPose(g:Game):ShipPose{
   return {mode:g.hull<=0?'wreck':boost?'overdrive':p.focus?'focus':launch?'launch':Math.abs(p.vx)>3?'bank':'cruise',
     roll:clamp(-p.vx*.0105,-.30,.30),bank:clamp(p.vx*.025,-.46,.46),flex:p.focus?.13:boost?.82:launch?1-smooth(g.time/2.6):.35,
     thrust:boost?1.65:p.focus?.65:1+clamp(p.vy/35,-.3,.35),charge:boost?1:p.focus?.55:0,
-    recoil:Math.pow(clamp(g.shotTimer/(g.weapon==='homing'?.145:.10)),4),turret:0,rotor:t*8,glow:boost?1.4:1};
+    recoil:Math.pow(clamp(g.shotTimer/WEAPON_BALANCE[g.weapon].interval),4),turret:0,rotor:t*8,glow:boost?1.4:1};
 }
 export function enemyPose(e:Enemy,p:{x:number;y:number}):ShipPose{
   let vx=e.kind==='dart'?Math.cos(e.age*1.5+e.phase)*3.3:e.kind==='fighter'?Math.cos(e.age*1.1+e.phase)*1.32:e.kind==='weaver'?Math.cos(e.age*.85)*.94:e.kind==='drone'&&e.pattern===1?Math.cos(e.age)*1.75:0;
