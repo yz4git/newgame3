@@ -11,6 +11,7 @@ import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationS
 import {addShipRig,addBossRig,cloneAnimatedModel,disposeAnimatedModel,animateShip,animateBoss} from './animation-rig.ts';
 import {CombatEffects} from './combat-effects.ts';
 import {AirEffects} from './air-effects.ts';
+import {EncounterView} from './encounter-view.ts';
 
 const boxGeometry=new T.BoxGeometry(1,1,1);
 const shotGeometry=new T.SphereGeometry(1,10,6);
@@ -35,7 +36,7 @@ export class View {
   private fireMap=effectTexture('fire');private smokeMap=smokeMap;
   private lockMarkers=new Map<number,T.Group>();
   private pickups=new Map<number,T.Group>();private ring:T.Mesh;private indicator:T.Group;
-  private beam:T.Mesh;private warning:T.Mesh;private shake=0;private spriteTexture=radialTexture();
+  private shake=0;private spriteTexture=radialTexture();
   private frameAverage=16.6;private frames=0;private pixelRatio=1.5;private lastDprChange=0;
   private useBloom=true;
   private key:T.DirectionalLight;private blastLight=new T.PointLight(0xff7430,0,14,1.5);
@@ -43,14 +44,14 @@ export class View {
   private stageEffects=new StageEffects();private wrecks:Wreck[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];
   private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};
   private lastBoss:Game['boss']=null;
-  private combatEffects=new CombatEffects();private airEffects=new AirEffects();
+  private combatEffects=new CombatEffects();private airEffects=new AirEffects();private encounterView=new EncounterView();
   constructor(private canvas:HTMLCanvasElement){
     this.scene.background=new T.Color(0x030914);this.scene.environment=environmentTexture();this.camera.position.set(0,-12.5,40);this.camera.lookAt(0,0,0);
     this.scene.add(new T.HemisphereLight(0xb5d1ef,0x080d18,1.15));
     this.key=new T.DirectionalLight(0xffe8d2,3.8);this.key.position.set(-12,18,25);this.key.castShadow=true;
     this.key.shadow.mapSize.set(1024,1024);Object.assign(this.key.shadow.camera,{left:-19,right:19,top:30,bottom:-30,near:1,far:80});this.key.shadow.bias=-.0006;this.key.shadow.normalBias=.09;this.scene.add(this.key);
     const rim=new T.DirectionalLight(0x7096cf,1.8);rim.position.set(16,-5,12);this.scene.add(rim,this.blastLight);
-    this.scene.add(this.background.root,this.atmosphere,this.stageEffects.root,this.combatEffects.root,this.airEffects.root);this.player.position.z=1.0;this.scene.add(this.player);
+    this.scene.add(this.background.root,this.atmosphere,this.stageEffects.root,this.combatEffects.root,this.airEffects.root,this.encounterView.root);this.player.position.z=1.0;this.scene.add(this.player);
     for(const s of[-1,1]){const satellite=new T.Group();ball(satellite,white,0,0,0,.3,.4,.23);ball(satellite,cyan,0,.15,.22,.14,.2,.06);satellite.position.z=1;this.satellites.push(satellite);this.scene.add(satellite);}
     const bulletMat=new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
     this.shots=new T.InstancedMesh(shotGeometry,bulletMat,740);this.shots.setColorAt(0,new T.Color(0xffffff));this.shots.instanceColor!.setUsage(T.DynamicDrawUsage);
@@ -74,8 +75,6 @@ export class View {
     this.indicator=new T.Group();
     const hit=new T.Mesh(new T.RingGeometry(.19,.27,20),glow(0xffffff,1.3));this.indicator.add(hit);
     const dot=new T.Mesh(new T.CircleGeometry(.08,10),glow(0xa4f6ff,1.7));this.indicator.add(dot);this.scene.add(this.indicator);
-    this.beam=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({color:new T.Color(0xffdda9).multiplyScalar(4),transparent:true,opacity:.9,toneMapped:false}));this.beam.position.z=1.7;this.scene.add(this.beam);
-    this.warning=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({color:0xff517b,transparent:true,opacity:.4,toneMapped:false}));this.warning.position.z=1.4;this.scene.add(this.warning);
     this.setTheme(0);
   }
   async init(forceWebGL=false){
@@ -221,9 +220,7 @@ export class View {
       this.boss.visible=true;this.boss.position.set(game.boss.x,game.boss.y,1);this.boss.scale.setScalar(game.boss.flash>0?1.01:1);
       const pose=bossPose(game.boss);this.bossAnimation=pose.mode;animateBoss(this.boss,pose,game.boss);
     }else {if(this.boss)this.boss.visible=false;this.bossAnimation=this.wrecks.some(w=>w.boss)?'collapse':'none';}
-    const b=game.boss;
-    this.beam.visible=!!b&&b.beam>0&&!b.dead;this.warning.visible=!!b&&b.warning>0&&!b.dead;
-    if(b){this.beam.position.set(b.beamX,-2,1.8);this.beam.scale.set(1.6,33,1);this.warning.position.set(b.beamX,-2,1.6);this.warning.scale.set(1.6,33,1);(this.warning.material as T.MeshBasicMaterial).opacity=.18+Math.sin(this.epoch*28)*.13;}
+    this.encounterView.draw(game);
     let markerCount=0,lineCount=0,shadowCount=0;
     for(const e of game.enemies){
       if(!e.ground&&shadowCount<98){dummy.position.set(e.x+.15,e.y+.7,-2.95);dummy.rotation.set(0,0,0);dummy.scale.set(e.radius*2.8,e.radius*2.0,1);dummy.updateMatrix();this.shadows.setMatrixAt(shadowCount++,dummy.matrix);}
@@ -286,6 +283,6 @@ export class View {
     if(this.pixelRatio<=1.01&&this.frames>300&&this.epoch-this.lastDprChange>7&&this.frameAverage>32){this.useBloom=false;this.key.castShadow=false;this.quality='PERFORMANCE';}
     if(this.useBloom&&this.pipeline)this.pipeline.render();else if(this.useBloom&&this.composer)this.composer.render();else this.renderer.render(this.scene,this.camera);
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
 }
 function shipTint(kind:Kind){return kind==='dart'?0xb69add:kind==='lancer'?0xd2ddf7:0xffffff;}

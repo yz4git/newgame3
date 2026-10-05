@@ -1,0 +1,65 @@
+[
+  {
+    "name": "kestrel",
+    "file": "app/textures/miniboss-kestrel-v9.webp",
+    "originalFile": "exec-887603be-46fb-4d5d-9416-ded59470ed9c.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production enemy cutout texture for NOVA STRIKE, a top-down vertical science-fiction shooter. One original detailed miniboss spacecraft, exactly overhead orthographic view, front faces DOWN. Entire silhouette centered and fully visible with 8% transparent margins. High-end physically shaded game asset, tiny layered mechanical panels, rivets, vents, visible depth, strong readable silhouette. Soft upper-left light, rich metal midtones, subtle emissive reactor. Genuine transparent background, no scenery, no ground shadow outside the silhouette, no lettering or watermark. Square canvas. Keep the reactor around x50%,y56% and the forward weapons near the bottom of the silhouette. Distinct from a three-pod final boss; this is one compact integrated vehicle. Design: KESTREL, orbital sentry. A compact segmented circular navy and ivory station with brass gun housings, two short swept solar fins, violet circular reactor, six radial metal segments and two downward cannons. Aerospace ring architecture, disciplined readable symmetry.",
+    "bytes": 410682
+  },
+  {
+    "name": "trident",
+    "file": "app/textures/miniboss-trident-v9.webp",
+    "originalFile": "exec-e0c438e3-5f40-4664-867e-989c1ce6ea7b.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production enemy cutout texture for NOVA STRIKE, a top-down vertical science-fiction shooter. One original detailed miniboss spacecraft, exactly overhead orthographic view, front faces DOWN. Entire silhouette centered and fully visible with 8% transparent margins. High-end physically shaded game asset, tiny layered mechanical panels, rivets, vents, visible depth, strong readable silhouette. Soft upper-left light, rich metal midtones, subtle emissive reactor. Genuine transparent background, no scenery, no ground shadow outside the silhouette, no lettering or watermark. Square canvas. Keep the reactor around x50%,y56% and the forward weapons near the bottom of the silhouette. Distinct from a three-pod final boss; this is one compact integrated vehicle. Design: TRIDENT, ocean assault escort. A pale steel and blue-black naval hydrofoil corvette, two compact rounded engine pontoons connected to a broad armored center deck, teal reactor, twin forward rotary turrets, brass pipes, heavily detailed silver naval plating. No water or wake baked into the sprite.",
+    "bytes": 477802
+  },
+  {
+    "name": "bastion",
+    "file": "app/textures/miniboss-bastion-v9.webp",
+    "originalFile": "exec-c5466904-3fcc-42bc-80c7-9ed3b27653ce.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production enemy cutout texture for NOVA STRIKE, a top-down vertical science-fiction shooter. One original detailed miniboss spacecraft, exactly overhead orthographic view, front faces DOWN. Entire silhouette centered and fully visible with 8% transparent margins. High-end physically shaded game asset, tiny layered mechanical panels, rivets, vents, visible depth, strong readable silhouette. Soft upper-left light, rich metal midtones, subtle emissive reactor. Genuine transparent background, no scenery, no ground shadow outside the silhouette, no lettering or watermark. Square canvas. Keep the reactor around x50%,y56% and the forward weapons near the bottom of the silhouette. Distinct from a three-pod final boss; this is one compact integrated vehicle. Design: BASTION, citadel interdictor. Low broad hexagonal titanium fortress craft, ivory ceramic slabs and dark cobalt armored seams, central glowing blue hexagonal power chamber, paired rectangular railgun housings, gold cooling conduits. Monumental industrial precision, heavy solid compact silhouette.",
+    "bytes": 432256
+  },
+  {
+    "name": "mirror",
+    "file": "app/textures/miniboss-mirror-v9.webp",
+    "originalFile": "exec-4682e524-0101-4360-94a3-40a3c5853e3f.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production enemy cutout texture for NOVA STRIKE, a top-down vertical science-fiction shooter. One original detailed miniboss spacecraft, exactly overhead orthographic view, front faces DOWN. Entire silhouette centered and fully visible with 8% transparent margins. High-end physically shaded game asset, tiny layered mechanical panels, rivets, vents, visible depth, strong readable silhouette. Soft upper-left light, rich metal midtones, subtle emissive reactor. Genuine transparent background, no scenery, no ground shadow outside the silhouette, no lettering or watermark. Square canvas. Keep the reactor around x50%,y56% and the forward weapons near the bottom of the silhouette. Distinct from a three-pod final boss; this is one compact integrated vehicle. Design: MIRROR, polar prism guardian. A compact silver titanium craft with angular icy blue crystalline armor blades on both sides, pale cyan central prism reactor, narrow gunmetal spine, two downward energy lances and white ceramic navigation fins. Clear icy crystal facets integrated into machinery, no snow background.",
+    "bytes": 381446
+  },
+  {
+    "name": "totem",
+    "file": "app/textures/miniboss-totem-v9.webp",
+    "originalFile": "exec-1ad81bcb-bafe-4f81-b363-30db99955ee9.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production enemy cutout texture for NOVA STRIKE, a top-down vertical science-fiction shooter. One original detailed miniboss spacecraft, exactly overhead orthographic view, front faces DOWN. Entire silhouette centered and fully visible with 8% transparent margins. High-end physically shaded game asset, tiny layered mechanical panels, rivets, vents, visible depth, strong readable silhouette. Soft upper-left light, rich metal midtones, subtle emissive reactor. Genuine transparent background, no scenery, no ground shadow outside the silhouette, no lettering or watermark. Square canvas. Keep the reactor around x50%,y56% and the forward weapons near the bottom of the silhouette. Distinct from a three-pod final boss; this is one compact integrated vehicle. Design: TOTEM, ancient jungle defense automaton. Wide compact bronze and olive mechanical relic craft with six crescent leaf-shaped armored wings, weathered carved metal panels, a round vivid emerald reactor, subtle moss along joints, two forward energy emitters. Beautiful intricate lost-civilization machinery, no organic vines extending beyond the silhouette.",
+    "bytes": 589046
+  },
+  {
+    "name": "crucible",
+    "file": "app/textures/miniboss-crucible-v9.webp",
+    "originalFile": "exec-5393dff5-c0f8-4440-a83b-363476be5a6d.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: production enemy cutout texture for NOVA STRIKE, a top-down vertical science-fiction shooter. One original detailed miniboss spacecraft, exactly overhead orthographic view, front faces DOWN. Entire silhouette centered and fully visible with 8% transparent margins. High-end physically shaded game asset, tiny layered mechanical panels, rivets, vents, visible depth, strong readable silhouette. Soft upper-left light, rich metal midtones, subtle emissive reactor. Genuine transparent background, no scenery, no ground shadow outside the silhouette, no lettering or watermark. Square canvas. Keep the reactor around x50%,y56% and the forward weapons near the bottom of the silhouette. Distinct from a three-pod final boss; this is one compact integrated vehicle. Design: CRUCIBLE, foundry furnace carrier. A compact dark charcoal and burnt-orange armored boiler craft, heavy central circular furnace, chunky industrial cylinder tanks and brass pipework, angular black radiator wings, paired forward pressure cannons, restrained small amber vents. Heat stressed steel, strong stocky silhouette, no fire background.",
+    "bytes": 425090
+  },
+  {
+    "name": "nodes",
+    "file": "app/textures/encounter-nodes-v9.webp",
+    "originalFile": "exec-08d9d4bc-e236-4cfa-b518-a85dcaa1df2c.png",
+    "transparent": true,
+    "generator": "built-in image_gen",
+    "prompt": "Use case: stylized-concept. Asset type: transparent six-cell texture atlas of shootable stage mechanisms for NOVA STRIKE, a premium top-down vertical science-fiction shooter. Exact 3 columns by 2 rows, equal square cells, wide 3:2 canvas. Every object centered in its own cell, leave a generous 18% transparent margin within every cell. No objects crossing cell boundaries. Truly transparent background. Exactly overhead orthographic view, consistent upper-left soft light, intricate physically shaded game art, crisp readable silhouettes. All six are small compact mechanisms, no scenery or shadows outside their silhouette. Top row left: silver navy circular orbital shield generator with violet reactor and six compact radial fins. Top row middle: pale silver naval twin cannon turret on a blue-black rounded deck base, teal conduits. Top row right: square ivory ceramic fortress power coupler with dark titanium casing and bright blue hexagonal core. Bottom row left: angular ice-blue crystalline reflector pylon on a silver metal circular base, faceted cyan crystal. Bottom row middle: bronze olive ancient flying defense bit with three crescent metal wings and emerald round core. Bottom row right: charcoal industrial pressure valve, brass pipes, orange furnace center, two black radiator blocks. Six different objects with meticulous metal panels and emissive details. No letters, no labels, no text, no border lines, no watermark.",
+    "bytes": 500308
+  }
+]

@@ -7,6 +7,7 @@ import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationS
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
 import {CanvasCombatEffects} from './canvas-combat.ts';
 import {drawAirCanvas} from './air-effects.ts';
+import {drawThreatsCanvas,drawEncounterActorsCanvas,drawBossShieldCanvas,encounterDiagnostics} from './encounter-view.ts';
 
 // Compatibility view for browsers where all GPU contexts are unavailable.
 // It shares the same fixed-step combat, controls, scores and progression.
@@ -17,7 +18,7 @@ export class CanvasView {
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
   private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
-  private combatEffects=new CanvasCombatEffects();
+  private combatEffects=new CanvasCombatEffects();private encounterStatus={miniboss:false,nodes:0,telegraphs:0,activeThreats:0,shield:false};
   private air={clock:0,layers:0,kind:'none'};
   private wrecks:{x:number;y:number;kind:Kind|'boss';age:number;life:number;stage:number;parts?:number[];spread?:number;deploy?:number}[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];private lastBoss:Game['boss']=null;
   constructor(private canvas:HTMLCanvasElement){}
@@ -67,15 +68,16 @@ export class CanvasView {
     if(['explode','bosskill','damage'].includes(e.type)&&this.explosions.length<48){this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.4,age:0,life:.88});this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.8,age:-.08,life:1.6,smoke:true});}
   }
   draw(g:Game,dt:number,_frameMs:number){
-    dt=animationClockRunning(g)?dt:0;
+    dt=animationClockRunning(g)?dt:0;this.encounterStatus=encounterDiagnostics(g);
     const c=this.ctx,state=presentationState(g),title=state==='title',active=state==='playing'||state==='transition',stage=this.stage=g.stage;
     c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle='#'+STAGES[stage].sky.toString(16).padStart(6,'0');c.fillRect(0,0,this.width,this.height);
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
     this.background.draw(c,g);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.air=drawAirCanvas(c,g,reduced);
-    this.stageEffects.draw(c,g,reduced);this.combatEffects.step(g,dt,reduced);this.combatEffects.drawWaves(c);this.combatEffects.drawEchoes(c);this.enemyAnimations={};
+    this.stageEffects.draw(c,g,reduced);this.combatEffects.step(g,dt,reduced);this.combatEffects.drawWaves(c);this.combatEffects.drawEchoes(c);this.enemyAnimations={};drawThreatsCanvas(c,g);
     for(const e of g.enemies){const pose=enemyPose(e,g.player);this.enemyAnimations[pose.mode]=(this.enemyAnimations[pose.mode]||0)+1;this.ship(e.kind,e.x,e.y,pose,1,e.flash>0,e.age);}
+    drawEncounterActorsCanvas(c,g);
     const b=g.boss;
     if(b&&!b.dead){
       this.lastBoss=b;
@@ -86,9 +88,8 @@ export class CanvasView {
       c.save();c.translate(b.x,b.y-.85);c.rotate(pose.rotor);c.strokeStyle='#c9dce5';c.lineWidth=.065;for(let i=0;i<6;i++){const a=i*Math.PI/3;c.beginPath();c.moveTo(Math.cos(a)*.65,Math.sin(a)*.65);c.lineTo(Math.cos(a)*.89,Math.sin(a)*.89);c.stroke();}c.restore();
       for(let i=0;i<4;i++){const a=i*Math.PI/2,x=b.x+Math.cos(a)*(.45+pose.open*.52),y=b.y-.85+Math.sin(a)*(.45+pose.open*.52);c.save();c.translate(x,y);c.rotate(a);this.rect(-.15,-.30,.30,.6,'#738a9b');c.restore();}
       canvasGlow(c,b.x,b.y-.85,.7+pose.open*.65,'#'+STAGES[stage].color.toString(16).padStart(6,'0'),.2+pose.open*.4);
-      if(b.warning>0){c.globalAlpha=.15+Math.abs(Math.sin(g.visualTime*15))*.15;this.rect(b.beamX-.8,-19,1.6,b.y+19,'#ff4d87');c.globalAlpha=1;}
-      if(b.beam>0){c.shadowColor='#ffa981';c.shadowBlur=20;this.rect(b.beamX-.8,-19,1.6,b.y+19,'#fff0cb');this.rect(b.beamX-.45,-19,.9,b.y+19,'#ffffff');c.shadowBlur=0;}
     }else this.bossAnimation=this.wrecks.some(w=>w.kind==='boss')?'collapse':'none';
+    drawBossShieldCanvas(c,g);
     for(const item of g.pickups){c.save();c.translate(item.x,item.y);c.rotate(item.age);const color=item.type==='power'?'#7effff':item.type==='repair'?'#8affa6':'#ffd282';c.strokeStyle=color;c.lineWidth=.08;c.beginPath();c.arc(0,0,.58,0,Math.PI*2);c.stroke();this.shape([[0,.4],[-.35,0],[0,-.4],[.35,0]],color);c.restore();}
     for(const bullet of g.bullets)if(bullet.trail&&bullet.trail.length>1){c.strokeStyle='#6cffcc';c.lineWidth=.09;c.globalAlpha=.6;c.beginPath();bullet.trail.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke();}c.globalAlpha=1;
     for(const lock of g.locks){c.strokeStyle='#94ffd6';c.lineWidth=.05;const r=1.5-lock.progress*.5;c.strokeRect(lock.x-r,lock.y-r,r*2,r*2);}
@@ -112,5 +113,5 @@ export class CanvasView {
     this.ring.age+=dt;
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterStatus,textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }

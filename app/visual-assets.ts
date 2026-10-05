@@ -49,6 +49,13 @@ import scorchUrl from './textures/scorch-decal-v8.webp?url';
 import nebulaVeilUrl from './textures/nebula-veil-v8.webp?url';
 import auroraUrl from './textures/aurora-curtain-v8.webp?url';
 import shaftsUrl from './textures/sunlight-shafts-v8.webp?url';
+import kestrelUrl from './textures/miniboss-kestrel-v9.webp?url';
+import tridentUrl from './textures/miniboss-trident-v9.webp?url';
+import bastionUrl from './textures/miniboss-bastion-v9.webp?url';
+import mirrorUrl from './textures/miniboss-mirror-v9.webp?url';
+import totemUrl from './textures/miniboss-totem-v9.webp?url';
+import crucibleUrl from './textures/miniboss-crucible-v9.webp?url';
+import encounterNodesUrl from './textures/encounter-nodes-v9.webp?url';
 import type {Kind} from './sim.ts';
 
 function neutral(color:string){const c=document.createElement('canvas');c.width=c.height=2;const ctx=c.getContext('2d')!;ctx.fillStyle=color;ctx.fillRect(0,0,2,2);return c;}
@@ -60,6 +67,9 @@ export const playerMap=new T.CanvasTexture(neutral('#dce1e4')),fighterMap=new T.
 export const enemyMaps=Object.fromEntries(['interceptor','bomber','corvette','sentinel','strider','drone','lancer'].map(k=>[k,new T.CanvasTexture(neutral('#9cabb8'))])) as Record<string,T.CanvasTexture>;
 export const sceneMaps=Array.from({length:6},()=>new T.CanvasTexture(neutral('#364950')));
 export const bossMaps=Array.from({length:6},()=>new T.CanvasTexture(neutral('#ffffff00')));
+export const minibossMaps=Array.from({length:6},()=>new T.CanvasTexture(neutral('#ffffff00')));
+export const nodeAtlasMap=new T.CanvasTexture(neutral('#ffffff00'));
+export const nodeMaps=Array.from({length:6},(_,i)=>{const t=nodeAtlasMap.clone();t.repeat.set(1/3,1/2);t.offset.set(i%3/3,i<3?.5:0);return t;});
 export const bossPartMaps=bossMaps.map(map=>[1,0,2].map(col=>{const t=map.clone();t.repeat.set(1/3,1);t.offset.set(col/3,0);return t;}));
 export const finishMaps={shockwave:new T.CanvasTexture(neutral('#ffffff00')),debris:new T.CanvasTexture(neutral('#ffffff00')),scorch:new T.CanvasTexture(neutral('#ffffff00')),nebula:new T.CanvasTexture(neutral('#ffffff00')),aurora:new T.CanvasTexture(neutral('#ffffff00')),shafts:new T.CanvasTexture(neutral('#ffffff00'))};
 export const explosionAtlasMap=new T.CanvasTexture(neutral('#ffcf8f')),smokeMap=new T.CanvasTexture(neutral('#70615d'));
@@ -68,7 +78,7 @@ export const livingMaps={swell:new T.CanvasTexture(neutral('#124b71')),foam:new 
 function atlasFrames(map:T.Texture){return Array.from({length:4},(_,i)=>{const frame=map.clone();frame.repeat.set(.5,.5);frame.offset.set(i%2*.5,1-(Math.floor(i/2)+1)*.5);return frame;});}
 export const ventFrames=atlasFrames(livingMaps.vents),impactFrames=atlasFrames(livingMaps.impact);
 export const debrisFrames=atlasFrames(finishMaps.debris);
-for(const map of [...bossMaps,...bossPartMaps.flat(),...Object.values(finishMaps),...debrisFrames])map.colorSpace=T.SRGBColorSpace;
+for(const map of [...bossMaps,...bossPartMaps.flat(),...minibossMaps,nodeAtlasMap,...nodeMaps,...Object.values(finishMaps),...debrisFrames])map.colorSpace=T.SRGBColorSpace;
 for(const map of [...Object.values(livingMaps),...ventFrames,...impactFrames])map.colorSpace=T.SRGBColorSpace;
 for(const map of [livingMaps.swell,livingMaps.caustics]){map.wrapS=map.wrapT=T.RepeatWrapping;map.anisotropy=4;}
 export const terrainMaps={rock:new T.CanvasTexture(neutral('#64656b')),ocean:new T.CanvasTexture(neutral('#094963')),ice:new T.CanvasTexture(neutral('#519bbe')),snow:new T.CanvasTexture(neutral('#e6f1f7')),moss:new T.CanvasTexture(neutral('#526148')),lava:new T.CanvasTexture(neutral('#a6440c')),nebula:new T.CanvasTexture(neutral('#090b21')),canopy:new T.CanvasTexture(neutral('#184b2a'))};
@@ -83,11 +93,12 @@ const assets:[T.Texture,string][]=[[metalMap,metalUrl],[armourMap,armourUrl],[ex
   ...[shipyardUrl,carrierUrl,citadelUrl,arcologyUrl,sanctuaryUrl,refineryUrl].map((url,i)=>[sceneMaps[i],url] as [T.Texture,string]),[explosionAtlasMap,atlasUrl],[smokeMap,smokeUrl],
   ...[swellUrl,foamUrl,causticUrl,waterfallUrl,ventUrl,plumeUrl,impactUrl,cloudUrl].map((url,i)=>[Object.values(livingMaps)[i],url] as [T.Texture,string]),
   ...[aegisUrl,leviathanUrl,helixUrl,borealisUrl,verdantUrl,pyraUrl].map((url,i)=>[bossMaps[i],url] as [T.Texture,string]),
-  ...[shockwaveUrl,debrisUrl,scorchUrl,nebulaVeilUrl,auroraUrl,shaftsUrl].map((url,i)=>[Object.values(finishMaps)[i],url] as [T.Texture,string])];
+  ...[shockwaveUrl,debrisUrl,scorchUrl,nebulaVeilUrl,auroraUrl,shaftsUrl].map((url,i)=>[Object.values(finishMaps)[i],url] as [T.Texture,string]),
+  ...[kestrelUrl,tridentUrl,bastionUrl,mirrorUrl,totemUrl,crucibleUrl].map((url,i)=>[minibossMaps[i],url] as [T.Texture,string]),[nodeAtlasMap,encounterNodesUrl]];
 let loaded=0,pending:Promise<void>|undefined;
 export function loadVisualAssets(){
   return pending??=Promise.all(assets.map(([texture,url])=>new Promise<void>(resolve=>{
-    const timeout=setTimeout(resolve,25000),image=new Image();image.onload=()=>{clearTimeout(timeout);texture.image=image;texture.needsUpdate=true;const bossIndex=bossMaps.indexOf(texture as T.CanvasTexture);const frames=texture===explosionAtlasMap?explosionFrames:texture===livingMaps.vents?ventFrames:texture===livingMaps.impact?impactFrames:texture===finishMaps.debris?debrisFrames:bossIndex>=0?bossPartMaps[bossIndex]:[];for(const frame of frames){(frame as T.Texture).image=image;frame.needsUpdate=true;}loaded++;resolve();};image.onerror=()=>{clearTimeout(timeout);console.warn('A visual texture could not be loaded',url);resolve();};image.src=url;
+    const timeout=setTimeout(resolve,25000),image=new Image();image.onload=()=>{clearTimeout(timeout);texture.image=image;texture.needsUpdate=true;const bossIndex=bossMaps.indexOf(texture as T.CanvasTexture);const frames=texture===nodeAtlasMap?nodeMaps:texture===explosionAtlasMap?explosionFrames:texture===livingMaps.vents?ventFrames:texture===livingMaps.impact?impactFrames:texture===finishMaps.debris?debrisFrames:bossIndex>=0?bossPartMaps[bossIndex]:[];for(const frame of frames){(frame as T.Texture).image=image;frame.needsUpdate=true;}loaded++;resolve();};image.onerror=()=>{clearTimeout(timeout);console.warn('A visual texture could not be loaded',url);resolve();};image.src=url;
   }))).then(()=>{});
 }
 export function visualAssetStatus(){return {generated:assets.length,loaded};}

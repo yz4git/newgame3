@@ -6,6 +6,7 @@ import { AudioEngine } from './audio-engine.ts';
 import type {SoundBus} from './sound-design.ts';
 import { CanvasView } from './canvas.ts';
 import {stageCue} from './motion.ts';
+import {ENCOUNTERS} from './encounter-design.ts';
 import {zoneAt,stageDistance} from './bg-map.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -48,7 +49,7 @@ function start(mode:Mode){
 }
 function pause(){game.pause();clearInput();screens();}
 function resume(){el('help-screen').hidden=true;game.resume();clearInput();lastTime=performance.now();accumulator=0;screens();void audio.unlock().catch(()=>{});}
-function title(){clearPopups();game.locks=[];game.state='title';game.enemies=[];game.bullets=[];game.pickups=[];game.boss=null;game.hull=3;game.stage=selectedStage;game.player.vx=0;game.player.vy=0;clearInput();el('help-screen').hidden=true;el('touch-tip').hidden=true;el('message').classList.remove('show');el('toast').classList.remove('show');screens();}
+function title(){clearPopups();game.locks=[];game.state='title';game.enemies=[];game.bullets=[];game.pickups=[];game.boss=null;game.encounter=null;game.nodes=[];game.threats=[];game.encounterSeen={stage:false,mini:false};game.hull=3;game.stage=selectedStage;game.player.vx=0;game.player.vy=0;clearInput();el('help-screen').hidden=true;el('touch-tip').hidden=true;el('message').classList.remove('show');el('toast').classList.remove('show');screens();}
 function help(){helpFrom=game.state;if(game.state==='playing'||game.state==='transition')pause();el('help-screen').hidden=false;el('pause-screen').hidden=true;}
 function result(){
   clearInput();let newRecord=game.score>best(game.mode);
@@ -129,13 +130,14 @@ function updateUI(now:number){
   el('bombs').textContent=game.energy>=100?'READY':game.bombs.toString().padStart(2,'0');
   el('nova-ready').textContent=game.overdrive>0?'BOOST':game.energy>=100?'OVERDRIVE':'NOVA';
   el('nova-button').classList.toggle('ready',game.energy>=100);el('nova-button').classList.toggle('unavailable',game.bombs===0&&game.energy<100);
-  el('energy').style.width=game.energy+'%';const boss=game.boss;
-  el('boss-hud').hidden=!boss||boss.dead||game.state==='result'||game.state==='title';
+  el('energy').style.width=game.energy+'%';const boss=game.boss,mini=game.encounter;
+  el('boss-hud').hidden=(!boss||boss.dead)&&!mini||game.state==='result'||game.state==='title';
   if(boss){el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
+  else if(mini){const guarded=game.nodes.some(n=>n.attach==='mini'&&!n.dead);el('boss-hud').classList.toggle('exposed',!guarded);el('boss-name').textContent=ENCOUNTERS[game.stage].mini;el('boss-pattern').textContent=guarded?'ESCORT SHIELD / 護衛を壊すと本体が露出':'MIDBOSS / 集中射撃で突破';el('boss-fill').style.width=Math.max(0,mini.hp/mini.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(mini.hp/mini.maxHp*100))+'%';el('parts-status').textContent=(guarded?'ESCORT ACTIVE':'CORE EXPOSED')+' / 撤退まで '+Math.max(0,Math.ceil((22-mini.age)/GAME_SPEED))+'s';}
   const cue=stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
   const panel=el('stage-cue');panel.hidden=!cue;
   el('cinematic-frame').hidden=!cue&&game.state!=='transition'||cue?.kind==='radio';
-  el('sector-strip').hidden=!playing||!!boss;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
+  el('sector-strip').hidden=!playing||!!boss||!!mini;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
   el('district').textContent=zoneAt(game.stage,stageDistance(game.time)).toUpperCase().replaceAll('-',' ');
   if(cue){
     panel.className='stage-cue '+cue.kind;panel.style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
@@ -161,7 +163,9 @@ function events(){
     if(e.type==='stage'){lastCueKey='';el('message').classList.remove('show');}
     else if(e.type==='warning')el('touch-tip').hidden=true;
     else if(e.type==='bosskill')showMessage(game.stage===STAGES.length-1&&game.mode==='campaign'?'STAR CORE RECOVERED':'SECTOR CLEAR',game.mode==='campaign'&&game.stage<STAGES.length-1?'TARGET DESTROYED / HULL +1':'TARGET DESTROYED',1.3);
-    else if(e.type==='phase')showMessage('PHASE 02','ATTACK PATTERN SHIFT',.8,true);
+    else if(e.type==='phase')showMessage('PHASE '+String(e.value??2).padStart(2,'0'),'ATTACK PATTERN SHIFT',.8,true);
+    else if(e.type==='midboss'){el('touch-tip').hidden=true;}
+    else if(e.type==='midkill')showMessage('MIDBOSS BREAK','SUPPLY DROPPED / 補給を回収',1.0);
     else if(e.type==='finish')continue;
     else if(e.text)toast(e.text);
     if(e.type==='damage'||e.type==='nova'){
@@ -175,7 +179,7 @@ function loop(now:number){
   accumulator+=dt;const controls=input();let count=0;
   while(accumulator>=STEP&&count<4){game.update(STEP,controls);accumulator-=STEP;count++;}
   if(game.state!==lastState){lastState=game.state;if(game.state==='result')result();else screens();}
-  events();audio.update(game.state,game.stage,!!game.boss&&!game.boss.dead);view.draw(game,dt*GAME_SPEED,frameMs);drawPopups(now);updateUI(now);
+  events();audio.update(game.state,game.stage,!!game.boss&&!game.boss.dead||!!game.encounter&&!game.encounter.dead);view.draw(game,dt*GAME_SPEED,frameMs);drawPopups(now);updateUI(now);
   requestAnimationFrame(loop);
 }
 async function boot(){

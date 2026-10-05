@@ -1,0 +1,136 @@
+{
+  "mode": "canvas",
+  "results": [
+    {
+      "stage": 0,
+      "event": {
+        "miniboss": false,
+        "nodes": 2,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "mini": {
+        "miniboss": true,
+        "nodes": 0,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "bullets": 12
+    },
+    {
+      "stage": 1,
+      "event": {
+        "miniboss": false,
+        "nodes": 2,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "mini": {
+        "miniboss": true,
+        "nodes": 0,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "bullets": 8
+    },
+    {
+      "stage": 2,
+      "event": {
+        "miniboss": false,
+        "nodes": 2,
+        "telegraphs": 2,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "mini": {
+        "miniboss": true,
+        "nodes": 2,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "bullets": 10
+    },
+    {
+      "stage": 3,
+      "event": {
+        "miniboss": false,
+        "nodes": 2,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "mini": {
+        "miniboss": true,
+        "nodes": 2,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "bullets": 14
+    },
+    {
+      "stage": 4,
+      "event": {
+        "miniboss": false,
+        "nodes": 3,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "mini": {
+        "miniboss": true,
+        "nodes": 2,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "bullets": 24
+    },
+    {
+      "stage": 5,
+      "event": {
+        "miniboss": false,
+        "nodes": 2,
+        "telegraphs": 2,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "mini": {
+        "miniboss": true,
+        "nodes": 0,
+        "telegraphs": 0,
+        "activeThreats": 0,
+        "shield": false
+      },
+      "bullets": 10
+    }
+  ],
+  "warning": {
+    "hull": 3,
+    "render": {
+      "miniboss": false,
+      "nodes": 1,
+      "telegraphs": 1,
+      "activeThreats": 0,
+      "shield": false
+    }
+  },
+  "live": {
+    "hull": 2,
+    "render": {
+      "miniboss": false,
+      "nodes": 1,
+      "telegraphs": 0,
+      "activeThreats": 1,
+      "shield": false
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "environment": "Chromium, 480x854 mobile viewport; WebGL uses software rendering"
+}

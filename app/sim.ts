@@ -4,6 +4,9 @@ export const TOP = 14.8;
 export const STEP = 1 / 60;
 export const GAME_SPEED = 2.25;
 import {STAGES} from './stages.ts';
+import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
+import {updateEncounters} from './encounters.ts';
+import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
 export {STAGES} from './stages.ts';
 export type Weapon = 'wide' | 'laser' | 'homing';
 export type Mode = 'campaign' | 'caravan';
@@ -21,14 +24,14 @@ export interface Bullet {
   radius: number; damage: number; enemy: boolean; homing: boolean; weapon: Weapon;
   age: number; dead: boolean; grazed: boolean; hits: number[]; color: number;
   source?: number; targetId?: number; turn?: number; accel?: number; trail?: {x:number;y:number}[];
-  shape?:'missile'|'diamond';
+  shape?:'missile'|'diamond'; ricochets?:number;
 }
 export interface Pickup { id: number; x: number; y: number; type: 'power' | 'medal' | 'repair'; age: number; dead: boolean; }
 export interface Boss {
   id: number; x: number; y: number; age: number; encounterTime: number; hp: number; maxHp: number;
   parts: number[]; maxPart: number; shoot: number; attack: number; cycle: number;
   warning: number; beam: number; beamX: number; dead: boolean; flash: number;
-  phase: number; rest: boolean; spread: number; recoil:number;
+  phase: number; rest: boolean; spread: number; recoil:number; patternTime:number; guard:number; heat:number;
 }
 export interface Lock { id: number; progress: number; x: number; y: number; }
 export interface GameEvent { type: string; x?: number; y?: number; size?: number; color?: number; text?: string; value?: number; source?:number; kind?:Kind|'player'|'boss'; }
@@ -98,6 +101,12 @@ function waves(stage: number, mode: Mode): Wave[] {
     if(row.at===71){row.kind=stage===5?'corvette':stage===4?'sentinel':'fighter';row.count=2;}
   }
   if(stage===0)rows.push({at:49,kind:'cruiser',count:1,formation:3},{at:21,kind:'weaver',count:1,formation:3,side:1});
+  if(mode==='campaign'){
+    const t=encounterTimes(stage,STAGES[stage].duration).mini;
+    const keep=rows.filter(r=>r.at<t-2||r.at>t+23);
+    keep.push({at:t+24,kind:'bomber',count:1,formation:0},{at:t+25.5,kind:'corvette',count:1,formation:0},{at:t+27,kind:'sentinel',count:1,formation:3},{at:t+29,kind:'carrier',count:1,formation:1});
+    return keep.filter(r=>r.at<STAGES[stage].duration-2).sort((a,b)=>a.at-b.at);
+  }
   return rows.sort((a,b)=>a.at-b.at);
 }
 export function segmentDistance2(ax: number, ay: number, bx: number, by: number, x: number, y: number) {
@@ -124,6 +133,7 @@ export class Game {
   overdrive=0; novaTime=0; shotTimer=0; transitionTime=0; won=false;failureReason:'hull'|'timeout'|null=null; resumeState: State='playing';
   player={x:0,y:-10.5,vx:0,vy:0,focus:false};
   enemies: Enemy[]=[]; bullets: Bullet[]=[]; pickups: Pickup[]=[]; boss: Boss | null=null;
+  encounter:Miniboss|null=null;nodes:CombatNode[]=[];threats:Threat[]=[];encounterSeen={stage:false,mini:false};
   events: GameEvent[]=[]; private schedule: Wave[]=[]; private waveIndex=0; private uid=0;
   private seed=2026; private groups=new Map<number,{total:number;kills:number;escaped:boolean}>();
   private volley=0; private lastExtend=0;
@@ -137,7 +147,7 @@ export class Game {
     this.locks=[];this.lockKills=0;this.resonances=0;this.cancelled=0;this.medalStreak=0;this.bestMedal=0;this.pointBlanks=0;
     this.bombs=3; this.energy=0; this.invulnerable=3; this.overdrive=0; this.novaTime=0;this.transitionTime=0;
     this.weapon='wide'; this.player={x:0,y:-10.5,vx:0,vy:0,focus:false};
-    this.enemies=[]; this.bullets=[]; this.pickups=[]; this.events=[]; this.boss=null;
+    this.enemies=[]; this.bullets=[]; this.pickups=[]; this.events=[]; this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
     this.groups.clear(); this.waveIndex=0; this.uid=0; this.seed=2026; this.volley=0;
     this.lastExtend=0; this.won=false;this.failureReason=null; this.shotTimer=0; this.schedule=waves(this.stage,mode);
     this.state='playing'; this.emit('stage',{text:mode==='caravan'?'120 SECOND CARAVAN':STAGES[this.stage].name});
@@ -164,6 +174,8 @@ export class Game {
     this.addScore(converted*35); this.energy=Math.min(100,this.energy+converted*.3);
     for(const e of [...this.enemies])if(!e.dead)this.damageEnemy(e,70,'nova');
     if(this.boss&&!this.boss.dead){this.boss.hp-=105;for(let i=0;i<2;i++)this.damagePart(i,60);if(this.boss.hp<=0)this.killBoss();}
+    for(const t of this.threats)t.dead=true;
+    for(const n of [...this.nodes])this.damageNode(n,70);if(this.encounter)this.damageMiniboss(70);
     this.emit('nova',{x:this.player.x,y:this.player.y,size:18}); return true;
   }
   spawn(kind: Kind, x: number, y: number, group=0, pattern=0): Enemy {
@@ -188,18 +200,18 @@ export class Game {
     }
     if(w.kind==='carrier')this.emit('supply',{text:'SUPPLY / 補給機を撃破'});
   }
-  private projectile(x: number,y: number,vx: number,vy: number,enemy: boolean,damage=1.7,homing=false,color=0xffa73b,extra:Partial<Bullet>={}) {
+  projectile(x: number,y: number,vx: number,vy: number,enemy: boolean,damage=1.7,homing=false,color=0xffa73b,extra:Partial<Bullet>={}) {
     if(this.bullets.length>720)return;
     this.bullets.push({id:++this.uid,x,y,px:x,py:y,vx,vy,radius:enemy?.24:.18,damage,
       enemy,homing,weapon:this.weapon,age:0,dead:false,grazed:false,hits:[],color,...extra});
   }
-  private aimed(x: number,y: number,speed: number,count=1,spread=.15,source=0,target:{x:number;y:number}=this.player,accel=0) {
+  aimed(x: number,y: number,speed: number,count=1,spread=.15,source=0,target:{x:number;y:number}=this.player,accel=0) {
     if(y<this.player.y+2||Math.hypot(this.player.x-x,this.player.y-y)<3.8)return;
     const a=Math.atan2(target.y-y,target.x-x);
     const scale=this.difficulty==='casual'?.84:this.difficulty==='expert'?1.22:1;
     for(let i=0;i<count;i++){const an=a+(i-(count-1)/2)*spread;this.projectile(x,y,Math.cos(an)*speed*scale,Math.sin(an)*speed*scale,true,1,false,accel?0xff7899:0xffb85f,{source,accel});}
   }
-  private fan(x:number,y:number,count:number,speed:number,angle:number,spacing:number,source:number,color=0xffc05b,turn=0){
+  fan(x:number,y:number,count:number,speed:number,angle:number,spacing:number,source:number,color=0xffc05b,turn=0){
     const scale=this.difficulty==='casual'?.82:this.difficulty==='expert'?1.15:1;
     if(y<this.player.y+2)return;
     for(let i=0;i<count;i++){
@@ -216,6 +228,7 @@ export class Game {
       targets.push({id:b.id,x:b.x,y:b.y-1});
       for(let i=0;i<2;i++)if(b.parts[i]>0)targets.push({id:b.id+100000+i,...bossPartPosition(b,i)});
     }
+    for(const n of this.nodes)if(!n.dead&&n.y>p.y+.8)targets.push({id:n.id,x:n.x,y:n.y});if(this.encounter&&this.encounter.y<16)targets.push({id:this.encounter.id,x:this.encounter.x,y:this.encounter.y});
     targets.sort((a,b)=>(a.y-p.y)**2+(a.x-p.x)**2-((b.y-p.y)**2+(b.x-p.x)**2));
     const previous=new Map(this.locks.map(l=>[l.id,l]));
     this.locks=targets.slice(0,Math.min(4,this.power+1)).map(t=>{
@@ -291,7 +304,8 @@ export class Game {
     b.parts[index]-=damage;
     if(b.parts[index]>0)return;b.parts[index]=0;
     const pos=bossPartPosition(b,index);
-    const converted=this.cancelBullets(pos.x,pos.y,0,b.id+index+1);
+    const converted=this.clearSource(b.id+index+1,true);
+    for(const n of this.nodes)if(n.attach==='boss'&&n.index===index){n.dead=true;this.clearSource(n.id);}
     this.addScore(2500*this.multiplier);this.pickup('power',pos.x,pos.y-1);
     this.emit('explode',{...pos,size:2.7});this.emit('part',{...pos,text:'PART BREAK / +'+2500*this.multiplier+' / '+converted+' CANCEL'});
   }
@@ -307,92 +321,53 @@ export class Game {
   }
   spawnBoss() {
     const maxHp=460+this.stage*220;
-    this.boss={id:++this.uid,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[100+this.stage*45,100+this.stage*45],
-      maxPart:100+this.stage*45,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0};
+    this.clearEncounterSources('mini');this.encounter=null;for(const n of this.nodes)this.clearSource(n.id);this.nodes=[];this.threats=[];
+    const id=++this.uid;this.uid+=2;
+    this.boss={id,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[100+this.stage*45,100+this.stage*45],
+      maxPart:100+this.stage*45,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0,patternTime:0,guard:0,heat:0};
     this.emit('warning',{text:'WARNING / '+STAGES[this.stage].boss});
   }
-  private updateBoss(dt: number) {
-    const b=this.boss;if(!b||b.dead)return;
-    const style=STAGES[this.stage].bossStyle;
-    b.age+=dt;b.encounterTime+=dt/GAME_SPEED;b.flash=Math.max(0,b.flash-dt);b.recoil=Math.max(0,b.recoil-dt);
-    if(this.mode==='campaign'&&b.encounterTime>=90){this.finish(false,'timeout');return;}
-    if(this.mode==='campaign'&&b.encounterTime>=70&&b.encounterTime-dt/GAME_SPEED<70)this.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
-    b.y+=((b.age<3?9.2:9+Math.sin(b.age*.65)*.7)-b.y)*dt*1.9;
-    b.x=Math.sin(b.age*.55)*(style===2?3.3:2.8);
-    if(b.age<3)return;
-    if(b.hp<b.maxHp*.48&&b.phase===1){
-      b.phase=2;b.warning=0;b.beam=0;b.shoot=1.1;
-      this.cancelBullets(b.x,b.y,40);this.invulnerable=Math.max(this.invulnerable,.8);
-      this.emit('phase',{x:b.x,y:b.y,color:STAGES[this.stage].color,text:'PHASE 02 / ATTACK PATTERN SHIFT'});
-    }
-    const cycle=Math.floor((b.age-3)/7.5),elapsed=(b.age-3)%7.5;
-    b.rest=elapsed>5.75;
-    b.spread=style===1&&!b.rest&&cycle%3===1?Math.min(1.6,elapsed*1.7):Math.max(0,b.spread-dt*3);
-    if(cycle!==b.cycle){
-      b.cycle=cycle;b.attack=cycle%3;b.shoot=.8;
-      if(b.attack===2&&style!==1){b.beamX=this.player.x;b.warning=1.35;this.emit('beam',{text:'LASER LOCK / 横に回避'});}
-      else this.emit('pattern',{text:this.attackName()});
-    }
-    if(b.warning>0){b.warning-=dt;if(b.warning<=0)b.beam=1.65;}
-    else if(b.beam>0){b.beam=Math.max(0,b.beam-dt);if(Math.abs(this.player.x-b.beamX)<.8&&this.player.y<b.y)this.hitPlayer();}
-    if(b.rest){b.shoot=Math.max(.65,b.shoot);return;}
-    b.shoot-=dt;if(b.shoot>0)return;
-    const weak=b.parts.filter(p=>p>0).length,fast=b.phase===2;b.recoil=.24;
-    if(style===0){
-      if(b.attack===0){
-        const odd=Math.floor(elapsed/.85)%2===0;
-        this.fan(b.x,b.y-1.8,(odd?7:8)+weak,8,-Math.PI/2,.19,b.id,0xffc05b);
-        b.shoot=fast?.62:.88;
-      }else if(b.attack===1){
-        for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.aimed(pos.x,pos.y-1,10.5,3,.18,b.id+i+1);}
-        this.aimed(b.x,b.y-2,9,1,.1,b.id);b.shoot=fast?.78:1.05;
-      }else{
-        for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.fan(pos.x,pos.y-1,3,7.5,-Math.PI/2,.3,b.id+i+1);}
-        b.shoot=1.2;
-      }
-    }else if(style===1){
-      if(b.attack===0){
-        const swing=Math.sin(b.age*1.1)*.4;
-        for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.fan(pos.x,pos.y-1,5,7.5,-Math.PI/2+swing*(i===0?1:-1),.22,b.id+i+1,0xffa8da,(i===0?1:-1)*.17);}
-        this.fan(b.x,b.y-2,5,7,-Math.PI/2-swing,.23,b.id,0xffc05b);b.shoot=fast?.65:.95;
-      }else if(b.attack===1){
-        for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.aimed(pos.x,pos.y-1,10,fast?3:2,.20,b.id+i+1);}
-        b.shoot=.9;
-      }else{
-        const n=16+weak*2,gap=Math.atan2(this.player.y-b.y,this.player.x-b.x)+Math.sin(b.age)*.28;
-        for(let i=0;i<n;i++){
-          const a=i/n*Math.PI*2+b.age*.09,delta=Math.atan2(Math.sin(a-gap),Math.cos(a-gap));
-          if(Math.abs(delta)<.35)continue;
-          const speed=this.difficulty==='casual'?6.2:this.difficulty==='expert'?8.6:7.5;
-          this.projectile(b.x,b.y-1,Math.cos(a)*speed,Math.sin(a)*speed,true,1,false,0xffb776,{source:b.id});
-        }b.shoot=fast?1.1:1.45;
-      }
-    }else{
-      if(b.attack===0){
-        const pivot=Math.sin(b.age*.95)*.42;
-        this.fan(b.x,b.y-2,7+weak,7.5,-Math.PI/2+pivot,.20,b.id,0xffc05b,pivot*.4);
-        b.shoot=fast?.62:.85;
-      }else if(b.attack===1){
-        for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.aimed(pos.x,pos.y-1,5.5,3,.15,b.id+i+1,this.player,5);}
-        this.fan(b.x,b.y-2,4,8,-Math.PI/2,.36,b.id,0xffc05b);b.shoot=1.2;
-      }else{
-        for(let i=0;i<2;i++)if(b.parts[i]>0){const pos=bossPartPosition(b,i);this.fan(pos.x,pos.y-1,4,7.5,-Math.PI/2,.30,b.id+i+1);}
-        b.shoot=fast?1:1.35;
-      }
-    }
+  private updateBoss(dt:number){updateBossPattern(this,dt);}
+  attackName(){const b=this.boss;if(!b)return '';return b.rest?'CORE EXPOSED / DAMAGE ×1.6':BOSS_ATTACKS[this.stage][b.attack]+(b.guard?' / CORE ARMOR':this.stage===5?' / '+Math.round(b.heat*100)+'%':'');}
+  nextCombatId(){return ++this.uid;}
+  addCombatNode(attach:CombatNode['attach'],owner:number,index:number,x:number,y:number,hp:number,life:number){
+    if(this.nodes.filter(n=>!n.dead).length>=8)return;
+    this.nodes.push({id:++this.uid,owner,attach,index,stage:this.stage,x,y,baseX:x,baseY:y,hp,maxHp:hp,radius:1.12,age:0,life,shoot:(attach==='stage'?5.0:2.2)+index*.6,flash:0,dead:false});
   }
-  attackName(){
-    const b=this.boss;if(!b)return '';
-    if(b.rest)return 'CORE EXPOSED / DAMAGE ×1.6';
-    return [['GATE FAN / 偶数・奇数弾','CROSS AIM / 狙い弾','LOCK BEAM / 予告レーザー'],
-      ['TWIN SPIRAL / 双方向旋回','WING SEPARATION / 双翼分離','PRISM RING / 円形の隙間'],
-      ['HELIX FIELD / 螺旋弾','ACCEL SALVO / 加速弾','CORE LANCE / 星核レーザー']][STAGES[this.stage].bossStyle][b.attack];
+  addThreat(ax:number,ay:number,bx:number,by:number,width:number,source:number,warmup=2.05,duration=1.35){
+    if(this.threats.filter(t=>!t.dead).length>=12)return;
+    this.threats.push({id:++this.uid,source,ax,ay,bx,by,width,age:0,warmup:Math.max(GAME_SPEED*.70,warmup),duration,dead:false});this.emit('beam',{x:ax,y:ay,source});
+  }
+  clearSource(source:number,reward=false){
+    let count=0;if(reward)count=this.cancelBullets(0,0,0,source);else for(const b of this.bullets)if(b.enemy&&b.source===source)b.dead=true;
+    for(const t of this.threats)if(t.source===source)t.dead=true;return count;
+  }
+  clearEncounterSources(attach:CombatNode['attach']){
+    for(const n of this.nodes)if(n.attach===attach){n.dead=true;this.clearSource(n.id);}
+    if(attach==='mini'&&this.encounter)this.clearSource(this.encounter.id);
+  }
+  clearBossThreats(){
+    if(this.boss)this.cancelBullets(this.boss.x,this.boss.y,40);
+    this.clearEncounterSources('boss');for(const t of this.threats)t.dead=true;
+  }
+  damageNode(n:CombatNode,damage:number){
+    if(n.dead)return;if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:ENCOUNTERS[n.stage].color});n.hp-=damage;n.flash=.10;if(n.hp>0)return;n.hp=0;n.dead=true;this.clearSource(n.id,true);this.addScore(800*this.multiplier);this.energy=Math.min(100,this.energy+5);
+    this.emit('explode',{x:n.x,y:n.y,size:1.6});this.emit('part',{x:n.x,y:n.y,text:ENCOUNTERS[n.stage].hint+' / +800 × CHAIN'});this.pickup('medal',n.x,n.y);
+  }
+  damageMiniboss(damage:number){
+    const m=this.encounter;if(!m||m.dead)return;
+    const guarded=this.nodes.some(n=>n.attach==='mini'&&!n.dead);if(m.flash<=0)this.emit('hit',{x:m.x,y:m.y,color:ENCOUNTERS[m.stage].color});m.hp-=damage*(guarded?.70:1.25);m.flash=.08;if(m.hp>0)return;
+    m.dead=true;this.kills++;this.addScore((5000+this.stage*1000)*this.multiplier);this.clearSource(m.id,true);this.clearEncounterSources('mini');
+    this.emit('explode',{x:m.x,y:m.y,size:3.8});this.emit('midkill',{x:m.x,y:m.y,text:'MIDBOSS BREAK / 本隊へ進行'});this.pickup('power',m.x-1,m.y);this.pickup('repair',m.x+1,m.y);this.encounter=null;
+    const next=this.schedule[this.waveIndex];
+    if(next&&next.at-this.time>8)this.schedule.splice(this.waveIndex,0,{at:this.time+2.5,kind:'drone',count:5,formation:4},{at:this.time+6,kind:'carrier',count:1,formation:1});
   }
   private killBoss() {
     const b=this.boss;if(!b||b.dead||this.state!=='playing')return;b.dead=true;
     const timeBonus=Math.max(0,Math.round(8000-Math.max(0,b.age-3)*100));
     this.addScore(((10000+this.stage*5000)+timeBonus)*this.multiplier);
     this.emit('score',{x:b.x,y:b.y-3,text:'TIME BONUS +'+timeBonus*this.multiplier});
+    this.encounter=null;this.nodes=[];this.threats=[];
     this.emit('bosskill',{x:b.x,y:b.y,size:5.5,text:'TARGET DESTROYED',source:b.id,kind:'boss'});
     for(const e of this.enemies)e.dead=true;for(const shot of this.bullets)shot.dead=true;
     if(this.mode==='caravan'){
@@ -411,7 +386,7 @@ export class Game {
   }
   private nextStage() {
     if(this.stage>=STAGES.length-1){this.finish(true);return;}
-    this.stage++;this.time=0;this.enemies=[];this.bullets=[];this.pickups=[];this.boss=null;
+    this.stage++;this.time=0;this.enemies=[];this.bullets=[];this.pickups=[];this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
     this.groups.clear();this.waveIndex=0;this.schedule=waves(this.stage,this.mode);this.locks=[];
     this.hull=Math.min(4,this.hull+1);this.bombs=Math.min(3,this.bombs+1);
     this.invulnerable=2.5;this.state='playing';this.emit('stage',{text:STAGES[this.stage].name});
@@ -485,7 +460,7 @@ export class Game {
       if(!e.ground&&Math.hypot(e.x-p.x,e.y-p.y)<e.radius*.8+.23)this.hitPlayer();
       if(e.y<-19){e.dead=true;const group=this.groups.get(e.group);if(group)group.escaped=true;}
     }
-    if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
+    if(this.state!=='playing')return;updateEncounters(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
     for(const b of this.bullets){
       if(b.dead)continue;b.age+=dt;b.px=b.x;b.py=b.y;
       if(b.homing&&!b.enemy){
@@ -493,6 +468,8 @@ export class Game {
         const locked=this.enemies.find(e=>e.id===b.targetId&&!e.dead);
         if(locked){tx=locked.x;ty=locked.y;best=0;}
         else for(const e of this.enemies)if(!e.dead&&e.y>b.y-1){const d=(e.x-b.x)**2+(e.y-b.y)**2;if(d<best){best=d;tx=e.x;ty=e.y;}}
+        for(const n of this.nodes)if(!n.dead&&n.y>b.y-1){const d=(n.x-b.x)**2+(n.y-b.y)**2;if(n.id===b.targetId||d<best){best=n.id===b.targetId?0:d;tx=n.x;ty=n.y;}}
+        const mini=this.encounter;if(mini&&(mini.id===b.targetId||(mini.x-b.x)**2+(mini.y-b.y)**2<best)){best=0;tx=mini.x;ty=mini.y;}
         const boss=this.boss;
         if(boss&&!boss.dead&&(best>120||b.targetId===boss.id||(b.targetId??0)>=boss.id+100000)){
           const part=(b.targetId??0)-boss.id-100000;
@@ -506,6 +483,7 @@ export class Game {
         if(b.accel){const speed=Math.hypot(b.vx,b.vy),next=Math.min(18,speed+b.accel*dt),f=next/(speed||1);b.vx*=f;b.vy*=f;}
       }
       b.x+=b.vx*dt;b.y+=b.vy*dt;
+      if(b.enemy&&b.ricochets&&Math.abs(b.x)>W&&this.nodes.some(n=>n.stage===3&&!n.dead)){b.x=Math.sign(b.x)*W;b.vx=-b.vx;b.ricochets--;this.emit('hit',{x:b.x,y:b.y});}
       if(Math.abs(b.x)>16||b.y>25||b.y<-22||b.age>5){b.dead=true;continue;}
       if(b.enemy){
         const d=segmentDistance2(b.px,b.py,b.x,b.y,p.x,p.y);
@@ -520,6 +498,8 @@ export class Game {
             if(b.weapon!=='laser'||b.hits.length>=(p.focus?4:3)){b.dead=true;break;}
           }
         }
+        for(const n of this.nodes){if(b.dead||n.dead||b.hits.includes(n.id))continue;if(segmentDistance2(b.px,b.py,b.x,b.y,n.x,n.y)<(n.radius+b.radius)**2){this.damageNode(n,b.damage);b.hits.push(n.id);if(b.weapon!=='laser'||b.hits.length>=(p.focus?4:3))b.dead=true;}}
+        const mini=this.encounter;if(!b.dead&&mini&&!mini.dead&&mini.y<16&&!b.hits.includes(mini.id)&&segmentDistance2(b.px,b.py,b.x,b.y,mini.x,mini.y)<(2.15+b.radius)**2){this.damageMiniboss(b.damage);b.hits.push(mini.id);b.dead=true;}
         const boss=this.boss;
         if(!b.dead&&boss&&!boss.dead&&boss.y<16){
           for(let i=0;i<3;i++){
@@ -527,7 +507,7 @@ export class Game {
             const id=boss.id+i+100000,px=pos.x,py=pos.y,r=i===0?1.7:1.35;
             if(i>0&&boss.parts[i-1]<=0||b.hits.includes(id))continue;
             if(segmentDistance2(b.px,b.py,b.x,b.y,px,py)<(r+b.radius)**2){
-              if(i===0){boss.hp-=b.damage*(boss.rest?1.6:1);boss.flash=.07;}
+              if(i===0){boss.hp-=b.damage*bossCoreDamage(this,boss);boss.flash=.07;}
               else this.damagePart(i-1,b.damage);
               b.hits.push(id);b.dead=true;if(boss.hp<=0)this.killBoss();break;
             }
@@ -548,11 +528,13 @@ export class Game {
         this.emit('collect',{x:item.x,y:item.y,color:item.type==='power'?0x65ffff:0xffd56d});
       }else if(item.y<-19){item.dead=true;if(item.type==='medal')this.medalStreak=0;}
     }
+    this.nodes=this.nodes.filter(n=>!n.dead);this.threats=this.threats.filter(t=>!t.dead);
     this.enemies=this.enemies.filter(e=>!e.dead);this.bullets=this.bullets.filter(b=>!b.dead);this.pickups=this.pickups.filter(p=>!p.dead);
   }
   snapshot() { return {state:this.state,stage:this.stage,time:this.time,totalTime:this.totalTime,score:this.score,
     hull:this.hull,power:this.power,bombs:this.bombs,energy:this.energy,weapon:this.weapon,kills:this.kills,
     bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,
     boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest}:null,
+    encounter:this.encounter?{name:ENCOUNTERS[this.stage].mini,hp:this.encounter.hp,maxHp:this.encounter.maxHp,age:this.encounter.age,attack:this.encounter.attack}:null,stageEvent:{...this.encounterSeen,nodes:this.nodes.length,threats:this.threats.length},
     player:{...this.player},won:this.won,failureReason:this.failureReason}; }
 }
