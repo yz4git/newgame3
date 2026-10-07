@@ -13,7 +13,7 @@ import {drawThreatsCanvas,drawEncounterActorsCanvas,drawBossShieldCanvas,encount
 // It shares the same fixed-step combat, controls, scores and progression.
 interface Spark {x:number;y:number;vx:number;vy:number;life:number;max:number;color:string;size:number;}
 export class CanvasView {
-  engine='Canvas 2D';quality='COMPATIBLE';
+  engine='Canvas 2D';quality='COMPATIBLE';private playerTint='#65dcff';
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
@@ -37,7 +37,7 @@ export class CanvasView {
     if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')this.circle(x+.15,y+.6,kind==='cruiser'?1.9:1.05,'#02061170');
     if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
     const c=this.ctx;c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
-    const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player||kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
+    const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player?this.playerTint:kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
     if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')for(const side of[-1,1]){
       const ex=side*(large?1.35:kind==='bomber'?1.38:player?.50:small?.35:.62),ey=large?2.2:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:small?.78:1.05;
       canvasGlow(c,ex,ey,.3*pose.thrust,color,.65);c.save();c.translate(ex,ey);if(!player)c.rotate(Math.PI);c.scale(1,-1);c.globalAlpha=.6;c.globalCompositeOperation='lighter';const length=1.65*pose.thrust*(.9+Math.sin(t*36)*.1),width=.48*pose.thrust;c.drawImage(livingMaps.plume.image,-width/2,-length*.05,width,length);c.restore();
@@ -101,6 +101,7 @@ export class CanvasView {
     }
     const p=g.player,pose=playerPose(g),depart=state==='transition'?smooth((3.5-g.transitionTime)/3.5):g.state==='result'&&g.won&&g.boss?.dead?1:0;this.playerAnimation=state==='transition'?'depart':pose.mode;
     const playerVisible=title||g.hull>0&&(g.time<2.6||g.invulnerable<=0||Math.floor(g.invulnerable*12)%3!==0);
+    this.playerTint=g.shipClass==='falcon'?'#89bcff':g.shipClass==='bulwark'?'#ffc18e':'#65dcff';
     if(playerVisible)this.ship('player',title?Math.sin(g.visualTime*.5)*.4:p.x,title?1.9:p.y+depart*34,pose,title?2:1,false,g.visualTime);
     if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();}
     if(!title&&g.power===4)for(const s of[-1,1]){this.circle(p.x+s*1.45,p.y-.15,.25,'#aedce8');this.circle(p.x+s*1.45,p.y-.05,.13,'#87f9ff');}
