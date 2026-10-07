@@ -7,7 +7,7 @@ import {bossCoreDamage} from '../app/boss-patterns.ts';
 import {stageCue,bossPose} from '../app/motion.ts';
 
 const still={x:0,y:0,focus:false};
-function isolated(stage=0){const g=new Game();g.start('campaign','normal',stage);g.waveIndex=999;g.encounterSeen={stage:true,mini:true};g.shotTimer=1000;g.invulnerable=1000;return g;}
+function isolated(stage=0){const g=new Game();g.start('campaign','normal',stage);g.waveIndex=999;g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];g.shotTimer=1000;g.invulnerable=1000;return g;}
 function step(g,count){for(let i=0;i<count;i++){g.update(STEP,still);g.drainEvents();}}
 
 test('Every campaign sector reaches one event and one miniboss, while Caravan retains its timed waves',()=>{
