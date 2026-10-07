@@ -15,7 +15,7 @@ export const BOSS_ATTACKS=[
  ['PRESSURE SALVO / 炉圧連射','VENT LANCES / 放熱光槍','FURNACE SURGE / 炉の暴走'],
 ] as const;
 export interface Threat {id:number;source:number;ax:number;ay:number;bx:number;by:number;width:number;age:number;warmup:number;duration:number;dead:boolean;}
-export interface CombatNode {id:number;owner:number;attach:'stage'|'mini'|'boss';index:number;stage:number;x:number;y:number;baseX:number;baseY:number;hp:number;maxHp:number;radius:number;age:number;life:number;shoot:number;flash:number;dead:boolean;}
+export interface CombatNode {id:number;owner:number;attach:'stage'|'mini'|'boss'|'field';index:number;stage:number;x:number;y:number;baseX:number;baseY:number;hp:number;maxHp:number;radius:number;age:number;life:number;shoot:number;flash:number;dead:boolean;}
 export interface Miniboss {id:number;stage:number;x:number;y:number;hp:number;maxHp:number;age:number;shoot:number;flash:number;attack:number;cycle:number;dead:boolean;}
 export function encounterTimes(stage:number,duration:number){return {event:duration*.18,mini:duration*.42};}
 export function threatActive(t:Threat){return !t.dead&&t.age>=t.warmup&&t.age<t.warmup+t.duration;}
