@@ -6,11 +6,12 @@ export const GAME_SPEED = 2.25;
 import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {updateEncounters} from './encounters.ts';
+import {initialBattlefield,nextBattlefieldStage,updateBattlefield,destroyBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
 export {STAGES} from './stages.ts';
 export type Weapon = 'wide' | 'laser' | 'homing';
-export type Mode = 'campaign' | 'caravan';
+export type Mode = 'campaign' | 'caravan' | 'bossrush';
 export type Difficulty = 'casual' | 'normal' | 'expert';
 export type State = 'title' | 'playing' | 'paused' | 'transition' | 'result';
 export type Kind = 'drone' | 'dart' | 'fighter' | 'tank' | 'cruiser' | 'carrier' | 'relic' | 'weaver' | 'lancer' | 'interceptor' | 'bomber' | 'corvette' | 'sentinel' | 'strider';
@@ -55,6 +56,7 @@ const DATA: Record<Kind, { hp: number; radius: number; score: number; speed: num
   strider: { hp: 24, radius: 1.05, score: 700, speed: 4.4 },
 };
 function waves(stage: number, mode: Mode): Wave[] {
+  if(mode==='bossrush')return [];
   const style=STAGES[stage].bossStyle;
   // Teach a role, combine it, release pressure, then resupply.
   const rows: Wave[] = [
@@ -126,7 +128,7 @@ export function bossPartPosition(b:Boss,index:number) {
   return {x:b.x+side*(3+b.spread),y:b.y-b.spread*.65};
 }
 export class Game {
-  state: State = 'title'; mode: Mode = 'campaign'; difficulty: Difficulty = 'normal';
+  state: State = 'title'; mode: Mode = 'campaign'; difficulty: Difficulty = 'normal'; battlefield:BattlefieldState=initialBattlefield();
   stage=0; time=0; totalTime=0; visualTime=0; score=0; kills=0; chain=0; maxChain=0;
   chainTime=0; multiplier=1; formations=0; relics=0; grazes=0;
   locks:Lock[]=[];lockKills=0;resonances=0;cancelled=0;medalStreak=0;bestMedal=0;pointBlanks=0;
@@ -142,10 +144,11 @@ export class Game {
   emit(type: string, fields: Omit<GameEvent,'type'>={}) { if(this.events.length<600)this.events.push({type,...fields}); }
   drainEvents() { const r=this.events; this.events=[]; return r; }
   start(mode: Mode='campaign', difficulty: Difficulty='normal',startStage=0) {
-    this.mode=mode; this.difficulty=difficulty; this.stage=mode==='caravan'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
+    this.mode=mode; this.difficulty=difficulty;this.battlefield=initialBattlefield(); this.stage=mode!=='campaign'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
     this.score=0; this.kills=0; this.chain=0; this.maxChain=0; this.chainTime=0; this.multiplier=1;
     this.formations=0; this.relics=0; this.grazes=0; this.power=1; this.hull=difficulty==='casual'?4:3;
     this.locks=[];this.lockKills=0;this.resonances=0;this.cancelled=0;this.medalStreak=0;this.bestMedal=0;this.pointBlanks=0;
+    if(mode==='bossrush')this.power=3;
     this.bombs=3; this.energy=0; this.invulnerable=3; this.overdrive=0; this.novaTime=0;this.transitionTime=0;
     this.weapon='wide'; this.player={x:0,y:-10.5,vx:0,vy:0,focus:false};
     this.enemies=[]; this.bullets=[]; this.pickups=[]; this.events=[]; this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
@@ -176,7 +179,7 @@ export class Game {
     for(const e of [...this.enemies])if(!e.dead)this.damageEnemy(e,70,'nova');
     if(this.boss&&!this.boss.dead){this.boss.hp-=PLAYER_BALANCE.novaBossDamage;for(let i=0;i<2;i++)this.damagePart(i,PLAYER_BALANCE.novaPartDamage);if(this.boss.hp<=0)this.killBoss();}
     for(const t of this.threats)t.dead=true;
-    for(const n of [...this.nodes])this.damageNode(n,70);if(this.encounter)this.damageMiniboss(PLAYER_BALANCE.novaMinibossDamage);
+    for(const n of [...this.nodes])this.damageNode(n,n.attach==='field'?22:70);if(this.encounter)this.damageMiniboss(PLAYER_BALANCE.novaMinibossDamage);
     this.emit('nova',{x:this.player.x,y:this.player.y,size:18}); return true;
   }
   spawn(kind: Kind, x: number, y: number, group=0, pattern=0): Enemy {
@@ -270,7 +273,7 @@ export class Game {
     const close=Math.hypot(e.x-this.player.x,e.y-this.player.y)<6.5&&e.y>this.player.y;
     const locked=cause==='shot'&&this.locks.some(l=>l.id===e.id&&l.progress>=1);
     if(close)this.pointBlanks++;if(locked)this.lockKills++;
-    const value=Math.round(DATA[e.kind].score*this.multiplier*(close?1.5:1)*(locked?1.25:1));
+    const value=Math.round(DATA[e.kind].score*this.multiplier*(close?1.5:1)*(locked?1.25:1)*(this.battlefield.alert>0?1.25:1));
     this.addScore(value);
     if(close||locked||e.radius>1.4)this.emit('score',{x:e.x,y:e.y,value,text:(locked?'LOCK ':close?'CLOSE ':'')+'+'+value});
     this.energy=Math.min(100,this.energy+(e.kind==='cruiser'?12:3.2));
@@ -302,6 +305,11 @@ export class Game {
     }
     this.cancelled+=count;this.addScore(count*40*this.multiplier);return count;
   }
+  battlefieldPulse(x:number,y:number,radius:number,damage:number){
+    const cleared=this.cancelBullets(x,y,radius);
+    for(const e of [...this.enemies])if(!e.dead&&Math.hypot(e.x-x,e.y-y)<radius)this.damageEnemy(e,damage,'pulse');
+    return cleared;
+  }
   private damagePart(index:number,damage:number){
     const b=this.boss;if(!b||b.dead||b.parts[index]<=0)return;
     b.parts[index]-=damage;
@@ -325,9 +333,11 @@ export class Game {
   spawnBoss() {
     const maxHp=460+this.stage*220;
     this.clearEncounterSources('mini');this.encounter=null;for(const n of this.nodes)this.clearSource(n.id);this.nodes=[];this.threats=[];
+    const branch=this.mode==='campaign'?(this.battlefield.stageDestroyed===2?.85:this.battlefield.stageEscaped>0?1.10:1):1;
+    if(this.mode==='campaign')this.emit('fieldoutcome',{text:branch<1?'DEFENSE SUPPRESSED / ボス兵装 -15%':branch>1?'ALERT ESCALATED / ボス兵装 +10%':'BATTLEFIELD SECURED / ボス接近'});
     const id=++this.uid;this.uid+=2;
-    this.boss={id,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[100+this.stage*45,100+this.stage*45],
-      maxPart:100+this.stage*45,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0,patternTime:0,guard:0,heat:0};
+    this.boss={id,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[(100+this.stage*45)*branch,(100+this.stage*45)*branch],
+      maxPart:(100+this.stage*45)*branch,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0,patternTime:0,guard:0,heat:0};
     this.emit('warning',{text:'WARNING / '+STAGES[this.stage].boss});
   }
   private updateBoss(dt:number){updateBossPattern(this,dt);}
@@ -354,7 +364,9 @@ export class Game {
     this.clearEncounterSources('boss');for(const t of this.threats)t.dead=true;
   }
   damageNode(n:CombatNode,damage:number){
-    if(n.dead)return;if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:ENCOUNTERS[n.stage].color});n.hp-=damage;n.flash=.10;if(n.hp>0)return;n.hp=0;n.dead=true;this.clearSource(n.id,true);this.addScore(800*this.multiplier);this.energy=Math.min(100,this.energy+5);
+    if(n.dead)return;
+    if(n.attach==='field'){if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:0xffcf78});n.hp-=damage;n.flash=.12;if(n.hp<=0)destroyBattlefieldNode(this,n);return;}
+    if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:ENCOUNTERS[n.stage].color});n.hp-=damage;n.flash=.10;if(n.hp>0)return;n.hp=0;n.dead=true;this.clearSource(n.id,true);this.addScore(800*this.multiplier);this.energy=Math.min(100,this.energy+5);
     this.emit('explode',{x:n.x,y:n.y,size:1.6});this.emit('part',{x:n.x,y:n.y,text:ENCOUNTERS[n.stage].hint+' / +800 × CHAIN'});this.pickup('medal',n.x,n.y);
   }
   damageMiniboss(damage:number){
@@ -390,6 +402,7 @@ export class Game {
   private nextStage() {
     if(this.stage>=STAGES.length-1){this.finish(true);return;}
     this.stage++;this.time=0;this.enemies=[];this.bullets=[];this.pickups=[];this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
+    nextBattlefieldStage(this);
     this.groups.clear();this.waveIndex=0;this.schedule=waves(this.stage,this.mode);this.locks=[];
     this.hull=Math.min(4,this.hull+1);this.bombs=Math.min(3,this.bombs+1);
     this.invulnerable=2.5;this.state='playing';this.emit('stage',{text:STAGES[this.stage].name});
@@ -420,6 +433,7 @@ export class Game {
     const bossTime=this.mode==='caravan'?96:STAGES[this.stage].duration;
     if(this.time>=bossTime&&!this.boss&&this.mode==='campaign')this.spawnBoss();
     if(this.mode==='caravan'&&this.time>=96&&this.time<96+dt*1.1&&!this.boss)this.spawnBoss();
+    if(this.mode==='bossrush'&&this.time>=1.5&&!this.boss)this.spawnBoss();
     for(const e of this.enemies){
       if(e.dead)continue;e.age+=dt;e.flash=Math.max(0,e.flash-dt);e.recoil=Math.max(0,e.recoil-dt);
       e.y-=DATA[e.kind].speed*dt;
@@ -437,7 +451,8 @@ export class Game {
       if(e.kind==='sentinel')e.x=e.origin+Math.sin(e.age*1.3+e.phase)*1.7;
       if(e.kind==='strider')e.x=e.origin+Math.sin(e.age*.7+e.phase)*.8;
       e.shoot-=dt;
-      if(e.y<13.5&&e.y>p.y+3.8){
+      if(this.battlefield.suppression>0)e.shoot=Math.max(.35,e.shoot);
+      if(e.y<13.5&&e.y>p.y+3.8&&this.battlefield.suppression<=0){
         if(e.shoot<=.48&&!e.charging){e.charging=true;e.shoot=.48;e.aimX=p.x;e.aimY=p.y;}
         if(e.shoot<=0){
           const aim={x:e.aimX,y:e.aimY};e.charging=false;e.volley++;const bulletsBefore=this.bullets.length;
@@ -461,7 +476,7 @@ export class Game {
       if(!e.ground&&Math.hypot(e.x-p.x,e.y-p.y)<e.radius*.8+.23)this.hitPlayer();
       if(e.y<-19){e.dead=true;const group=this.groups.get(e.group);if(group)group.escaped=true;}
     }
-    if(this.state!=='playing')return;updateEncounters(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
+    if(this.state!=='playing')return;updateEncounters(this,dt);updateBattlefield(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
     for(const b of this.bullets){
       if(b.dead)continue;b.age+=dt;b.px=b.x;b.py=b.y;
       if(b.homing&&!b.enemy){
@@ -534,7 +549,7 @@ export class Game {
   }
   snapshot() { return {state:this.state,stage:this.stage,time:this.time,totalTime:this.totalTime,score:this.score,
     hull:this.hull,power:this.power,bombs:this.bombs,energy:this.energy,weapon:this.weapon,kills:this.kills,
-    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,
+    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},
     boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest}:null,
     encounter:this.encounter?{name:ENCOUNTERS[this.stage].mini,hp:this.encounter.hp,maxHp:this.encounter.maxHp,age:this.encounter.age,attack:this.encounter.attack}:null,stageEvent:{...this.encounterSeen,nodes:this.nodes.length,threats:this.threats.length},
     player:{...this.player},won:this.won,failureReason:this.failureReason}; }
