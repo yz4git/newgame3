@@ -27,7 +27,8 @@ function escapeNode(g:Game,n:CombatNode){
  const op=FIELD_OPERATIONS[g.stage][n.index];
  const b=g.battlefield;b.escaped++;b.stageEscaped++;b.alert=Math.max(b.alert,10);
  // Escaped controller summons two faster reinforcements but pays +25% during the alert.
- for(const side of [-1,1])g.spawn(g.stage===1||g.stage===2?'corvette':'interceptor',side*6.3,18+(side+1)*1.8);
+ for(const side of [-1,1])g.spawn(g.stage===1||g.stage===2?'corvette':g.stage===4?'sentinel':'interceptor',side*6.3,18+(side+1)*1.8);
+ if(g.stage===2||g.stage===5)g.addThreat(n.x,n.y,g.player.x,-18,.48,n.id,2,1.25);
  g.emit('fieldrisk',{x:n.x,y:n.y,text:op.name+' ESCAPED / 増援出現・得点 +25%'});
 }
 export function updateBattlefield(g:Game,dt:number){
@@ -53,7 +54,11 @@ export function updateBattlefield(g:Game,dt:number){
   n.shoot-=dt;
   if(n.shoot<=0){
    const op=FIELD_OPERATIONS[g.stage][n.index];
-   if(op.kind==='relay')g.aimed(n.x,n.y,6.2,3,.24,n.id);
+   if(g.stage===2&&op.kind==='relay')g.addThreat(n.x,n.y,g.player.x,-18,.45,n.id,2.1,1.3);
+   else if(g.stage===3)for(const a of[-2.55,-Math.PI/2,-.58])g.projectile(n.x,n.y,Math.cos(a)*6,Math.sin(a)*6,true,1,false,0xb7eeff,{source:n.id,shape:'diamond',ricochets:1});
+   else if(g.stage===4)g.fan(n.x,n.y,5,6.2,-Math.PI/2+Math.sin(n.age*.8)*.25,.2,n.id,0xffa4ee,.10);
+   else if(g.stage===5)g.aimed(n.x,n.y,5.8,4,.20,n.id,g.player,1.7);
+   else if(op.kind==='relay')g.aimed(n.x,n.y,6.2,3,.24,n.id);
    else g.fan(n.x,n.y,5,6.0,-Math.PI/2,.26,n.id,0xffd28e);
    n.shoot=3.5;
   }
@@ -72,6 +77,12 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  g.energy=Math.min(100,g.energy+15+Math.min(20,cleared));
  g.addScore((reactor?2500:3000)*g.multiplier);g.pickup('medal',n.x,n.y);
  if(st.stageDestroyed===2)g.pickup('power',n.x,n.y+1.7);
+ // Each world pays a different tactical dividend beyond the universal bullet conversion.
+ if(g.stage===1&&n.index===1)g.pickup('repair',n.x+1,n.y);
+ if(g.stage===2&&n.index===0)for(const t of g.threats)t.dead=true;
+ if(g.stage===3&&n.index===0)for(const linked of [...g.nodes])if(linked.attach==='stage'&&!linked.dead)g.damageNode(linked,linked.hp+1);
+ if(g.stage===4&&n.index===0)g.pickup('power',n.x-1,n.y);
+ if(g.stage===5&&n.index===0)g.energy=Math.min(100,g.energy+12);
  g.emit('explode',{x:n.x,y:n.y,size:reactor?3.8:2.7});
  g.emit('resonance',{x:n.x,y:n.y,size:radius,color:reactor?0xffbb62:0x5ce9ff});
  g.emit('fieldclear',{x:n.x,y:n.y,text:op.name+' BREAK / '+reactions+' CHAIN KILLS · '+cleared+' CANCEL / 敵射撃停止'});
