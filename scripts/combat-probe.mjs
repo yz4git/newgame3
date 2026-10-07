@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 
 export function isolated(stage=0,weapon='laser',power=1){
  const g=new Game();g.start('campaign','normal',stage);g.waveIndex=999;
- g.encounterSeen={stage:true,mini:true};g.invulnerable=1000;g.weapon=weapon;g.power=power;
+ g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];g.invulnerable=1000;g.weapon=weapon;g.power=power;
  return g;
 }
 export function emittedDamage(weapon,power,focus,boost=false){
