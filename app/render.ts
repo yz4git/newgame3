@@ -5,7 +5,7 @@ import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import type {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {glow,block,ball,shipModel,bossModel,radialTexture,environmentTexture,effectTexture,planetModel,cyan,gold,white} from './art.ts';
-import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
+import { Game, STAGES, SHIPS, type GameEvent, type Kind } from './sim.ts';
 import {StageEffects} from './stage-effects.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState} from './motion.ts';
 import {addShipRig,addBossRig,cloneAnimatedModel,disposeAnimatedModel,animateShip,animateBoss} from './animation-rig.ts';
@@ -185,7 +185,7 @@ export class View {
     this.player.position.set(title?Math.sin(this.epoch*.5)*.5:p.x,title?1.9+Math.sin(this.epoch)*.25:p.y+depart*34,1.0);
     this.player.rotation.y+=(pose.bank-this.player.rotation.y)*(dt>0?1-Math.exp(-dt*9):0);
     this.player.rotation.z=title?Math.sin(this.epoch*.7)*.035:pose.roll;
-    const skin=this.player.getObjectByName('skin') as T.Sprite|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(this.player.quaternion).invert());skin.material.rotation=title?Math.sin(this.epoch*.7)*.035:pose.roll;skin.scale.x=3.1*(1-Math.abs(this.player.rotation.y)*.3);}
+    const skin=this.player.getObjectByName('skin') as T.Sprite|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(this.player.quaternion).invert());skin.material.rotation=title?Math.sin(this.epoch*.7)*.035:pose.roll;skin.material.color.setHex(SHIPS[game.shipClass].tint);skin.scale.x=3.1*(1-Math.abs(this.player.rotation.y)*.3);}
     animateShip(this.player,pose,this.epoch,'player');
     this.player.scale.setScalar(title?2.0:1.0);this.player.visible=game.hull>0||title;
     if(game.invulnerable>0&&!title&&game.time>2.6)this.player.visible=Math.floor(game.invulnerable*12)%3!==0;
