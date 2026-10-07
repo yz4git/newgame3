@@ -43,7 +43,7 @@ export function updateEncounters(g:Game,dt:number){
   }
  }
  for(const n of g.nodes){
-  if(n.dead)continue;n.age+=dt;n.flash=Math.max(0,n.flash-dt);
+  if(n.dead||n.attach==='field')continue;n.age+=dt;n.flash=Math.max(0,n.flash-dt);
   if(n.attach==='mini'){if(!g.encounter){n.dead=true;continue;}const a=n.age*.6+n.index*Math.PI;n.x=g.encounter.x+Math.cos(a)*4.3;n.y=g.encounter.y+Math.sin(a)*1.4;}
   else if(n.attach==='boss'){
    const b=g.boss;if(!b||b.dead||b.parts[n.index]<=0){n.dead=true;g.clearSource(n.id);continue;}
