@@ -503,7 +503,7 @@ export class Game {
         if(b.accel){const speed=Math.hypot(b.vx,b.vy),next=Math.min(18,speed+b.accel*dt),f=next/(speed||1);b.vx*=f;b.vy*=f;}
       }
       b.x+=b.vx*dt;b.y+=b.vy*dt;
-      if(b.enemy&&b.ricochets&&Math.abs(b.x)>W&&this.nodes.some(n=>n.stage===3&&!n.dead)){b.x=Math.sign(b.x)*W;b.vx=-b.vx;b.ricochets--;this.emit('hit',{x:b.x,y:b.y});}
+      if(b.enemy&&b.ricochets&&Math.abs(b.x)>W&&this.nodes.some(n=>n.stage===3&&n.attach==='stage'&&!n.dead)){b.x=Math.sign(b.x)*W;b.vx=-b.vx;b.ricochets--;this.emit('hit',{x:b.x,y:b.y});}
       if(Math.abs(b.x)>16||b.y>25||b.y<-22||b.age>5){b.dead=true;continue;}
       if(b.enemy){
         const d=segmentDistance2(b.px,b.py,b.x,b.y,p.x,p.y);
