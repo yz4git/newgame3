@@ -7,9 +7,12 @@ import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {updateEncounters} from './encounters.ts';
 import {initialBattlefield,nextBattlefieldStage,updateBattlefield,destroyBattlefieldNode,type BattlefieldState} from './battlefield.ts';
+import {SHIPS,type ShipClass} from './ship-config.ts';
 import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
 export {STAGES} from './stages.ts';
+export {SHIPS} from './ship-config.ts';
+export type {ShipClass} from './ship-config.ts';
 export type Weapon = 'wide' | 'laser' | 'homing';
 export type Mode = 'campaign' | 'caravan' | 'bossrush';
 export type Difficulty = 'casual' | 'normal' | 'expert';
@@ -128,7 +131,7 @@ export function bossPartPosition(b:Boss,index:number) {
   return {x:b.x+side*(3+b.spread),y:b.y-b.spread*.65};
 }
 export class Game {
-  state: State = 'title'; mode: Mode = 'campaign'; difficulty: Difficulty = 'normal'; battlefield:BattlefieldState=initialBattlefield();
+  state: State = 'title'; mode: Mode = 'campaign'; difficulty: Difficulty = 'normal'; battlefield:BattlefieldState=initialBattlefield();shipClass:ShipClass='striker';
   stage=0; time=0; totalTime=0; visualTime=0; score=0; kills=0; chain=0; maxChain=0;
   chainTime=0; multiplier=1; formations=0; relics=0; grazes=0;
   locks:Lock[]=[];lockKills=0;resonances=0;cancelled=0;medalStreak=0;bestMedal=0;pointBlanks=0;
@@ -143,11 +146,12 @@ export class Game {
   private random() { let x=this.seed|0; x^=x<<13; x^=x>>>17; x^=x<<5; this.seed=x; return (x>>>0)/4294967296; }
   emit(type: string, fields: Omit<GameEvent,'type'>={}) { if(this.events.length<600)this.events.push({type,...fields}); }
   drainEvents() { const r=this.events; this.events=[]; return r; }
-  start(mode: Mode='campaign', difficulty: Difficulty='normal',startStage=0) {
-    this.mode=mode; this.difficulty=difficulty;this.battlefield=initialBattlefield(); this.stage=mode!=='campaign'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
+  start(mode: Mode='campaign', difficulty: Difficulty='normal',startStage=0,shipClass:ShipClass='striker') {
+    this.mode=mode; this.difficulty=difficulty;this.shipClass=shipClass;this.battlefield=initialBattlefield(); this.stage=mode!=='campaign'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
     this.score=0; this.kills=0; this.chain=0; this.maxChain=0; this.chainTime=0; this.multiplier=1;
     this.formations=0; this.relics=0; this.grazes=0; this.power=1; this.hull=difficulty==='casual'?4:3;
     this.locks=[];this.lockKills=0;this.resonances=0;this.cancelled=0;this.medalStreak=0;this.bestMedal=0;this.pointBlanks=0;
+    this.hull=Math.max(1,Math.min(4,this.hull+SHIPS[this.shipClass].hullOffset));
     if(mode==='bossrush')this.power=3;
     this.bombs=3; this.energy=0; this.invulnerable=3; this.overdrive=0; this.novaTime=0;this.transitionTime=0;
     this.weapon='wide'; this.player={x:0,y:-10.5,vx:0,vy:0,focus:false};
@@ -242,7 +246,7 @@ export class Game {
     });
   }
   private fire() {
-    const p=this.player,level=this.power,boost=this.overdrive>0?PLAYER_BALANCE.overdriveMultiplier:1;
+    const p=this.player,level=this.power,boost=(this.overdrive>0?PLAYER_BALANCE.overdriveMultiplier:1)*SHIPS[this.shipClass].damage;
     if(this.weapon==='wide'){
       const n=WEAPON_BALANCE.wide.pellets[level-1];
       for(let i=0;i<n;i++){
@@ -422,10 +426,10 @@ export class Game {
     if(this.chainTime<=0){this.chain=0;this.multiplier=1;}
     const p=this.player;p.focus=input.focus;const oldX=p.x,oldY=p.y;
     if(input.target){
-      const dx=input.target.x-p.x,dy=input.target.y-p.y,len=Math.hypot(dx,dy),step=(input.focus?17:47)*dt;
+      const dx=input.target.x-p.x,dy=input.target.y-p.y,len=Math.hypot(dx,dy),step=(input.focus?17:47)*SHIPS[this.shipClass].speed*dt;
       const f=Math.min(1,step/(len||1));p.x+=dx*f;p.y+=dy*f;
     }else{const len=Math.max(1,Math.hypot(input.x,input.y)),speed=input.focus?8:18;
-      p.x+=input.x/len*speed*dt;p.y+=input.y/len*speed*dt;}
+      p.x+=input.x/len*speed*SHIPS[this.shipClass].speed*dt;p.y+=input.y/len*speed*SHIPS[this.shipClass].speed*dt;}
     p.x=Math.max(-W,Math.min(W,p.x));p.y=Math.max(BOTTOM,Math.min(TOP,p.y));
     p.vx=(p.x-oldX)/dt;p.vy=(p.y-oldY)/dt;
     this.updateLocks(dt);this.shotTimer-=dt;if(this.shotTimer<=0)this.fire();
@@ -549,7 +553,7 @@ export class Game {
   }
   snapshot() { return {state:this.state,stage:this.stage,time:this.time,totalTime:this.totalTime,score:this.score,
     hull:this.hull,power:this.power,bombs:this.bombs,energy:this.energy,weapon:this.weapon,kills:this.kills,
-    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},
+    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},shipClass:this.shipClass,
     boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest}:null,
     encounter:this.encounter?{name:ENCOUNTERS[this.stage].mini,hp:this.encounter.hp,maxHp:this.encounter.maxHp,age:this.encounter.age,attack:this.encounter.attack}:null,stageEvent:{...this.encounterSeen,nodes:this.nodes.length,threats:this.threats.length},
     player:{...this.player},won:this.won,failureReason:this.failureReason}; }
