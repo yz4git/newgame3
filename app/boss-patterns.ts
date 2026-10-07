@@ -11,8 +11,8 @@ export function bossCoreDamage(g:Game,b:Boss){return b.rest?1.6:g.stage===0&&b.g
 export function updateBossPattern(g:Game,dt:number){
  const b=g.boss;if(!b||b.dead)return;
  b.age+=dt;b.encounterTime+=dt/GAME_SPEED;b.flash=Math.max(0,b.flash-dt);b.recoil=Math.max(0,b.recoil-dt);
- if(g.mode==='campaign'&&b.encounterTime>=90){g.finish(false,'timeout');return;}
- if(g.mode==='campaign'&&b.encounterTime>=70&&b.encounterTime-dt/GAME_SPEED<70)g.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
+ if(g.mode!=='caravan'&&b.encounterTime>=90){g.finish(false,'timeout');return;}
+ if(g.mode!=='caravan'&&b.encounterTime>=70&&b.encounterTime-dt/GAME_SPEED<70)g.emit('beam',{text:'20 SEC LEFT / ボス制限時間'});
  b.y+=((b.age<3?9.2:9+Math.sin(b.age*.65)*.7)-b.y)*dt*1.9;
  b.x=Math.sin(b.age*.55)*([0,0,1,0,0,1][g.stage]?3.3:2.8);
  if(b.age<3)return;
@@ -33,7 +33,7 @@ export function updateBossPattern(g:Game,dt:number){
   if(g.stage===5&&b.attack===1)for(let i=0;i<2;i++)wing(g,b,i,(x,y,source)=>g.addThreat(x,y,x,-18,.60,source,2.2,1.6));
  }
  b.warning=Math.max(0,...g.threats.filter(t=>t.source>=b.id&&t.source<=b.id+2&&!t.dead).map(t=>t.warmup-t.age));b.beam=0;
- if(b.rest){b.shoot=Math.max(.6,b.shoot);return;}b.shoot-=dt;if(b.shoot>0)return;
+ if(b.rest){b.shoot=Math.max(.6,b.shoot);return;}if(g.battlefield.suppression>0){b.shoot=Math.max(.5,b.shoot);return;}b.shoot-=dt;if(b.shoot>0)return;
  const speed=g.difficulty==='casual'?.83:g.difficulty==='expert'?1.14:1,fast=b.phase>1,before=g.bullets.length;b.recoil=.24;
  switch(g.stage){
   case 0:
