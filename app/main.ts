@@ -21,13 +21,13 @@ let record:Record<string,number>={},padButtons:boolean[]=[];
 const popups:{element:HTMLSpanElement;x:number;y:number;at:number}[]=[];
 try{record=JSON.parse(localStorage.getItem('nova-strike-records-v1')||'{}');const d=localStorage.getItem('nova-strike-difficulty');if(d==='casual'||d==='normal'||d==='expert')difficulty=d;const ship=localStorage.getItem('nova-strike-ship');if(ship&&ship in SHIPS)selectedShip=ship as ShipClass;audio.muted=localStorage.getItem('nova-strike-muted')==='true';}catch{/* Storage can be disabled in private browsing. */}
 const scoreText=(s:number)=>Math.floor(s).toString().padStart(7,'0');
-const keyFor=(mode=game.mode)=>mode+':'+difficulty;
+const keyFor=(mode=game.mode)=>mode+':'+difficulty+(selectedShip==='striker'?'':':'+selectedShip);
 const best=(mode:Mode)=>Math.max(0,Number(record[keyFor(mode)])||0);
 function selectDifficulty(d:Difficulty){difficulty=d;document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.classList.toggle('selected',b.dataset.difficulty===d));el('title-best').textContent=scoreText(best('campaign'));try{localStorage.setItem('nova-strike-difficulty',d);}catch{/* Optional storage. */}}
 const stageSelect=el<HTMLSelectElement>('stage-select');
 STAGES.forEach((stage,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(index+1).padStart(2,'0')+' / '+stage.jp;stageSelect.append(option);});
 stageSelect.addEventListener('change',()=>{selectedStage=Number(stageSelect.value);if(game.state==='title'){game.stage=selectedStage;game.visualTime=0;}});
-document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(button=>{const type=button.dataset.ship as ShipClass;button.classList.toggle('selected',type===selectedShip);button.addEventListener('click',()=>{selectedShip=type;game.shipClass=type;document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(b=>b.classList.toggle('selected',b.dataset.ship===type));try{localStorage.setItem('nova-strike-ship',type);}catch{/* Storage optional. */}});});game.shipClass=selectedShip;
+document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(button=>{const type=button.dataset.ship as ShipClass;button.classList.toggle('selected',type===selectedShip);button.addEventListener('click',()=>{selectedShip=type;game.shipClass=type;el('title-best').textContent=scoreText(best('campaign'));document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(b=>b.classList.toggle('selected',b.dataset.ship===type));try{localStorage.setItem('nova-strike-ship',type);}catch{/* Storage optional. */}});});game.shipClass=selectedShip;
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
@@ -56,7 +56,7 @@ function result(){
   clearInput();let newRecord=game.score>best(game.mode);
   if(newRecord){record[keyFor()]=game.score;try{localStorage.setItem('nova-strike-records-v1',JSON.stringify(record));}catch{/* Records remain available during this session. */}}
   el('result-title').textContent=game.won?game.mode==='caravan'?'TIME COMPLETE':game.mode==='bossrush'?'BOSS RUSH CLEAR':'MISSION COMPLETE':game.failureReason==='timeout'?'TIME LIMIT':'SIGNAL LOST';
-  el('result-subtitle').textContent=game.won?game.mode==='caravan'?'2分間の戦果。次は、さらに高く。':'星核を回収。夜明けは、ここから。':game.failureReason==='timeout'?'制限時間を超過。砲台を壊し、攻撃の合間に本体を狙おう。':'機体ロスト。次の出撃へ、経験をつなぐ。';
+  el('result-subtitle').textContent=game.won?game.mode==='caravan'?'2分間の戦果。次は、さらに高く。':game.mode==='bossrush'?'全6守護艦撃破。最速撃破を目指そう。':'星核を回収。夜明けは、ここから。':game.failureReason==='timeout'?'制限時間を超過。砲台を壊し、攻撃の合間に本体を狙おう。':'機体ロスト。次の出撃へ、経験をつなぐ。';
   el('final-score').textContent=scoreText(game.score);el('new-record').hidden=!newRecord;
   el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['戦場目標破壊',String(game.battlefield.destroyed)],['目標突破を許した数',String(game.battlefield.escaped)],['誘爆撃破',String(game.battlefield.reactions)],['ロック撃破',String(game.lockKills)],['弾消し',String(game.cancelled)],['最高メダル',String(game.bestMedal)+' / 5'],['到達セクター',String(game.stage+1)+' / '+STAGES.length],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
   for(const[label,value]of values){const d=document.createElement('div');d.textContent=label;const s=document.createElement('strong');s.textContent=value;d.append(s);el('result-stats').append(d);}
