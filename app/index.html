@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#060b18" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="NOVA STRIKE — 小惑星・海・要塞・氷・密林・溶岩の6ステージを駆け抜ける縦スクロールシューティング。3つの武器、巨大ボス、2分スコアアタック。iPhone・PCでプレイ。" />
+  <meta name="description" content="NOVA STRIKE 2.0 — 戦略施設破壊・戦場連鎖・機体選択・ボスラッシュを備えた縦スクロールシューティング。3つの武器、巨大ボス、2分スコアアタック。iPhone・PCでプレイ。" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
@@ -19,7 +19,7 @@
     <div class="vignette" aria-hidden="true"></div>
     <div id="boot" class="boot"><div class="boot-icon">N/S</div><p id="boot-text">SYSTEM ONLINE<span class="loading-dots">...</span></p><span>軌道都市へ接続中</span></div>
     <header class="hud" id="hud" hidden>
-      <div class="score-area"><span class="tiny-label">SCORE <span id="multiplier">×1</span></span><strong id="score">0000000</strong><span class="high-score" id="high">BEST 0000000</span><span class="chain-readout" id="chain-readout">CHAIN 000 <i><b id="chain-fill"></b></i></span></div>
+      <div class="score-area"><span class="tiny-label">SCORE <span id="multiplier">×1</span></span><strong id="score">0000000</strong><span class="high-score" id="high">BEST 0000000</span><span class="chain-readout" id="chain-readout">CHAIN 000 <i><b id="chain-fill"></b></i></span><span id="battlefield-status" class="field-readout">FIELD 0/2</span></div>
       <div class="hud-right"><div class="hull" id="hull" aria-label="残り耐久"></div><button id="pause-button" class="icon-button" aria-label="一時停止">Ⅱ</button><div class="sector-label" id="sector">01 / 06</div></div>
       <div class="progress-track"><div id="progress"></div></div>
     </header>
@@ -35,13 +35,15 @@
       <div class="action-controls"><button id="focus-button" class="focus-button" aria-label="押している間は精密移動">FOCUS<span id="focus-caption">精密移動</span></button><button id="nova-button" class="nova-button"><span id="nova-ready">NOVA</span><strong id="bombs">03</strong><span class="nova-meter"><i id="energy"></i></span></button></div>
     </div>
     <section class="screen title-screen" id="title-screen">
-      <div class="title-top"><span class="edition">NOVA STRIKE 1.10 / 2026</span><div class="title-sound-controls"><button id="sound-button" class="sound-button" aria-label="サウンド切替">SOUND ON</button><button id="audio-settings-button" class="sound-button">音量</button></div></div>
+      <div class="title-top"><span class="edition">NOVA STRIKE 2.0 / 2026</span><div class="title-sound-controls"><button id="sound-button" class="sound-button" aria-label="サウンド切替">SOUND ON</button><button id="audio-settings-button" class="sound-button">音量</button></div></div>
       <div class="title-lockup"><span class="eyebrow">星核を取り戻せ。</span><h1>NOVA<br><span>STRIKE</span><i></i></h1><p>SIX WORLDS. FOURTEEN HOSTILE CLASSES.</p></div>
       <div class="title-menu">
         <div class="difficulty" aria-label="難易度"><button data-difficulty="casual">CASUAL</button><button data-difficulty="normal" class="selected">NORMAL</button><button data-difficulty="expert">EXPERT</button></div>
+        <div class="ship-picker" aria-label="機体選択"><button data-ship="striker" class="selected">STRIKER<small>標準</small></button><button data-ship="falcon">FALCON<small>高速</small></button><button data-ship="bulwark">BULWARK<small>装甲</small></button></div>
         <label class="stage-picker" for="stage-select"><span>開始ステージ</span><select id="stage-select" aria-label="開始ステージ"></select></label>
         <button id="start-button" class="primary-button"><span>作戦開始</span><small>CAMPAIGN <b>↗</b></small></button>
         <button id="caravan-button" class="secondary-button">2分スコアアタック<span>CARAVAN / 120s →</span></button>
+        <button id="bossrush-button" class="secondary-button">6連戦 ボスラッシュ<span>BOSS RUSH →</span></button>
         <button id="help-button" class="text-button">操作とルール</button>
         <div class="title-bottom"><span>BEST <b id="title-best">0000000</b></span><span>N/S — VOL.06</span></div>
       </div>
