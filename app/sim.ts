@@ -6,7 +6,7 @@ export const GAME_SPEED = 2.25;
 import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {updateEncounters} from './encounters.ts';
-import {initialBattlefield,nextBattlefieldStage,updateBattlefield,destroyBattlefieldNode,type BattlefieldState} from './battlefield.ts';
+import {initialBattlefield,nextBattlefieldStage,updateBattlefield,damageBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {SHIPS,type ShipClass} from './ship-config.ts';
 import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
@@ -369,7 +369,7 @@ export class Game {
   }
   damageNode(n:CombatNode,damage:number){
     if(n.dead)return;
-    if(n.attach==='field'){if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:0xffcf78});n.hp-=damage;n.flash=.12;if(n.hp<=0)destroyBattlefieldNode(this,n);return;}
+    if(n.attach==='field'){if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:0xffcf78});damageBattlefieldNode(this,n,damage);return;}
     if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:ENCOUNTERS[n.stage].color});n.hp-=damage;n.flash=.10;if(n.hp>0)return;n.hp=0;n.dead=true;this.clearSource(n.id,true);this.addScore(800*this.multiplier);this.energy=Math.min(100,this.energy+5);
     this.emit('explode',{x:n.x,y:n.y,size:1.6});this.emit('part',{x:n.x,y:n.y,text:ENCOUNTERS[n.stage].hint+' / +800 × CHAIN'});this.pickup('medal',n.x,n.y);
   }
