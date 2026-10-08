@@ -120,6 +120,12 @@ await rich.page.evaluate(()=>{
  g.battlefield.seen=[false,false];g.encounterSeen={stage:true,mini:true};g.invulnerable=800;g.shotTimer=800;
 });
 await scene(rich.page,'09-real-world-facility',700);
+results.facilityGeometry=await rich.page.evaluate(()=>{
+ const pool=window.__nova.view.encounterView?.worldFacilities??[];
+ const visible=pool.filter(g=>g.visible);
+ return {models:pool.length,visible:visible.length,meshes:visible[0]?.children.filter(o=>o.type==='Group').length??0,
+   worldPosition:visible[0]?.position?.toArray(),worldScale:visible[0]?.scale?.x};
+});
 await rich.page.evaluate(()=>{
  const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
  if(n){n.y=6.4;g.damageNode(n,n.hp+100);}
@@ -130,12 +136,7 @@ results.gpuDemolition=await rich.page.evaluate(()=>({
   oldExplosionSprites:window.__nova.view.flares?.length
 }));
 await scene(rich.page,'11-gpu-chain-bursts',850);
-results.facilityGeometry=await rich.page.evaluate(()=>{
- const pool=window.__nova.view.encounterView?.worldFacilities??[];
- const visible=pool.filter(g=>g.visible);
- return {models:pool.length,visible:visible.length,meshes:visible[0]?.children.filter(o=>o.type==='Group').length??0,
-   worldPosition:visible[0]?.position?.toArray(),worldScale:visible[0]?.scale?.x};
-});
+
 
 results.errors=errors;
 console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
