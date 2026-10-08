@@ -208,7 +208,7 @@ function events(){
       el('field-target-flash').classList.remove('on');void el('field-target-flash').offsetWidth;el('field-target-flash').classList.add('on');
     }
     else if(e.type==='fieldrisk')showMessage('FACILITY ESCAPED / 破壊失敗','増援が出現・ボス兵装が強化！',1.7,true);
-    else if(e.type==='fieldwarning'){showMessage('◆ DESTROY TARGET','金色の六角リングを撃って破壊！',1.15);}
+    else if(e.type==='fieldwarning'){showMessage('◆ DESTROY TARGET','大型設備の発光炉心を狙って撃て！',1.15);}
     else if(e.type==='fieldfracture')toast('装甲破損！ 炉心を狙え');
     else if(e.type==='fieldcritical')toast('赤い炉心が露出！ あと少し');
     else if(e.type==='fieldcollapse')toast(e.text||'STRUCTURE COLLAPSE');
