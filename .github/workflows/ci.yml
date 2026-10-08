@@ -2,7 +2,7 @@ name: Verify NOVA STRIKE
 
 on:
   push:
-    branches: ['feat/nova-strike-2-battlefield']
+    branches: ['feat/**']
   pull_request:
     branches: [main]
 
