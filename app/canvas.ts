@@ -110,10 +110,10 @@ export class CanvasView {
       if(bullet.enemy){if(bullet.shape==='missile'){this.shape([[0,.60],[-.21,.18],[-.16,-.52],[.16,-.52],[.21,.18]],'#030a16');this.rect(-.12,-.40,.24,.8,color);canvasGlow(c,0,-.55,.25,'#ffac69',.8);this.rect(-.065,.1,.13,.30,'#fff5de');}else if(bullet.shape==='diamond'){this.shape([[0,.35],[-.29,0],[0,-.35],[.29,0]],color,'#160d2c');this.circle(0,0,.09,'#fff5ef');}else{this.circle(0,0,.36,'#030a16');this.circle(0,0,.265,color);this.circle(0,0,.1,'#fff5de');}}else this.rect(-.07,-.5,.14,bullet.weapon==='laser'?1.6:.9,color);c.restore();
     }
     const p=g.player,pose=playerPose(g),depart=state==='transition'?smooth((3.5-g.transitionTime)/3.5):g.state==='result'&&g.won&&g.boss?.dead?1:0;this.playerAnimation=state==='transition'?'depart':pose.mode;
-    const playerVisible=title||g.hull>0&&(g.time<2.6||g.invulnerable<=0||Math.floor(g.invulnerable*12)%3!==0);
+    const playerVisible=title||g.hull>0;
     this.playerTint=g.shipClass==='falcon'?'#89bcff':g.shipClass==='bulwark'?'#ffc18e':'#65dcff';this.playerSkinIndex=g.shipClass==='falcon'?1:g.shipClass==='bulwark'?2:0;
     if(playerVisible)this.ship('player',title?Math.sin(g.visualTime*.5)*.4:p.x,title?1.9:p.y+depart*34,pose,title?2:1,false,g.visualTime);
-    if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();}
+    if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();if(g.invulnerable>0&&g.time>2.6){c.save();c.globalAlpha=.48+.17*Math.sin(g.visualTime*12);c.lineWidth=.055;c.strokeStyle='#97f7ff';c.beginPath();c.arc(p.x,p.y-.25,1.05+Math.sin(g.visualTime*11)*.10,0,Math.PI*2);c.stroke();c.restore();}}
     if(!title&&g.power===4)for(const s of[-1,1]){this.circle(p.x+s*1.45,p.y-.15,.25,'#aedce8');this.circle(p.x+s*1.45,p.y-.05,.13,'#87f9ff');}
     if(active&&playerVisible){const y=p.y+depart*34,length=(1.3+Math.sin(g.visualTime*36)*.15)*pose.thrust;for(const s of[-1,1]){c.save();c.translate(p.x+s*.5,y-1.65);c.scale(.12,length);canvasGlow(c,0,-.5,.75,'#57d6ff',.8);c.restore();}}
     for(const q of this.cascades)q.at-=dt;const due=this.cascades.filter(q=>q.at<=0);this.cascades=this.cascades.filter(q=>q.at>0);for(const q of due)this.event({type:'explode',x:q.x,y:q.y,size:q.size});
