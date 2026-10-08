@@ -141,7 +141,7 @@ export function facilityModel(stage:number,index:number):StrategicFacilityModel{
  ring(reactor,index===0?.52:.41,.065,-.16,bright);
  reactor.position.z=0;g.add(reactor);
  const shadow=new T.Mesh(new T.CircleGeometry(3.5,48),new T.MeshBasicMaterial({color:0x020710,transparent:true,opacity:.25,depthWrite:false}));
- shadow.scale.set(1,.72,1);shadow.position.set(.18,-.48,-3.55);
+ shadow.name='facility-shadow';shadow.scale.set(1,.72,1);shadow.position.set(.18,-.48,-3.55);
  g.add(shadow);
  // Invisible in combat gameplay? No: these are true side walls and contact geometry.
  g.userData={reactor,inner:deck,lighting:core,stage,variant:index};
