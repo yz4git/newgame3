@@ -85,7 +85,7 @@ export function collideTerrainPlayer(g:Game){
   const radius=piece.radius+.36;
   if(dx*dx+dy*dy>=radius*radius)continue;
   if(piece.route==='hazard'){
-   if(g.invulnerable<=0){g.hitPlayer();piece.dead=true;} // One contact per charged hazard, no repeated hit-lock.
+   if(g.invulnerable<=0)g.hitPlayer();piece.dead=true; // One contact per charged hazard, even during invulnerability.
    return;
   }
   const horizontal=Math.sqrt(Math.max(0,radius*radius-dy*dy))+.06;
