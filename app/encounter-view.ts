@@ -74,15 +74,18 @@ export class EncounterView {
   }
   // Keep the original lit facility geometry through collapse, never restore the old billboard.
   for(const wreck of g.battlefield.collapses){
-   const u=Math.min(1,wreck.age/wreck.life),model=this.worldFacilities[wreck.stage*2+wreck.index];
+   // Hold the entire building stationary through the initial core detonation, THEN let it fall.
+    const hold=.93,u=Math.min(1,Math.max(0,(wreck.age-hold)/(wreck.life-hold)));
+    const quake=Math.sin(wreck.age*36)*.045*(1-Math.min(1,wreck.age/hold));
+    const model=this.worldFacilities[wreck.stage*2+wreck.index];
    model.visible=true;
-   model.position.set(wreck.x,wreck.y-.42-u*1.75,-.25-u*.36);
-   model.rotation.set(u*.16*Math.sin(wreck.index+1),u*.1,(wreck.index===1?.04:-.035)+Math.sin(u*8+wreck.index)*u*.18);
+   model.position.set(wreck.x+quake,wreck.y-.42-u*1.75,-.25-u*.36);
+   model.rotation.set(u*.16*Math.sin(wreck.index+1),u*.1,(wreck.index===1?.04:-.035)+quake+Math.sin(u*8+wreck.index)*u*.18);
    model.scale.setScalar(1.15*(1-u*.43));
-   animateFacility(model,wreck.age,2,0);
+   animateFacility(model,wreck.age,2,wreck.age<hold?1:0);
    const core=model.userData.lighting as T.Mesh|undefined;
    if(core&&core.material instanceof T.MeshPhysicalMaterial){
-    core.material.emissiveIntensity=Math.max(0,2*(1-u));
+    core.material.emissiveIntensity=Math.max(0,(wreck.age<hold?4.0+Math.sin(wreck.age*43)*1.5:2)*(1-u));
     core.material.opacity=Math.max(.08,1-u);
    }
   }
@@ -179,9 +182,11 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
  }
  // Canvas renders the same physical geometry cached in canvasFacility, not the pre-3D art atlas.
  for(const wreck of g.battlefield.collapses){
-  const u=Math.min(1,wreck.age/wreck.life),raster=canvasFacility(wreck.stage,wreck.index);
-  c.save();c.translate(wreck.x,wreck.y-u*1.75);
-  c.rotate(Math.sin(u*8+wreck.index)*u*.18);c.globalAlpha=(1-u)**1.25*.73;
+  const hold=.93,u=Math.min(1,Math.max(0,(wreck.age-hold)/(wreck.life-hold)));
+   const quake=Math.sin(wreck.age*36)*.045*(1-Math.min(1,wreck.age/hold));
+   const raster=canvasFacility(wreck.stage,wreck.index);
+  c.save();c.translate(wreck.x+quake,wreck.y-u*1.75);
+  c.rotate(quake+Math.sin(u*8+wreck.index)*u*.18);c.globalAlpha=(1-u)**1.25;
   const scale=1.15*(1-u*.43);
   c.drawImage(raster.canvas,raster.left*scale,-raster.top*scale,raster.width*scale,raster.height*scale);
   c.restore();
