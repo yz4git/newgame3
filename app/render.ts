@@ -143,11 +143,11 @@ export class View {
     }
     if(e.type==='phase'){this.burst(x,y,50,2,e.color||0xff8b6a);this.shake=.3;}
     if(['missionstart','missionclear','missionfail','bosstransform','bossform'].includes(e.type)){this.burst(x,y,e.type==='missionstart'?52:75,e.size??3,e.color??0x9deaff);this.shake=Math.max(this.shake,e.type==='bosstransform'?.47:.26);}
-    if(['explode','bosskill','damage','nova','resonance','fieldfracture','fieldcritical','fieldcollapse','fieldburst','bossreinforce'].includes(e.type)){
+    if(['explode','bosskill','damage','nova','resonance','fieldfracture','fieldcritical','fieldcollapse','fieldburst','bossreinforce','fieldclear','fieldwarning','fieldhit'].includes(e.type)){
       const size=e.size||1,count=e.type==='nova'?95:e.type==='bosskill'?150:Math.floor(20+size*13);
-      this.burst(x,y,count,size,e.color||0xff8743);this.shake=Math.max(this.shake,e.type==='bosskill'?1.0:e.type==='damage'?.65:e.type==='nova'?.8:e.type==='fieldcollapse'?.52:e.type==='fieldburst'?.12:e.type==='fieldcritical'?.2:.09*size);
+      this.burst(x,y,e.type==='fieldhit'?13:e.type==='fieldwarning'?18:e.type==='fieldclear'?110:count,e.type==='fieldhit'?.65:e.type==='fieldwarning'?1.15:size,e.color||0xff8743);this.shake=Math.max(this.shake,e.type==='bosskill'?1.0:e.type==='damage'?.65:e.type==='nova'?.8:e.type==='fieldcollapse'?.52:e.type==='fieldburst'?.12:e.type==='fieldcritical'?.2:e.type==='fieldclear'?.36:e.type==='fieldhit'?.025:e.type==='fieldwarning'?.08:.09*size);
       if(e.type==='nova'||e.type==='bosskill'||e.type==='resonance')(this.ring.material as T.MeshBasicMaterial).opacity=0;
-      if(e.type!=='nova'&&e.type!=='resonance'&&e.type!=='fieldfracture'&&e.type!=='fieldcritical'){
+      if(e.type!=='nova'&&e.type!=='resonance'&&e.type!=='fieldfracture'&&e.type!=='fieldcritical'&&e.type!=='fieldhit'&&e.type!=='fieldwarning'&&e.type!=='fieldclear'){
         for(const smoke of[false,true]){
           if(this.flares.length>=48)break;
           const sprite=new T.Sprite(new T.SpriteMaterial({map:smoke?this.smokeMap:explosionFrames[0],transparent:true,blending:T.NormalBlending,depthWrite:false,toneMapped:false}));
