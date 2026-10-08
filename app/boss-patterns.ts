@@ -1,6 +1,7 @@
 import type {Game,Boss,Bullet} from './sim.ts';
 import {bossPartPosition,GAME_SPEED} from './sim.ts';
 import {BOSS_ATTACKS} from './encounter-design.ts';
+import {bossRestStart,bossOverchargeVolley} from './boss-evolution.ts';
 
 function wing(g:Game,b:Boss,i:number,shot:(x:number,y:number,source:number)=>void){if(b.parts[i]>0){const p=bossPartPosition(b,i);shot(p.x,p.y-1,b.id+i+1);}}
 function ring(g:Game,x:number,y:number,count:number,speed:number,gap:number,source:number,extra:Partial<Bullet>={}){
@@ -17,13 +18,14 @@ export function updateBossPattern(g:Game,dt:number){
  b.x=Math.sin(b.age*.55)*([0,0,1,0,0,1][g.stage]?3.3:2.8);
  if(b.age<3)return;
  const phase=b.hp<b.maxHp*.28?3:b.hp<b.maxHp*.62?2:1;
- if(phase>b.phase){b.phase=phase;b.patternTime=0;b.cycle=-1;g.clearBossThreats();g.invulnerable=Math.max(g.invulnerable,.8);g.emit('phase',{x:b.x,y:b.y,color:0xffae73,value:phase,text:'PHASE 0'+phase+' / ATTACK PATTERN SHIFT'});}
+ if(phase>b.phase){b.phase=phase;b.patternTime=0;b.cycle=-1;g.clearBossThreats();g.invulnerable=Math.max(g.invulnerable,.8);g.emit('phase',{x:b.x,y:b.y,color:b.form==='shattered'?0x83ffda:b.form==='overcharged'?0xff9762:0xffae73,value:phase,text:'PHASE 0'+phase+' / ATTACK PATTERN SHIFT'});if(b.form!=='standard')g.emit('bosstransform',{x:b.x,y:b.y,size:5,color:b.form==='shattered'?0x83ffda:0xff9762,text:b.form==='shattered'?'ARMOUR BREAK / CORE EXPOSED':'REACTOR OVERCHARGE / EXTRA CANNONS'});}
  b.patternTime+=dt;const period=9.6,cycle=Math.floor(b.patternTime/period),elapsed=b.patternTime%period;
  const broken=b.parts.filter(p=>p<=0).length;
- b.rest=elapsed>(g.stage===5?7.0-broken*.55:7.3);b.guard=g.stage===0&&!b.rest&&broken<2?1:0;b.heat=g.stage===5&&!b.rest?Math.min(1,elapsed/6.8)*(1-broken*.24):0;
+ b.rest=elapsed>bossRestStart(b,g.stage,broken);b.guard=g.stage===0&&!b.rest&&broken<2&&!(b.form==='shattered'&&b.phase>=2)?1:0;b.heat=g.stage===5&&!b.rest?Math.min(1,elapsed/6.8)*(1-broken*.24):0;
  b.spread=g.stage===1&&cycle%3===1&&!b.rest?Math.min(1.6,elapsed*1.7):Math.max(0,b.spread-dt*3);
  if(cycle!==b.cycle){
   b.cycle=cycle;b.attack=cycle%3;b.shoot=2.05;g.emit('pattern',{text:BOSS_ATTACKS[g.stage][b.attack]});
+  bossOverchargeVolley(g,b,cycle);
   if(b.attack===0){
    if(g.stage===1||g.stage===3||g.stage===4)for(let i=0;i<2;i++)if(b.parts[i]>0)g.addCombatNode('boss',b.id+i+1,i,(i?1:-1)*6.5,8,36+g.stage*4,8.5);
   }
