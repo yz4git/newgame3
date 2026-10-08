@@ -69,7 +69,7 @@ const small=await setup({width:375,height:667});
 await scene(small.page,'07-short-iphone-title',400);
 results.smallLayout=await small.page.evaluate(()=>{
  const ids=['title-screen','title-top','title-lockup','title-menu','start-button','bossrush-button','help-button'];
- return Object.fromEntries(ids.map(id=>{const r=document.getElementById(id).getBoundingClientRect();return [id,{y:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}]}));
+ return Object.fromEntries(ids.map(id=>{const r=(document.getElementById(id)||document.querySelector('.'+id)).getBoundingClientRect();return [id,{y:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}]}));
 });
 const rich=await setup({width:390,height:844},{renderer:'webgl'});
 await rich.page.locator('#start-button').click();
@@ -78,6 +78,7 @@ await rich.page.evaluate(()=>{const g=window.__nova.game;g.invulnerable=900;g.sh
 await scene(rich.page,'08-gpu-or-fallback-battle',1000);
 results.gpu=await rich.page.evaluate(()=>({view:window.__nova.view.constructor.name,diagnostics:window.__nova.view.getDiagnostics()}));
 results.errors=errors;
+console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
 console.log('NOVA_REVIEW:'+JSON.stringify(results));
 await browser.close();
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb)throw new Error('Functional mobile touch control regression');
