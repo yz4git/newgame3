@@ -1,6 +1,7 @@
 import * as T from 'three/webgpu';
 import type {Game} from './sim.ts';
 import {fieldDamagePhase} from './battlefield.ts';
+import {isTerrainActive} from './battlefield-terrain.ts';
 import {ENCOUNTERS,miniAngle,threatActive} from './encounter-design.ts';
 import {minibossMaps,nodeMaps,nodeAtlasMap,battlefieldAtlasMap,battlefieldMaps,tacticalFxMaps,livingMaps} from './visual-assets.ts';
 
@@ -13,11 +14,12 @@ export class EncounterView {
  root=new T.Group();private mini=sprite(minibossMaps[0]);
  private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9])}));
  private collapsing=Array.from({length:3},()=>({skin:sprite(battlefieldMaps[0]),aura:sprite(tacticalFxMaps[0])}));
+ private terrain=Array.from({length:12},()=>({skin:sprite(battlefieldMaps[0]),warning:sprite(tacticalFxMaps[4])}));
  private beams=Array.from({length:12},()=>({band:new T.Mesh(plane,material(0xffb655,.14)),line:new T.Mesh(plane,material(0xffbd6c,.8)),core:new T.Mesh(plane,material(0xfff8e8,.9))}));
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
  private shield=new T.Mesh(new T.RingGeometry(1.86,1.94,64),material(0xb9a3ff,.6));
  private status=encounterDiagnostics({nodes:[],threats:[],encounter:null,boss:null} as unknown as Game);
- constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
+ constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
  draw(g:Game){
   this.root.visible=g.state!=='title'&&g.state!=='result';this.status=encounterDiagnostics(g);
   const m=g.encounter;this.mini.visible=!!m&&!m.dead;
@@ -37,6 +39,24 @@ export class EncounterView {
    v.skin.scale.set(3.35*(1-u*.48),3.35*(1-u*.48),1);
    v.aura.material.map=tacticalFxMaps[wreck.stage===3?11:0];v.aura.material.opacity=Math.max(0,.64-u*.55);
    v.aura.position.set(wreck.x,wreck.y-u*.5,2.59);v.aura.material.rotation=u*.9;v.aura.scale.setScalar(3.5+u*5.5);
+  }
+  // Pre-allocated sprite pools; both routes share exactly the same collision geometry.
+  for(let i=0;i<this.terrain.length;i++){
+   const v=this.terrain[i],piece=g.battlefield.terrain[i];
+   v.skin.visible=!!piece;v.warning.visible=!!piece&&piece.route==='hazard'&&piece.age<piece.warning;
+   if(!piece)continue;
+   const active=isTerrainActive(piece),fade=Math.max(.15,Math.min(1,(piece.life-piece.age)/2.5));
+   v.skin.material.map=battlefieldMaps[piece.stage*2+piece.index];
+   v.skin.material.color.setHex(piece.route==='cover'?0x8d99b0:0xff9f73);
+   v.skin.material.opacity=fade*(active?.85:.36);
+   v.skin.material.rotation=piece.side*(piece.route==='cover'?.21:-.16)+Math.sin(piece.age*.42)*.06;
+   v.skin.position.set(piece.x,piece.y,.86);
+   v.skin.scale.set(piece.radius*2.35,piece.radius*2.35,1);
+   if(v.warning.visible){
+    v.warning.material.opacity=.45+.30*Math.abs(Math.sin(piece.age*8));
+    v.warning.position.set(piece.x,piece.y,1.12);
+    v.warning.scale.setScalar(piece.radius*2.5);
+   }
   }
   for(let i=0;i<this.beams.length;i++){
    const v=this.beams[i],t=g.threats.filter(t=>!t.dead)[i];v.band.visible=v.line.visible=!!t;v.core.visible=!!t&&threatActive(t);if(!t)continue;
@@ -61,6 +81,23 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
   if(phase===2){const fx=tacticalFxMaps[9].image;if(fx instanceof HTMLImageElement&&fx.naturalWidth>0){const w=fx.width/4,h=fx.height/4;c.globalAlpha=.65;c.drawImage(fx,w,h*2,w,h,-.72,-.72,1.44,1.44);}}
  }
 }c.restore();c.save();c.fillStyle='#07121d';c.fillRect(n.x-1.025,n.y-1.39,2.05,.085);c.fillStyle='#'+(n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');c.fillRect(n.x-1,n.y-1.37,2*Math.max(0,n.hp/n.maxHp),.045);c.restore();}
+ // A dynamic corridor is visible in every renderer, with precise circular danger telegraphs.
+ const art=battlefieldAtlasMap.image;
+ for(const piece of g.battlefield.terrain){
+  const live=isTerrainActive(piece),r=piece.radius;
+  c.save();c.translate(piece.x,piece.y);
+  if(art instanceof HTMLImageElement&&art.naturalWidth>0){
+   const k=piece.stage*2+piece.index,w=art.width/4,h=art.height/3;
+   c.save();c.rotate(piece.side*(piece.route==='cover'?.21:-.16));c.scale(1,-1);
+   c.globalAlpha=(live?.85:.36)*Math.max(.15,Math.min(1,(piece.life-piece.age)/2.5));
+   c.drawImage(art,(k%4)*w,Math.floor(k/4)*h,w,h,-r*1.17,-r*1.17,r*2.34,r*2.34);c.restore();
+  }else{c.fillStyle=piece.route==='cover'?'#69899e':'#cb725a';c.globalAlpha=live?.76:.35;c.beginPath();c.arc(0,0,r,0,Math.PI*2);c.fill();}
+  c.globalAlpha=piece.route==='hazard'?(live?.70:.35+.25*Math.abs(Math.sin(piece.age*8))):.4;
+  c.strokeStyle=piece.route==='hazard'?'#ffb36c':'#7ef4ff';c.lineWidth=.08;
+  c.beginPath();c.arc(0,0,r+.22,0,Math.PI*2);c.stroke();
+  if(piece.route==='hazard'&&!live){c.strokeStyle='#ff685a';c.beginPath();c.moveTo(-r,0);c.lineTo(r,0);c.moveTo(0,-r);c.lineTo(0,r);c.stroke();}
+  c.restore();
+ }
  // Collapsing facilities remain visible long enough to sell the multi-stage chain reaction.
  const fieldAtlas=battlefieldAtlasMap.image;
  if(fieldAtlas instanceof HTMLImageElement&&fieldAtlas.naturalWidth>0)for(const wreck of g.battlefield.collapses){
