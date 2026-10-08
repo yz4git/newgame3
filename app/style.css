@@ -38,3 +38,25 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
 .stage-cue.boss{border-color:#ff8e83;background:linear-gradient(90deg,#30121cec,#30121c3a)}.stage-cue.boss .cue-heading{color:#ff9a8e}.stage-cue.boss strong{font-size:19px;color:#ffd4cd}.stage-cue.boss .cue-track i{background:#ff9688}
 .radio-bars{display:flex;gap:3px;align-items:center;height:15px}.radio-bars b{display:block;width:2px;height:13px;background:var(--world-color,#80e7ff);transform-origin:center;opacity:.75}
 @media(max-height:600px){.stage-cue{padding:7px 10px;top:29%}.stage-cue strong{font-size:15px}.stage-cue.radio{top:23%;padding:6px 10px}.stage-cue.radio strong{font-size:9px}.stage-cue.boss strong{font-size:13px}.cue-heading{font-size:7px;margin-bottom:5px}.cue-track{margin-top:7px}.sector-strip{top:16%;font-size:5px}.cinematic-frame{border-width:7px}}
+
+/* NOVA STRIKE 2.1 original generated art: efficient AVIF sheets; decorative only. */
+.title-screen{isolation:isolate}
+.title-screen::before{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+ background:linear-gradient(180deg,#030813d9 0%,#030813b5 42%,#030813ee 90%),
+ url("./textures/v21/title-hero-v21.avif") center 40%/cover no-repeat;opacity:.94;
+}
+.title-screen>.title-top,.title-screen>.title-lockup,.title-screen>.title-menu{z-index:1}
+.stage-picker{position:relative;isolation:isolate}
+.stage-picker::before{
+ content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.38;
+ background-image:linear-gradient(90deg,#061525e6,#0615258a),url("./textures/v21/sector-thumbnails-6-v21.avif");
+ background-size:100% 100%,300% 200%;background-position:center,var(--stage-art-position,0% 0%);
+}
+.stage-picker select{position:relative}
+.sector-badge{display:block;flex:none;width:23px;height:23px;background-image:url("./textures/v21/sector-badges-10-v21.avif");background-repeat:no-repeat;background-size:600% 200%;background-position:0 0;filter:drop-shadow(0 1px 4px #09142199)}
+.field-readout{display:flex;align-items:center;gap:5px}
+.field-readout::before{content:"";display:block;flex:none;width:13px;height:13px;background:url("./textures/v21/field-fx-16-v21.avif") 0 0/400% 400% no-repeat;filter:drop-shadow(0 0 4px #ffaa6077)}
+.field-readout.alert::before{background-position:66.6667% 0}
+@media(max-height:600px){.sector-badge{width:17px;height:17px}}
+@media(prefers-reduced-motion:reduce){.sector-badge,.field-readout::before{filter:none}}
