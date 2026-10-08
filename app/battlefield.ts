@@ -146,7 +146,7 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  if(g.stage===3&&n.index===0)for(const linked of [...g.nodes])if(linked.attach==='stage'&&!linked.dead)g.damageNode(linked,linked.hp+1);
  if(g.stage===4&&n.index===0)g.pickup('power',n.x-1,n.y);
  if(g.stage===5&&n.index===0)g.energy=Math.min(100,g.energy+12);
- g.emit('explode',{x:n.x,y:n.y,size:reactor?3.8:2.7});
- g.emit('resonance',{x:n.x,y:n.y,size:radius,color:reactor?0xffbb62:0x5ce9ff});
+ // Facility-specific fieldcollapse + fieldclear now own the whole explosion.
+ // Never emit the generic 2-D explosion atlas or resonance sprite for a world-space structure.
  g.emit('fieldclear',{x:n.x,y:n.y,size:7.5,color:0xffe48b,text:'敵弾すべて消去 '+(cleared+clearedShots)+' / '+(st.stageDestroyed===2?'ボス兵装 -15%':'敵射撃停止・残骸で防御')});
 }
