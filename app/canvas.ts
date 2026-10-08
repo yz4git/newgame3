@@ -6,6 +6,7 @@ import {bossWingAngle,bossScars,scarPositions} from './boss-finish.ts';
 import {bossMorph} from './boss-evolution.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState,type ShipPose} from './motion.ts';
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
+import {FacilityDemolitionMotion,isFacilityDemolition,drawFacilityDemolitionCanvas} from './facility-demolition.ts';
 import {CanvasCombatEffects} from './canvas-combat.ts';
 import {drawAirCanvas} from './air-effects.ts';
 import {drawThreatsCanvas,drawEncounterActorsCanvas,drawBossShieldCanvas,encounterDiagnostics} from './encounter-view.ts';
@@ -18,6 +19,7 @@ export class CanvasView {
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
+   private facilityDemolition=new FacilityDemolitionMotion();
   private worldHeight=128/3;private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
   private combatEffects=new CanvasCombatEffects();private encounterStatus={miniboss:false,nodes:0,telegraphs:0,activeThreats:0,shield:false};
   private air={clock:0,layers:0,kind:'none'};
@@ -54,6 +56,8 @@ export class CanvasView {
   }
   event(e:GameEvent){
     this.combatEffects.event(e);
+    this.facilityDemolition.event(e);
+    if(isFacilityDemolition(e.type))return;
     if(e.type==='stage'){this.sparks=[];this.explosions=[];this.wrecks=[];this.cascades=[];this.pulse=0;this.ring.age=2;}
     if(e.type==='explode'&&e.kind&&e.kind!=='player'&&e.kind!=='boss'&&this.wrecks.length<12)this.wrecks.push({x:e.x||0,y:e.y||0,kind:e.kind,stage:this.stage,age:0,life:e.kind==='cruiser'?1.65:.85});
     if(e.type==='bosskill'){
@@ -118,11 +122,13 @@ export class CanvasView {
     if(active&&playerVisible){const y=p.y+depart*34,length=(1.3+Math.sin(g.visualTime*36)*.15)*pose.thrust;for(const s of[-1,1]){c.save();c.translate(p.x+s*.5,y-1.65);c.scale(.12,length);canvasGlow(c,0,-.5,.75,'#57d6ff',.8);c.restore();}}
     for(const q of this.cascades)q.at-=dt;const due=this.cascades.filter(q=>q.at<=0);this.cascades=this.cascades.filter(q=>q.at>0);for(const q of due)this.event({type:'explode',x:q.x,y:q.y,size:q.size});
     this.wrecks=this.wrecks.filter(w=>{w.age+=dt;if(w.age>=w.life)return false;w.y-=dt*(w.kind==='boss'?.6:2.3);const t=w.age/w.life;c.save();c.translate(w.x,w.y);c.rotate(w.age*(w.x>0?1:-1)*(w.kind==='boss'?.13:1.3));c.globalAlpha=(1-t)*.45;if(w.kind==='boss'){this.asset(bossSprite(w.stage,'core'),0,0);for(let i=0;i<2;i++)if(w.parts![i]>0)this.asset(bossSprite(w.stage,i===0?'wing0':'wing1'),(i===0?-1:1)*(w.spread!+(1-w.deploy!)*1.2),-w.spread!*.65);}else this.asset(shipSprite(w.kind),0,0);c.restore();return true;});
+    this.facilityDemolition.update(g,dt,reduced);
+    drawFacilityDemolitionCanvas(c,this.facilityDemolition,reduced);
     for(const e of this.explosions){e.age+=dt;if(e.age<0)continue;const t=e.age/e.life,s=e.size*(e.smoke?.45+t*.7:.25+Math.sin(Math.min(1,t)*Math.PI/2)*.75);c.save();c.globalAlpha=Math.max(0,(1-t)*(e.smoke?.75:1));c.translate(e.x,e.y);c.scale(1,-1);if(e.smoke)c.drawImage(smokeMap.image,-s/2,-s/2,s,s);else{const frame=Math.min(3,Math.floor(t*4)),im=explosionAtlasMap.image,w=im.width/2,h=im.height/2;c.drawImage(im,frame%2*w,Math.floor(frame/2)*h,w,h,-s/2,-s/2,s,s);}c.restore();}this.explosions=this.explosions.filter(e=>e.age<e.life);
     this.combatEffects.drawFragments(c);this.combatEffects.drawImpacts(c);
     for(const s of this.sparks){s.life-=dt;if(s.life<=0)continue;s.x+=s.vx*dt;s.y+=s.vy*dt;c.globalAlpha=s.life/s.max;this.rect(s.x,s.y,s.size,s.size*1.5,s.color);}c.globalAlpha=1;this.sparks=this.sparks.filter(s=>s.life>0);
     this.ring.age+=dt;
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterStatus,textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterStatus,facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }
