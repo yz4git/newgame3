@@ -126,11 +126,11 @@ function updateUI(now:number){
   el('multiplier').textContent='×'+game.multiplier;
   el('chain-readout').firstChild!.textContent='CHAIN '+game.chain.toString().padStart(3,'0')+' ';el('chain-fill').style.width=Math.min(100,game.chainTime/3.4*100)+'%';
   const activeField=game.nodes.find(n=>n.attach==='field'&&!n.dead);
-  const fieldLabel=el('battlefield-status');fieldLabel.hidden=game.mode!=='campaign';
+  const fieldLabel=el('battlefield-status');fieldLabel.hidden=game.mode!=='campaign'||!!game.boss;
   const activeTerrain=game.battlefield.terrain.some(p=>!p.dead);fieldLabel.textContent=activeTerrain?'AFTERMATH '+(game.battlefield.route==='cover'?'COVER +'+game.battlefield.shotsBlocked+' BLOCK':'HAZARD · SHOOT TO CLEAR'):activeField?'TARGET '+(activeField.index+1)+'/2 · '+(fieldDamagePhase(activeField.hp,activeField.maxHp)===2?'CORE EXPOSED ':fieldDamagePhase(activeField.hp,activeField.maxHp)===1?'ARMOUR BROKEN ':'')+Math.max(0,Math.ceil(activeField.hp/activeField.maxHp*100))+'%':game.battlefield.suppression>0?'DEFENSE OFFLINE '+Math.ceil(game.battlefield.suppression/GAME_SPEED)+'s':game.battlefield.alert>0?'ALERT ×1.25 '+Math.ceil(game.battlefield.alert/GAME_SPEED)+'s':'FIELD '+game.battlefield.stageDestroyed+'/2 · '+game.battlefield.stageEscaped+' ESCAPED';
   fieldLabel.classList.toggle('alert',game.battlefield.alert>0||!!activeField&&fieldDamagePhase(activeField.hp,activeField.maxHp)===2);
   const missionLabel=el('mission-status'),mission=game.sectorMission;
-  missionLabel.hidden=game.mode!=='campaign'||!mission.active;
+  missionLabel.hidden=game.mode!=='campaign'||!mission.active||!!game.boss;
   if(mission.active){const objective=game.nodes.find(n=>n.id===mission.targetId&&!n.dead);
     missionLabel.textContent='MISSION '+mission.name+' · '+Math.ceil(Math.max(0,mission.timeLeft)/GAME_SPEED)+'s'+(objective?' · '+Math.ceil(Math.max(0,objective.hp)/objective.maxHp*100)+'%':'');
     missionLabel.classList.toggle('danger',mission.route==='intercept');}
@@ -149,10 +149,10 @@ function updateUI(now:number){
   const bossFormLabel=el('boss-form');bossFormLabel.hidden=!boss||boss.form==='standard';
   if(boss){bossFormLabel.textContent=BOSS_FORM_NAMES[boss.form];bossFormLabel.classList.toggle('overcharged',boss.form==='overcharged');el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
   else if(mini){const guarded=game.nodes.some(n=>n.attach==='mini'&&!n.dead);el('boss-hud').classList.toggle('exposed',!guarded);el('boss-name').textContent=ENCOUNTERS[game.stage].mini;el('boss-pattern').textContent=guarded?'ESCORT SHIELD / 護衛を壊すと本体が露出':'MIDBOSS / 集中射撃で突破';el('boss-fill').style.width=Math.max(0,mini.hp/mini.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(mini.hp/mini.maxHp*100))+'%';el('parts-status').textContent=(guarded?'ESCORT ACTIVE':'CORE EXPOSED')+' / 撤退まで '+Math.max(0,Math.ceil((22-mini.age)/GAME_SPEED))+'s';}
-  const cue=stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
+  const priorityTarget=game.sectorMission.active||game.nodes.some(n=>n.attach==='field'&&!n.dead);const cue=priorityTarget?null:stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
   const panel=el('stage-cue');panel.hidden=!cue;
   el('cinematic-frame').hidden=!cue&&game.state!=='transition'||cue?.kind==='radio';
-  el('sector-strip').hidden=!playing||!!boss||!!mini;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
+  el('sector-strip').hidden=!playing||!!boss||!!mini||priorityTarget;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
   el('district').textContent=zoneAt(game.stage,stageDistance(game.time)).toUpperCase().replaceAll('-',' ');
   el('sector-badge').style.backgroundPosition=(game.stage*20)+'% 0%';
   if(cue){
