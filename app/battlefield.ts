@@ -30,21 +30,21 @@ export const STAGE_COLLAPSE_TITLES=[
  'FURNACE MELTDOWN / 溶岩炉心が暴走'
 ] as const;
 export interface BattlefieldState {
- seen:[boolean,boolean];destroyed:number;escaped:number;stageDestroyed:number;stageEscaped:number;
+ seen:[boolean,boolean];outcomes:[null|'destroyed'|'escaped',null|'destroyed'|'escaped'];destroyed:number;escaped:number;stageDestroyed:number;stageEscaped:number;
  reactions:number;suppression:number;alert:number;mostReactions:number;
  fractures:number;criticals:number;collapses:BattlefieldCollapse[];
  terrain:TerrainPiece[];terrainSerial:number;terrainCreated:number;shotsBlocked:number;hazardsCleared:number;rerouted:number;route:TerrainRoute|null;
 }
 export function initialBattlefield():BattlefieldState{
- return {seen:[false,false],destroyed:0,escaped:0,stageDestroyed:0,stageEscaped:0,reactions:0,suppression:0,alert:0,mostReactions:0,fractures:0,criticals:0,collapses:[],terrain:[],terrainSerial:0,terrainCreated:0,shotsBlocked:0,hazardsCleared:0,rerouted:0,route:null};
+ return {seen:[false,false],outcomes:[null,null],destroyed:0,escaped:0,stageDestroyed:0,stageEscaped:0,reactions:0,suppression:0,alert:0,mostReactions:0,fractures:0,criticals:0,collapses:[],terrain:[],terrainSerial:0,terrainCreated:0,shotsBlocked:0,hazardsCleared:0,rerouted:0,route:null};
 }
 export function nextBattlefieldStage(g:Game){
- const b=g.battlefield;b.seen=[false,false];b.stageDestroyed=0;b.stageEscaped=0;b.suppression=0;b.alert=0;b.collapses=[];b.terrain=[];b.route=null;
+ const b=g.battlefield;b.seen=[false,false];b.outcomes=[null,null];b.stageDestroyed=0;b.stageEscaped=0;b.suppression=0;b.alert=0;b.collapses=[];b.terrain=[];b.route=null;
 }
 function escapeNode(g:Game,n:CombatNode){
  n.dead=true;g.clearSource(n.id);
  const op=FIELD_OPERATIONS[g.stage][n.index];
- const b=g.battlefield;b.escaped++;b.stageEscaped++;b.alert=Math.max(b.alert,10);
+ const b=g.battlefield;b.outcomes[n.index]='escaped';b.escaped++;b.stageEscaped++;b.alert=Math.max(b.alert,10);
  // Escaped controller summons two faster reinforcements but pays +25% during the alert.
  for(const side of [-1,1])g.spawn(g.stage===1||g.stage===2?'corvette':g.stage===4?'sentinel':'interceptor',side*6.3,18+(side+1)*1.8);
  if(g.stage===2||g.stage===5)g.addThreat(n.x,n.y,g.player.x,-18,.48,n.id,2,1.25);
@@ -127,7 +127,7 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  const cleared=g.battlefieldPulse(n.x,n.y,radius,reactor?85:45);
  const reactions=g.kills-before,st=g.battlefield;
  st.reactions+=reactions;st.mostReactions=Math.max(st.mostReactions,reactions);
- st.destroyed++;st.stageDestroyed++;st.suppression=Math.max(st.suppression,reactor?5:9);st.alert=0;
+ st.outcomes[n.index]='destroyed';st.destroyed++;st.stageDestroyed++;st.suppression=Math.max(st.suppression,reactor?5:9);st.alert=0;
  st.collapses.push({stage:g.stage,index:n.index,x:n.x,y:n.y,age:0,life:3.3,burst:0});
  if(st.collapses.length>3)st.collapses.shift();
  g.emit('fieldcollapse',{x:n.x,y:n.y,size:reactor?5.4:4.6,color:reactor?0xffb05d:0x78e9ff,text:STAGE_COLLAPSE_TITLES[g.stage]});
