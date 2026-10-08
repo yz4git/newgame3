@@ -47,7 +47,7 @@ export class EncounterView {
     const field=n.attach==='field'?fieldPresentation(n):null;
     if(field){
       const geometry=this.worldFacilities[n.stage*2+n.index];geometry.visible=true;
-      geometry.position.set(n.x,n.y-.42,-.15);geometry.rotation.z=n.index===1?.04:-.035;
+      geometry.position.set(n.x,n.y-.42,-.15);geometry.rotation.z=n.index===1?.04:-.035;geometry.scale.setScalar(1.15);
       animateFacility(geometry,n.age,field.phase,n.flash);
       v.backplate.position.set(n.x,n.y-.5,2.545);v.backplate.material.opacity=.66+.1*Math.sin(n.age*3);
       v.target.position.set(n.x,n.y-.5,2.66);v.target.rotation.z=Math.PI/6+Math.sin(n.age*.9)*.035;
@@ -122,7 +122,7 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
  const im=nodeAtlasMap.image,field=battlefieldAtlasMap.image;for(const n of g.nodes){if(n.dead)continue;c.save();c.translate(n.x,n.y);c.rotate((n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?-n.age*.35:Math.sin(n.age*1.4)*.025);c.scale(1,-1);if(n.attach==='field'){
   // Same Three.js world geometry as WebGL, CPU-rasterized once for compatibility.
   const structure=canvasFacility(n.stage,n.index);
-  if(structure.width>0){c.globalAlpha=1;c.drawImage(structure.canvas,structure.left,-structure.top,structure.width,structure.height);}
+  if(structure.width>0){c.globalAlpha=1;c.drawImage(structure.canvas,structure.left*1.15,-structure.top*1.15,structure.width*1.15,structure.height*1.15);}
  }
  if(n.attach==='mission'&&field instanceof HTMLImageElement&&field.naturalWidth>0){const k=n.stage*2+n.index,w=field.width/4,h=field.height/3;c.drawImage(field,k%4*w,Math.floor(k/4)*h,w,h,-1.675,-1.675,3.35,3.35);}else if(n.attach!=='field'){const w=im.width/3,h=im.height/2;c.drawImage(im,n.stage%3*w,Math.floor(n.stage/3)*h,w,h,-1.375,-1.375,2.75,2.75);}if(n.attach==='mission'){c.strokeStyle=n.index===1?'#78e9ff':'#ff987d';c.lineWidth=.085;c.globalAlpha=.7+.2*Math.sin(n.age*8);c.beginPath();c.arc(0,0,1.95,0,Math.PI*2);c.stroke();}
  if(n.attach==='field'){
