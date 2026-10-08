@@ -94,17 +94,17 @@ export function updateBattlefield(g:Game,dt:number){
  for(let i=0;i<2;i++){
   if(st.seen[i]||g.time<duration*(i===0?.095:.615)||g.time>duration-4)continue;
   const before=g.nodes.length;
-  g.addCombatNode('field',0,i,i===0?-3.25:3.25,15,52+g.stage*7,21);
+  g.addCombatNode('field',0,i,i===0?-3.25:3.25,19,44+g.stage*6,8.3);
   if(g.nodes.length===before)continue;
-  const n=g.nodes[g.nodes.length-1];n.radius=1.5;n.shoot=2.7;
+  const n=g.nodes[g.nodes.length-1];n.radius=2.35;n.shoot=2.7;
   st.seen[i]=true;
   g.emit('fieldwarning',{x:n.x,y:n.y,size:3.5,color:0xffd679,text:'破壊可能な戦略施設 / '+FIELD_OPERATIONS[g.stage][i].jp+' · 撃って破壊！'});
  }
  for(const n of g.nodes){
   if(n.dead||n.attach!=='field')continue;
-  n.age+=dt;n.flash=Math.max(0,n.flash-dt);n.y-=1.52*dt;
-  if(n.age>=21||n.y<-17){escapeNode(g,n);continue;}
-  if(n.y<g.player.y+4||n.age<2.4)continue;
+  n.age+=dt;n.flash=Math.max(0,n.flash-dt);n.y-=4.4*dt;
+  if(n.age>=8.3||n.y<-17){escapeNode(g,n);continue;}
+  if(n.y<g.player.y+4||n.age<1.4)continue;
   n.shoot-=dt;
   if(n.shoot<=0){
    const op=FIELD_OPERATIONS[g.stage][n.index];
