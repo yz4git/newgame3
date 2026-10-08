@@ -28,19 +28,20 @@ export class FacilityDemolitionMotion {
   if(!isFacilityDemolition(e.type))return;
   const type=e.type;
   const size=type==='fieldclear'?7.5:type==='fieldcollapse'?4.9:type==='fieldburst'?2.0:2.5;
-  const life=type==='fieldclear'?.86:type==='fieldcollapse'?.66:type==='fieldburst'?.43:.48;
+  // Timings use accelerated GAME time (2.25x real time). The primary detonation must persist ~1 real second.
+  const life=type==='fieldclear'?2.4:type==='fieldcollapse'?2.5:type==='fieldburst'?1.5:1.05;
   const color=e.color??(type==='fieldcritical'?0xffcc86:0xffad63);
   this.pulses.push({x:e.x??0,y:e.y??0,age:0,life,size,color,type});
   if(this.pulses.length>12)this.pulses.shift();
-  const count=type==='fieldcollapse'?24:type==='fieldburst'?9:type==='fieldcritical'?5:0;
+  const count=type==='fieldcollapse'?42:type==='fieldburst'?16:type==='fieldcritical'?7:0;
   for(let i=0;i<count;i++){
-   const n=++this.serial,a=unit(n+7)*Math.PI*2,vel=type==='fieldcollapse'?4.7:2.8;
+   const n=++this.serial,a=unit(n+7)*Math.PI*2,vel=type==='fieldcollapse'?4.0:2.8;
    const speed=vel+unit(n+42)*5;
    this.shards.push({
-    x:e.x??0,y:e.y??0,z:2.75,
+    x:e.x??0,y:e.y??0,z:5.05,
     vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-.6,vz:.7+unit(n+11)*2,
-    angle:a,spin:(unit(n+53)-.5)*8,age:0,life:.66+unit(n+23)*.64,
-    size:.09+unit(n+34)*.19,
+    angle:a,spin:(unit(n+53)-.5)*8,age:0,life:1.2+unit(n+23)*1.05,
+    size:.16+unit(n+34)*.24,
     // Silvery chunks dominate: glowing amber is restricted to occasional hot fragments.
     color:i%5===0?color:i%3===0?0x9da6b2:0x555f69
    });
@@ -67,21 +68,31 @@ export class FacilityDemolition3D {
  root=new T.Group();
  motion=new FacilityDemolitionMotion();
  private rings:T.Mesh<T.RingGeometry,T.MeshBasicMaterial>[]=[];
- private cores:T.Mesh<T.CircleGeometry,T.MeshBasicMaterial>[]=[];
+ private cores:T.Mesh<T.SphereGeometry,T.MeshBasicMaterial>[]=[];
+ private halos:T.Mesh<T.CircleGeometry,T.MeshBasicMaterial>[]=[];
+ private secondRings:T.Mesh<T.RingGeometry,T.MeshBasicMaterial>[]=[];
  private shards:T.InstancedMesh;
  private dummy=new T.Object3D();
  private tint=new T.Color();
  constructor(){
   const ringShape=new T.RingGeometry(.94,1.06,48);
-  const coreShape=new T.CircleGeometry(1,24);
+  const coreShape=new T.SphereGeometry(1,12,8);
+  const haloShape=new T.CircleGeometry(1,36);
+  const secondaryShape=new T.RingGeometry(.95,1.045,44);
   for(let i=0;i<12;i++){
-   const ring=new T.Mesh(ringShape,new T.MeshBasicMaterial({color:0xffb87a,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));
-   const core=new T.Mesh(coreShape,new T.MeshBasicMaterial({color:0xffedce,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));
-   ring.visible=core.visible=false;ring.frustumCulled=core.frustumCulled=false;
-   this.rings.push(ring);this.cores.push(core);this.root.add(ring,core);
+   const material=(color:number)=>new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthTest:false,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,side:T.DoubleSide});
+   const ring=new T.Mesh(ringShape,material(0xffb87a));
+   const core=new T.Mesh(coreShape,material(0xffedce));
+   const halo=new T.Mesh(haloShape,material(0xffad4b));
+   const second=new T.Mesh(secondaryShape,material(0xffe6ae));
+   ring.visible=core.visible=halo.visible=second.visible=false;
+   ring.renderOrder=901;second.renderOrder=900;halo.renderOrder=899;core.renderOrder=902;
+   ring.frustumCulled=core.frustumCulled=halo.frustumCulled=second.frustumCulled=false;
+   this.rings.push(ring);this.secondRings.push(second);this.cores.push(core);this.halos.push(halo);
+   this.root.add(halo,second,ring,core);
   }
-  this.shards=new T.InstancedMesh(new T.TetrahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,depthWrite:false,toneMapped:false}),112);
-  this.shards.count=0;this.shards.frustumCulled=false;
+  this.shards=new T.InstancedMesh(new T.TetrahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,depthTest:false,depthWrite:false,toneMapped:false}),112);
+  this.shards.count=0;this.shards.frustumCulled=false;this.shards.renderOrder=903;
   this.shards.instanceMatrix.setUsage(T.DynamicDrawUsage);
   this.root.add(this.shards);
  }
@@ -89,15 +100,29 @@ export class FacilityDemolition3D {
  draw(g:Game,dt:number,reduced=false){
   this.motion.update(g,dt,reduced);
   this.rings.forEach((ring,i)=>{
-   const p=this.motion.pulses[i],core=this.cores[i];ring.visible=core.visible=!!p;if(!p)return;
+   const p=this.motion.pulses[i],core=this.cores[i],halo=this.halos[i],second=this.secondRings[i];
+   ring.visible=core.visible=halo.visible=second.visible=!!p;if(!p)return;
    const u=clamp(p.age/p.life,0,1);
-   const blast=p.type==='fieldclear'?1.05:p.type==='fieldcollapse'?.8:.62;
-   ring.position.set(p.x,p.y,2.9);ring.scale.setScalar((.19+u*blast)*p.size);
-   ring.material.opacity=(1-u)**1.9*(p.type==='fieldclear'?.46:.78);
-   ring.material.color.setHex(p.color);ring.rotation.z=u*.10;
-   core.position.set(p.x,p.y,2.88);core.scale.setScalar((.25+u*.42)*Math.min(3.5,p.size));
-   core.material.color.setHex(p.type==='fieldclear'?0xaadfff:0xffe8c5);
-   core.material.opacity=Math.max(0,(1-u*3.7))*.68;
+   const size=p.size,outer=(.22+u*(p.type==='fieldclear'?1.18:1.04))*size;
+   const intensity=Math.pow(1-u,.7);
+   const typeColor=p.type==='fieldclear'?0xb6eeff:p.color;
+   // All layers are rendered above in-world architecture, not depth-occluded by the falling model.
+   ring.position.set(p.x,p.y,6.25);ring.scale.setScalar(outer);
+   ring.material.opacity=intensity*(p.type==='fieldclear'?.95:1.0);
+   ring.material.color.setHex(typeColor);ring.rotation.z=u*.15;
+   second.position.set(p.x,p.y,6.24);
+   second.scale.setScalar(outer*(.66+u*.17));
+   second.material.color.setHex(0xffe7ad);
+   second.material.opacity=intensity*.55;
+   halo.position.set(p.x,p.y,6.20);
+   halo.scale.setScalar(size*(.65+u*.55));
+   halo.material.color.setHex(typeColor);
+   halo.material.opacity=(1-u)**1.35*(p.type==='fieldclear'?.15:.23);
+   core.position.set(p.x,p.y,6.31);
+   const flicker=.95+.12*Math.sin(p.age*27);
+   core.scale.setScalar(Math.min(2.8,size*.54)*(.65+u*.28)*flicker);
+   core.material.color.setHex(p.type==='fieldclear'?0xd9ffff:0xfff4c9);
+   core.material.opacity=Math.max(0,1-u*1.7)*(p.type==='fieldburst'?.78:.98);
   });
   let n=0;
   for(const p of this.motion.shards){
@@ -116,25 +141,25 @@ export class FacilityDemolition3D {
 /** World-space fallback has the same silhouettes and timing without a sprite atlas. */
 export function drawFacilityDemolitionCanvas(c:CanvasRenderingContext2D,motion:FacilityDemolitionMotion,reduced=false){
  for(const p of motion.pulses){
-  const u=clamp(p.age/p.life,0,1),radius=p.size*(.16+u*(p.type==='fieldclear'?1.10:.76));
+  const u=clamp(p.age/p.life,0,1),radius=p.size*(.22+u*(p.type==='fieldclear'?1.18:1.04));
   const red=(p.color>>16)&255,green=(p.color>>8)&255,blue=p.color&255;
   const rgb=red+','+green+','+blue;
   c.save();
   // Screen-space core plasma bloom, drawn analytically instead of stretching a baked animation sheet.
-  if(u<.46){
-   const r=Math.min(2.5,p.size)*(.33+u*.48);
+  if(u<.72){
+   const r=Math.min(3.6,p.size)*(.57+u*.52);
    const gradient=c.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
-   gradient.addColorStop(0,'rgba(255,249,221,'+((1-u/.46)*.82)+')');
-   gradient.addColorStop(.29,'rgba('+rgb+','+((1-u/.46)*.58)+')');
+   gradient.addColorStop(0,'rgba(255,249,221,'+((1-u/.72)*.94)+')');
+   gradient.addColorStop(.29,'rgba('+rgb+','+((1-u/.72)*.75)+')');
    gradient.addColorStop(1,'rgba('+rgb+',0)');
    c.fillStyle=gradient;c.beginPath();c.arc(p.x,p.y,r,0,Math.PI*2);c.fill();
   }
-  c.globalAlpha=(1-u)**2*(p.type==='fieldclear'?.6:.82);
+  c.globalAlpha=(1-u)**.72*(p.type==='fieldclear'?.88:1);
   c.strokeStyle='#'+p.color.toString(16).padStart(6,'0');
-  c.lineWidth=Math.max(.03,.11*(1-u*.7));
+  c.lineWidth=Math.max(.05,.20*(1-u*.6));
   c.beginPath();c.arc(p.x,p.y,radius,0,Math.PI*2);c.stroke();
   if(p.type==='fieldcollapse'){
-   c.globalAlpha=(1-u)**2*.28;c.lineWidth=.045;
+   c.globalAlpha=(1-u)**.85*.72;c.lineWidth=.10;
    c.beginPath();c.arc(p.x,p.y,radius*.75,0,Math.PI*2);c.stroke();
   }
   c.restore();
