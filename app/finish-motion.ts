@@ -7,9 +7,9 @@ export class FinishMotion {
  fragments:Fragment[]=[];waves:Wave[]=[];private serial=0;
  event(e:GameEvent){
   if(e.type==='stage'){this.fragments=[];this.waves=[];this.serial=0;return;}
-  if(['nova','bosskill','resonance'].includes(e.type)){this.waves.push({x:e.x??0,y:e.y??0,age:0,life:.68,size:e.type==='nova'?30:24,color:e.type==='resonance'?0xffd59a:0xa5efff});if(this.waves.length>4)this.waves.shift();}
-  if(!['explode','bosskill','part'].includes(e.type))return;
-  const count=e.type==='bosskill'?18:e.type==='part'?8:Math.min(9,Math.ceil((e.size??1)*4));
+  if(['nova','bosskill','resonance','fieldcollapse','fieldcritical','fieldburst'].includes(e.type)){this.waves.push({x:e.x??0,y:e.y??0,age:0,life:e.type==='fieldburst'?.38:.68,size:e.type==='nova'?30:e.type==='fieldcollapse'?12:e.type==='fieldburst'?6:24,color:e.color??(e.type==='resonance'?0xffd59a:0xa5efff)});if(this.waves.length>4)this.waves.shift();}
+  if(!['explode','bosskill','part','fieldcollapse','fieldfracture','fieldcritical','fieldburst'].includes(e.type))return;
+  const count=e.type==='bosskill'?18:e.type==='fieldcollapse'?20:e.type==='fieldcritical'?12:e.type==='fieldburst'?9:e.type==='fieldfracture'?8:e.type==='part'?8:Math.min(9,Math.ceil((e.size??1)*4));
   for(let i=0;i<count;i++){
    const n=++this.serial,a=fraction(n)*Math.PI*2,speed=3+fraction(n+57)*9;
    this.fragments.push({x:e.x??0,y:e.y??0,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-1,age:0,life:.70+fraction(n+19)*.55,size:.32+fraction(n+11)*.65,angle:a,spin:(fraction(n+44)-.5)*8,frame:n%4});
