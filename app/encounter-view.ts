@@ -2,7 +2,7 @@ import * as T from 'three/webgpu';
 import type {Game} from './sim.ts';
 import {fieldDamagePhase} from './battlefield.ts';
 import {fieldPresentation} from './field-clarity.ts';
-import {facilityModel,animateFacility} from './strategic-facility.ts';
+import {facilityModel,animateFacility,facilityDebrisModel} from './strategic-facility.ts';
 import {meshSprite} from './canvas-art.ts';
 import {isTerrainActive} from './battlefield-terrain.ts';
 import {missionBeacons} from './mission-spectacle.ts';
@@ -11,6 +11,10 @@ import {minibossMaps,nodeMaps,nodeAtlasMap,battlefieldAtlasMap,battlefieldMaps,t
 
 const plane=new T.PlaneGeometry(1,1);
 const physicalCanvasCache=new Map<number,ReturnType<typeof meshSprite>>();
+const debrisCanvasCache=new Map<number,ReturnType<typeof meshSprite>>();
+function canvasFacilityDebris(stage:number){let raster=debrisCanvasCache.get(stage);if(raster)return raster;
+ raster=meshSprite('fallen-world-metal-v30-'+stage,facilityDebrisModel(stage),27);debrisCanvasCache.set(stage,raster);return raster;
+}
 function canvasFacility(stage:number,index:number){
  const id=stage*2+index,prior=physicalCanvasCache.get(id);if(prior)return prior;
  const model=facilityModel(stage,index);
@@ -26,7 +30,9 @@ export class EncounterView {
  root=new T.Group();private mini=sprite(minibossMaps[0]);
  private worldFacilities=Array.from({length:12},(_,i)=>facilityModel(Math.floor(i/2),i%2));
  private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9]),backplate:new T.Mesh(new T.CircleGeometry(2.32,48),material(0x020c19,.76)),target:new T.Mesh(new T.RingGeometry(2.01,2.12,6),material(0xffd679,.90)),locator:new T.Mesh(new T.CircleGeometry(.19,3),material(0xffe3a7,.95)),fracture:new T.Mesh(plane,material(0xffb68c,.70))}));
- private terrain=Array.from({length:12},()=>({skin:sprite(battlefieldMaps[0]),warning:sprite(tacticalFxMaps[4])}));
+ private terrainStage=-1;
+ private debrisTemplates=Array.from({length:6},(_,stage)=>facilityDebrisModel(stage));
+ private terrain=Array.from({length:12},()=>({skin:this.debrisTemplates[0].clone(),warning:sprite(tacticalFxMaps[4])}));
  private missionGlow=Array.from({length:6},()=>sprite(tacticalFxMaps[0]));
  private beams=Array.from({length:12},()=>({band:new T.Mesh(plane,material(0xffb655,.14)),line:new T.Mesh(plane,material(0xffbd6c,.8)),core:new T.Mesh(plane,material(0xfff8e8,.9))}));
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
@@ -80,18 +86,18 @@ export class EncounterView {
     core.material.opacity=Math.max(.08,1-u);
    }
   }
-  // Pre-allocated sprite pools; both routes share exactly the same collision geometry.
+  // Both gameplay routes reuse lit, thick fallen metal, not the old facility sticker.
+  if(this.terrainStage!==g.stage){for(const v of this.terrain){this.root.remove(v.skin);v.skin=this.debrisTemplates[g.stage].clone();this.root.add(v.skin);}this.terrainStage=g.stage;}
+  // Pre-allocated world-space debris pools share exactly the same collision geometry.
   for(let i=0;i<this.terrain.length;i++){
    const v=this.terrain[i],piece=g.battlefield.terrain[i];
    v.skin.visible=!!piece;v.warning.visible=!!piece&&piece.route==='hazard'&&piece.age<piece.warning;
    if(!piece)continue;
    const active=isTerrainActive(piece),fade=Math.max(.15,Math.min(1,(piece.life-piece.age)/2.5));
-   v.skin.material.map=battlefieldMaps[piece.stage*2+piece.index];
-   v.skin.material.color.setHex(piece.route==='cover'?0x8d99b0:0xff9f73);
-   v.skin.material.opacity=fade*(active?.85:.36);
-   v.skin.material.rotation=piece.side*(piece.route==='cover'?.21:-.16)+Math.sin(piece.age*.42)*.06;
-   v.skin.position.set(piece.x,piece.y,.86);
-   v.skin.scale.set(piece.radius*2.35,piece.radius*2.35,1);
+   v.skin.position.set(piece.x,piece.y,-.25);
+   v.skin.rotation.set(piece.side*.045,0,piece.side*(piece.route==='cover'?.21:-.16)+Math.sin(piece.age*.42)*.06);
+   const scale=piece.radius*.78*(1-Math.min(.22,(piece.age/piece.life)*.2));
+   v.skin.scale.setScalar(scale);
    if(v.warning.visible){
     v.warning.material.opacity=.45+.30*Math.abs(Math.sin(piece.age*8));
     v.warning.position.set(piece.x,piece.y,1.12);
@@ -157,16 +163,14 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
   }
  }
  // A dynamic corridor is visible in every renderer, with precise circular danger telegraphs.
- const art=battlefieldAtlasMap.image;
  for(const piece of g.battlefield.terrain){
   const live=isTerrainActive(piece),r=piece.radius;
   c.save();c.translate(piece.x,piece.y);
-  if(art instanceof HTMLImageElement&&art.naturalWidth>0){
-   const k=piece.stage*2+piece.index,w=art.width/4,h=art.height/3;
-   c.save();c.rotate(piece.side*(piece.route==='cover'?.21:-.16));c.scale(1,-1);
-   c.globalAlpha=(live?.85:.36)*Math.max(.15,Math.min(1,(piece.life-piece.age)/2.5));
-   c.drawImage(art,(k%4)*w,Math.floor(k/4)*h,w,h,-r*1.17,-r*1.17,r*2.34,r*2.34);c.restore();
-  }else{c.fillStyle=piece.route==='cover'?'#69899e':'#cb725a';c.globalAlpha=live?.76:.35;c.beginPath();c.arc(0,0,r,0,Math.PI*2);c.fill();}
+  const raster=canvasFacilityDebris(piece.stage);
+  const scale=r*.78;
+  c.save();c.rotate(piece.side*(piece.route==='cover'?.21:-.16));c.globalAlpha=live?.95:.45;
+  c.drawImage(raster.canvas,raster.left*scale,-raster.top*scale,raster.width*scale,raster.height*scale);
+  c.restore();
   c.globalAlpha=piece.route==='hazard'?(live?.70:.35+.25*Math.abs(Math.sin(piece.age*8))):.4;
   c.strokeStyle=piece.route==='hazard'?'#ffb36c':'#7ef4ff';c.lineWidth=.08;
   c.beginPath();c.arc(0,0,r+.22,0,Math.PI*2);c.stroke();
