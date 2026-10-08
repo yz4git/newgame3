@@ -62,12 +62,12 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
  }
 }c.restore();c.save();c.fillStyle='#07121d';c.fillRect(n.x-1.025,n.y-1.39,2.05,.085);c.fillStyle='#'+(n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');c.fillRect(n.x-1,n.y-1.37,2*Math.max(0,n.hp/n.maxHp),.045);c.restore();}
  // Collapsing facilities remain visible long enough to sell the multi-stage chain reaction.
- const field=battlefieldAtlasMap.image;
- if(field instanceof HTMLImageElement&&field.naturalWidth>0)for(const wreck of g.battlefield.collapses){
-  const u=Math.min(1,wreck.age/wreck.life),k=wreck.stage*2+wreck.index,w=field.width/4,h=field.height/3;
+ const fieldAtlas=battlefieldAtlasMap.image;
+ if(fieldAtlas instanceof HTMLImageElement&&fieldAtlas.naturalWidth>0)for(const wreck of g.battlefield.collapses){
+  const u=Math.min(1,wreck.age/wreck.life),k=wreck.stage*2+wreck.index,w=fieldAtlas.width/4,h=fieldAtlas.height/3;
   c.save();c.translate(wreck.x,wreck.y-u*2);c.rotate(Math.sin(u*8+wreck.index)*u*.3);c.scale(1,-1);
   c.globalAlpha=(1-u)**1.65*.84;
-  const size=3.35*(1-u*.48);c.drawImage(field,k%4*w,Math.floor(k/4)*h,w,h,-size/2,-size/2,size,size);
+  const size=3.35*(1-u*.48);c.drawImage(fieldAtlas,k%4*w,Math.floor(k/4)*h,w,h,-size/2,-size/2,size,size);
   c.restore();
  }
 }
