@@ -29,6 +29,7 @@ export function addShipRig(g:T.Group,kind:Kind|'player'){
   g.add(rig);return g;
 }
 export function addBossRig(g:T.Group,color:number){
+  g.userData.bossStageColor=color;
   const rig=new T.Group();rig.name='animation-rig';
   for(let i=0;i<4;i++){const a=i*Math.PI/2,p=panel(rig,'petal'+i,Math.cos(a)*.45,-.85+Math.sin(a)*.45,.31,.60,0x748799);p.rotation.z=a;p.position.z=1.9;}
   // Armor spines reuse the established metal textures and are never re-created per frame.
@@ -57,9 +58,9 @@ export function animateShip(g:T.Group,pose:ShipPose,t:number,kind:Kind|'player')
 }
 export function animateBoss(g:T.Group,pose:ReturnType<typeof import('./motion.ts').bossPose>,b:Boss){
   const n=nodes(g),morph=bossMorph(b);
-  for(let i=0;i<3;i++){const skin=n.get('boss-skin'+i) as T.Sprite|undefined;if(skin){skin.material.color.setHex(morph.color).multiplyScalar(b.flash>0?1.6:morph.armor);skin.material.rotation=i===0?0:bossWingAngle(g.userData.stage??0,i===1?-1:1,b.age,pose.deploy);}const scar=n.get('scar'+i) as T.Sprite|undefined;if(scar)scar.material.opacity=bossScars(b);}
+  for(let i=0;i<3;i++){const skin=n.get('boss-skin'+i) as T.Sprite|undefined;if(skin){skin.material.color.setHex(b.form==='standard'?0xffffff:morph.color).multiplyScalar(b.flash>0?1.6:morph.armor);skin.material.rotation=i===0?0:bossWingAngle(g.userData.stage??0,i===1?-1:1,b.age,pose.deploy);}const scar=n.get('scar'+i) as T.Sprite|undefined;if(scar)scar.material.opacity=bossScars(b);}
   for(let i=0;i<4;i++){const p=n.get('petal'+i);if(!p)continue;const a=i*Math.PI/2;p.position.x=Math.cos(a)*(.45+pose.open*.52+morph.petalDelta);p.position.y=-.85+Math.sin(a)*(.45+pose.open*.52+morph.petalDelta);p.rotation.y=pose.open*.75;}
-  const core=n.get('core-light') as T.Sprite;if(core){core.material.color.setHex(morph.color);core.material.opacity=Math.min(1,(.22+pose.open*.5+pose.charge*.25)*morph.glow);core.scale.setScalar(1.25+pose.open*.85+Math.sin(b.age*8)*.05+morph.halo*.15);}
+  const core=n.get('core-light') as T.Sprite;if(core){core.material.color.setHex(b.form==='standard'?g.userData.bossStageColor??0xffffff:morph.color);core.material.opacity=Math.min(1,(.22+pose.open*.5+pose.charge*.25)*morph.glow);core.scale.setScalar(1.25+pose.open*.85+Math.sin(b.age*8)*.05+morph.halo*.15);}
   for(let i=0;i<4;i++){const fin=n.get('form-spine'+i) as T.Mesh|undefined;if(fin){const side=i<2?-1:1;fin.visible=b.form!=='standard';fin.position.x=side*(.87+(i%2)*.34+Math.abs(morph.wingDelta)*1.2);fin.rotation.z=side*(b.form==='overcharged'?.30:-.27)+Math.sin(b.age*1.6+i)*.035;(fin.material as T.MeshStandardMaterial).color.setHex(morph.color);}}
   for(let i=0;i<2;i++){
     const wing=n.get('wing'+i);if(wing){wing.visible=b.parts[i]>0;wing.position.x=(i===0?-1:1)*(b.spread+(1-pose.deploy)*1.2+morph.wingDelta);wing.position.y=-b.spread*.65;wing.rotation.y=(i===0?-1:1)*(1-pose.deploy)*.7+Math.sin(b.age*1.5)*.035;}
