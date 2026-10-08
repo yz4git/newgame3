@@ -62,3 +62,22 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
 .field-readout.alert::before{background-position:66.6667% 0}
 @media(max-height:600px){.sector-badge{width:17px;height:17px}}
 @media(prefers-reduced-motion:reduce){.sector-badge,.field-readout::before{filter:none}}
+
+/* iPhone aspect ratios taller than 9:16 use the available display instead of letterboxing.
+   Rendering keeps a fixed horizontal world scale and exposes more scenery vertically. */
+@media (max-width:600px) and (max-aspect-ratio:9/16){
+ .frame{width:100vw;height:100dvh;box-shadow:none}
+}
+/* Mission briefing, field telegraph and boss banner should not compete for the same strip. */
+@media(max-width:600px){
+ .score-area{max-width:64%;min-width:0}
+ .field-readout{font-size:9px;line-height:1.3;letter-spacing:.025em}
+ .mission-readout{font-size:9px;line-height:1.35;letter-spacing:.025em}
+ .boss-hud{top:max(18%,110px);background:linear-gradient(180deg,#030d1ce8,#030d1c08);padding:6px 8px 7px;left:6%;right:6%}
+ .boss-hud>div:first-child{font-size:10px}
+ .parts-status,.boss-pattern,.boss-form{font-size:9px;letter-spacing:.035em}
+ .stage-cue{top:28%;left:6%;right:6%}
+ .stage-cue.radio{top:30%;left:6%;right:6%}
+ .sector-strip{top:20%}
+ .hud{left:5%;right:5%}
+}
