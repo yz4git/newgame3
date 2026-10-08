@@ -1,7 +1,7 @@
 import * as T from 'three/webgpu';
 import {block,ball,batch,hull,metal,glow} from './art.ts';
 import {STAGES} from './stages.ts';
-import {metalMap} from './visual-assets.ts';
+// Reuse the same painted metal and lighting materials as the scrolling background.
 
 /** Real world-space structures, not billboards. The same lit geometry is CPU-rasterized on older iPhones. */
 const palettes=[
