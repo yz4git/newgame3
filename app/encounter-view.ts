@@ -26,14 +26,13 @@ export class EncounterView {
  root=new T.Group();private mini=sprite(minibossMaps[0]);
  private worldFacilities=Array.from({length:12},(_,i)=>facilityModel(Math.floor(i/2),i%2));
  private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9]),backplate:new T.Mesh(new T.CircleGeometry(2.32,48),material(0x020c19,.76)),target:new T.Mesh(new T.RingGeometry(2.01,2.12,6),material(0xffd679,.90)),locator:new T.Mesh(new T.CircleGeometry(.19,3),material(0xffe3a7,.95)),fracture:new T.Mesh(plane,material(0xffb68c,.70))}));
- private collapsing=Array.from({length:3},()=>({skin:sprite(battlefieldMaps[0]),aura:sprite(tacticalFxMaps[0])}));
  private terrain=Array.from({length:12},()=>({skin:sprite(battlefieldMaps[0]),warning:sprite(tacticalFxMaps[4])}));
  private missionGlow=Array.from({length:6},()=>sprite(tacticalFxMaps[0]));
  private beams=Array.from({length:12},()=>({band:new T.Mesh(plane,material(0xffb655,.14)),line:new T.Mesh(plane,material(0xffbd6c,.8)),core:new T.Mesh(plane,material(0xfff8e8,.9))}));
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
  private shield=new T.Mesh(new T.RingGeometry(1.86,1.94,64),material(0xb9a3ff,.6));
  private status=encounterDiagnostics({nodes:[],threats:[],encounter:null,boss:null} as unknown as Game);
- constructor(){this.root.add(this.mini,this.shield,...this.plumes,...this.worldFacilities);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.backplate,n.target,n.locator,n.fracture);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
+ constructor(){this.root.add(this.mini,this.shield,...this.plumes,...this.worldFacilities);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.backplate,n.target,n.locator,n.fracture);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
  draw(g:Game){
   this.root.visible=g.state!=='title'&&g.state!=='result';this.status=encounterDiagnostics(g);
   for(const f of this.worldFacilities)f.visible=false;
@@ -47,7 +46,7 @@ export class EncounterView {
     const field=n.attach==='field'?fieldPresentation(n):null;
     if(field){
       const geometry=this.worldFacilities[n.stage*2+n.index];geometry.visible=true;
-      geometry.position.set(n.x,n.y-.42,-.15);geometry.rotation.z=n.index===1?.04:-.035;geometry.scale.setScalar(1.15);
+      geometry.position.set(n.x,n.y-.42,-.15);geometry.rotation.set(0,0,n.index===1?.04:-.035);geometry.scale.setScalar(1.15);
       animateFacility(geometry,n.age,field.phase,n.flash);
       v.backplate.position.set(n.x,n.y-.5,2.545);v.backplate.material.opacity=.66+.1*Math.sin(n.age*3);
       v.target.position.set(n.x,n.y-.5,2.66);v.target.rotation.z=Math.PI/6+Math.sin(n.age*.9)*.035;
@@ -67,15 +66,19 @@ export class EncounterView {
     v.bar.position.set(n.x-barW/2+ratio*barW/2,barY,2.73);v.bar.scale.set(ratio*(barW-.1),field?.12:.045,1);
     v.bar.material.color.setHex(field?field.color:n.attach==='mission'?(n.index===1?0x76edff:0xff9980):ENCOUNTERS[n.stage].color);
   }
-  for(let i=0;i<this.collapsing.length;i++){
-   const v=this.collapsing[i],wreck=g.battlefield.collapses[i];v.skin.visible=v.aura.visible=!!wreck;if(!wreck)continue;
-   const u=Math.min(1,wreck.age/wreck.life);
-   v.skin.material.map=battlefieldMaps[wreck.stage*2+wreck.index];v.skin.material.opacity=(1-u)**1.65*.84;
-   v.skin.material.color.setHex(wreck.stage===3?0xa3deff:wreck.stage===4?0xb4efcf:0xffc19a);
-   v.skin.position.set(wreck.x,wreck.y-u*2.0,2.57);v.skin.material.rotation=Math.sin(u*8+wreck.index)*u*.30;
-   v.skin.scale.set(3.35*(1-u*.48),3.35*(1-u*.48),1);
-   v.aura.material.map=tacticalFxMaps[wreck.stage===3?11:0];v.aura.material.opacity=Math.max(0,.64-u*.55);
-   v.aura.position.set(wreck.x,wreck.y-u*.5,2.59);v.aura.material.rotation=u*.9;v.aura.scale.setScalar(3.5+u*5.5);
+  // Keep the original lit facility geometry through collapse, never restore the old billboard.
+  for(const wreck of g.battlefield.collapses){
+   const u=Math.min(1,wreck.age/wreck.life),model=this.worldFacilities[wreck.stage*2+wreck.index];
+   model.visible=true;
+   model.position.set(wreck.x,wreck.y-.42-u*1.75,-.25-u*.36);
+   model.rotation.set(u*.16*Math.sin(wreck.index+1),u*.1,(wreck.index===1?.04:-.035)+Math.sin(u*8+wreck.index)*u*.18);
+   model.scale.setScalar(1.15*(1-u*.43));
+   animateFacility(model,wreck.age,2,0);
+   const core=model.userData.lighting as T.Mesh|undefined;
+   if(core&&core.material instanceof T.MeshPhysicalMaterial){
+    core.material.emissiveIntensity=Math.max(0,2*(1-u));
+    core.material.opacity=Math.max(.08,1-u);
+   }
   }
   // Pre-allocated sprite pools; both routes share exactly the same collision geometry.
   for(let i=0;i<this.terrain.length;i++){
@@ -170,13 +173,13 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
   if(piece.route==='hazard'&&!live){c.strokeStyle='#ff685a';c.beginPath();c.moveTo(-r,0);c.lineTo(r,0);c.moveTo(0,-r);c.lineTo(0,r);c.stroke();}
   c.restore();
  }
- // Collapsing facilities remain visible long enough to sell the multi-stage chain reaction.
- const fieldAtlas=battlefieldAtlasMap.image;
- if(fieldAtlas instanceof HTMLImageElement&&fieldAtlas.naturalWidth>0)for(const wreck of g.battlefield.collapses){
-  const u=Math.min(1,wreck.age/wreck.life),k=wreck.stage*2+wreck.index,w=fieldAtlas.width/4,h=fieldAtlas.height/3;
-  c.save();c.translate(wreck.x,wreck.y-u*2);c.rotate(Math.sin(u*8+wreck.index)*u*.3);c.scale(1,-1);
-  c.globalAlpha=(1-u)**1.65*.84;
-  const size=3.35*(1-u*.48);c.drawImage(fieldAtlas,k%4*w,Math.floor(k/4)*h,w,h,-size/2,-size/2,size,size);
+ // Canvas renders the same physical geometry cached in canvasFacility, not the pre-3D art atlas.
+ for(const wreck of g.battlefield.collapses){
+  const u=Math.min(1,wreck.age/wreck.life),raster=canvasFacility(wreck.stage,wreck.index);
+  c.save();c.translate(wreck.x,wreck.y-u*1.75);
+  c.rotate(Math.sin(u*8+wreck.index)*u*.18);c.globalAlpha=(1-u)**1.25*.73;
+  const scale=1.15*(1-u*.43);
+  c.drawImage(raster.canvas,raster.left*scale,-raster.top*scale,raster.width*scale,raster.height*scale);
   c.restore();
  }
 }
