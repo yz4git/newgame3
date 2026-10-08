@@ -93,7 +93,7 @@ test('Boss rush and caravan cannot launch campaign-only missions',()=>{
 test('Mission state serialization remains bounded and consistent during long simulations',()=>{
  const {g,n}=ready();g.drainEvents();
  g.invulnerable=900;
- for(let i=0;i<300&&g.state==='playing';i++){
+ for(let i=0;i<350&&g.state==='playing';i++){
   g.update(STEP,idle);g.drainEvents();
   assert.ok(g.nodes.filter(x=>x.attach==='mission'&&!x.dead).length<=1);
   assert.ok(g.events.length<=600);
