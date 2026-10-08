@@ -104,10 +104,24 @@ await rich.page.waitForFunction(()=>window.__nova?.game.state==='playing');
 await rich.page.evaluate(()=>{const g=window.__nova.game;g.invulnerable=900;g.shotTimer=1000;g.time=64*.095;g.encounterSeen={stage:true,mini:true};});
 await scene(rich.page,'08-gpu-or-fallback-battle',1000);
 results.gpu=await rich.page.evaluate(()=>({view:window.__nova.view.constructor.name,diagnostics:window.__nova.view.getDiagnostics()}));
+await rich.page.evaluate(()=>{
+ const g=window.__nova.game;
+ g.time=64*.095;g.nodes=[];g.enemies=[];g.bullets=[];
+ g.battlefield.seen=[false,false];g.encounterSeen={stage:true,mini:true};g.invulnerable=800;g.shotTimer=800;
+});
+await scene(rich.page,'09-real-world-facility',700);
+results.facilityGeometry=await rich.page.evaluate(()=>{
+ const pool=window.__nova.view.encounterView?.worldFacilities??[];
+ const visible=pool.filter(g=>g.visible);
+ return {models:pool.length,visible:visible.length,meshes:visible[0]?.children.filter(o=>o.type==='Group').length??0,
+   worldPosition:visible[0]?.position?.toArray(),worldScale:visible[0]?.scale?.x};
+});
+
 results.errors=errors;
 console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
 console.log('NOVA_REVIEW:'+JSON.stringify(results));
 await browser.close();
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
+if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
