@@ -3,6 +3,7 @@ import {shipSprite,bossSprite,tankSprite,warpedSprite} from './canvas-art.ts';
 import {CanvasFortressBackground} from './canvas-background.ts';
 import {explosionAtlasMap,smokeMap,livingMaps,finishMaps,visualAssetStatus,playerShipsAtlasMap} from './visual-assets.ts';
 import {bossWingAngle,bossScars,scarPositions} from './boss-finish.ts';
+import {bossMorph} from './boss-evolution.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState,type ShipPose} from './motion.ts';
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
 import {CanvasCombatEffects} from './canvas-combat.ts';
@@ -83,9 +84,16 @@ export class CanvasView {
     const b=g.boss;
     if(b&&!b.dead){
       this.lastBoss=b;
-      const pose=bossPose(b);this.bossAnimation=pose.mode;
+      const pose=bossPose(b),morph=bossMorph(b);this.bossAnimation=pose.mode;
       this.asset(bossSprite(stage,'core'),b.x,b.y);
-      for(let i=0;i<2;i++)if(b.parts[i]>0){this.asset(bossSprite(stage,i===0?'wing0':'wing1'),b.x+(i===0?-1:1)*(b.spread+(1-pose.deploy)*1.2),b.y-b.spread*.65,1,bossWingAngle(stage,i===0?-1:1,b.age,pose.deploy));if(pose.recoil>.01)canvasGlow(c,b.x+(i===0?-1:1)*(3+b.spread),b.y-b.spread*.65-1.5,.6+pose.recoil*.4,'#ffd9ad',pose.recoil);}
+      if(b.form!=='standard'){
+        c.save();c.translate(b.x,b.y);c.strokeStyle=b.form==='overcharged'?'#ffae78':'#84ffda';c.lineWidth=.065;
+        c.globalAlpha=.35+.15*Math.sin(b.age*3.1);c.rotate(morph.rotation);
+        for(let i=0;i<4;i++){const a=i*Math.PI/2,r=1.1+morph.petalDelta;c.save();c.rotate(a);c.beginPath();c.moveTo(0,r);c.lineTo(-.31,r+1.5);c.lineTo(.31,r+1.5);c.closePath();c.stroke();c.restore();}
+        c.beginPath();c.arc(0,-.85,morph.halo,0,Math.PI*2);c.stroke();c.restore();
+        canvasGlow(c,b.x,b.y-.85,morph.halo*.85,'#'+morph.color.toString(16).padStart(6,'0'),.2+morph.glow*.22);
+      }
+      for(let i=0;i<2;i++)if(b.parts[i]>0){this.asset(bossSprite(stage,i===0?'wing0':'wing1'),b.x+(i===0?-1:1)*(b.spread+(1-pose.deploy)*1.2+morph.wingDelta),b.y-b.spread*.65,1,bossWingAngle(stage,i===0?-1:1,b.age,pose.deploy));if(pose.recoil>.01)canvasGlow(c,b.x+(i===0?-1:1)*(3+b.spread),b.y-b.spread*.65-1.5,.6+pose.recoil*.4,'#ffd9ad',pose.recoil);}
       for(const [x,y,size]of scarPositions){c.save();c.translate(b.x+x,b.y+y);c.scale(1,-1);c.globalAlpha=bossScars(b);c.drawImage(finishMaps.scorch.image,-size/2,-size/2,size,size);c.restore();}
       c.save();c.translate(b.x,b.y-.85);c.rotate(pose.rotor);c.strokeStyle='#c9dce5';c.lineWidth=.065;for(let i=0;i<6;i++){const a=i*Math.PI/3;c.beginPath();c.moveTo(Math.cos(a)*.65,Math.sin(a)*.65);c.lineTo(Math.cos(a)*.89,Math.sin(a)*.89);c.stroke();}c.restore();
       for(let i=0;i<4;i++){const a=i*Math.PI/2,x=b.x+Math.cos(a)*(.45+pose.open*.52),y=b.y-.85+Math.sin(a)*(.45+pose.open*.52);c.save();c.translate(x,y);c.rotate(a);this.rect(-.15,-.30,.30,.6,'#738a9b');c.restore();}
