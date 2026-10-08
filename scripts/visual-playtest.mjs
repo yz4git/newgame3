@@ -82,6 +82,16 @@ await page.evaluate(()=>{
 });
 await scene(page,'04c-core-exposed',300);
 await page.evaluate(()=>{
+ const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
+ if(n){n.y=6.4;g.damageNode(n,n.hp+100);}
+});
+await scene(page,'04d-canvas-facility-blast',140);
+results.canvasDemolition=await page.evaluate(()=>({
+  blasts:window.__nova.view.facilityDemolition?.diagnostics(),
+  atlasExplosions:window.__nova.view.explosions?.length
+}));
+await scene(page,'04e-canvas-chain-bursts',680);
+await page.evaluate(()=>{
  const g=window.__nova.game;g.nodes=[];g.enemies=[];g.bullets=[];g.encounter=null;g.battlefield.seen=[true,true];
  g.battlefield.outcomes=['destroyed',null];g.sectorMission.started=false;g.time=64*.76;
 });
@@ -110,6 +120,16 @@ await rich.page.evaluate(()=>{
  g.battlefield.seen=[false,false];g.encounterSeen={stage:true,mini:true};g.invulnerable=800;g.shotTimer=800;
 });
 await scene(rich.page,'09-real-world-facility',700);
+await rich.page.evaluate(()=>{
+ const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
+ if(n){n.y=6.4;g.damageNode(n,n.hp+100);}
+});
+await scene(rich.page,'10-gpu-facility-blast',130);
+results.gpuDemolition=await rich.page.evaluate(()=>({
+  blasts:window.__nova.view.facilityDemolition?.diagnostics(),
+  oldExplosionSprites:window.__nova.view.flares?.length
+}));
+await scene(rich.page,'11-gpu-chain-bursts',850);
 results.facilityGeometry=await rich.page.evaluate(()=>{
  const pool=window.__nova.view.encounterView?.worldFacilities??[];
  const visible=pool.filter(g=>g.visible);
