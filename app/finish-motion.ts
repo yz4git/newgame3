@@ -7,7 +7,7 @@ export class FinishMotion {
  fragments:Fragment[]=[];waves:Wave[]=[];private serial=0;
  event(e:GameEvent){
   if(e.type==='stage'){this.fragments=[];this.waves=[];this.serial=0;return;}
-  if(['nova','bosskill','resonance','missionstart','missionclear','missionfail','bossform','bosstransform','bossreinforce'].includes(e.type)){this.waves.push({x:e.x??0,y:e.y??0,age:0,life: .68,size:e.type==='nova'?30:e.type==='missionstart'?16:e.type==='bosstransform'?22:e.type==='bossform'?20:e.type==='fieldcollapse'?12:e.type==='fieldburst'?6:24,color:e.color??(e.type==='resonance'?0xffd59a:0xa5efff)});if(this.waves.length>4)this.waves.shift();}
+  if(['nova','bosskill','resonance','missionstart','missionclear','missionfail','bossform','bosstransform','bossreinforce'].includes(e.type)){this.waves.push({x:e.x??0,y:e.y??0,age:0,life: .68,size:e.type==='nova'?30:e.type==='missionstart'?16:e.type==='bosstransform'?22:e.type==='bossform'?20:24,color:e.color??(e.type==='resonance'?0xffd59a:0xa5efff)});if(this.waves.length>4)this.waves.shift();}
   if(!['explode','bosskill','part','missionstart','missionclear','missionfail','bossform','bosstransform','bossreinforce'].includes(e.type))return;
   const count=e.type==='bosskill'?18:e.type==='fieldcollapse'?20:e.type==='missionstart'?16:e.type==='missionclear'?22:e.type==='bosstransform'?24:e.type==='bossform'?20:e.type==='fieldcritical'?12:e.type==='fieldburst'?9:e.type==='fieldfracture'?8:e.type==='part'?8:Math.min(9,Math.ceil((e.size??1)*4));
   for(let i=0;i<count;i++){
