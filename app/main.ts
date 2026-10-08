@@ -43,7 +43,7 @@ function screens(){
 }
 function showMessage(title:string,caption:string,seconds=2.3,danger=false){
   el('message-title').textContent=title;el('message-caption').textContent=caption;
-  el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR|◆ DESTROY TARGET)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
+  el('message').classList.toggle('facility',title.startsWith('施設破壊成功'));el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR|◆ DESTROY TARGET)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
 }
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
@@ -204,7 +204,7 @@ function events(){
     else if(e.type==='midboss'){el('touch-tip').hidden=true;}
     else if(e.type==='midkill')showMessage('MIDBOSS BREAK','SUPPLY DROPPED / 補給を回収',1.0);
     else if(e.type==='fieldclear'){
-      showMessage('FACILITY DESTROYED / 施設破壊成功',e.text||'敵弾を消去！ ボス兵装を弱体化',1.8);
+      showMessage('施設破壊成功 / BATTLEFIELD CLEAR',e.text||'敵弾を消去！ ボス兵装を弱体化',1.7);
       el('field-target-flash').classList.remove('on');void el('field-target-flash').offsetWidth;el('field-target-flash').classList.add('on');
     }
     else if(e.type==='fieldrisk')showMessage('FACILITY ESCAPED / 破壊失敗','増援が出現・ボス兵装が強化！',1.7,true);
