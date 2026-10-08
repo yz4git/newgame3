@@ -8,6 +8,7 @@ import { CanvasView } from './canvas.ts';
 import {stageCue} from './motion.ts';
 import {ENCOUNTERS} from './encounter-design.ts';
 import {fieldDamagePhase} from './battlefield.ts';
+import {BOSS_FORM_NAMES} from './boss-evolution.ts';
 import {zoneAt,stageDistance} from './bg-map.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -145,7 +146,8 @@ function updateUI(now:number){
   el('nova-button').classList.toggle('ready',game.energy>=100);el('nova-button').classList.toggle('unavailable',game.bombs===0&&game.energy<100);
   el('energy').style.width=game.energy+'%';const boss=game.boss,mini=game.encounter;
   el('boss-hud').hidden=(!boss||boss.dead)&&!mini||game.state==='result'||game.state==='title';
-  if(boss){el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
+  const bossFormLabel=el('boss-form');bossFormLabel.hidden=!boss||boss.form==='standard';
+  if(boss){bossFormLabel.textContent=BOSS_FORM_NAMES[boss.form];bossFormLabel.classList.toggle('overcharged',boss.form==='overcharged');el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
   else if(mini){const guarded=game.nodes.some(n=>n.attach==='mini'&&!n.dead);el('boss-hud').classList.toggle('exposed',!guarded);el('boss-name').textContent=ENCOUNTERS[game.stage].mini;el('boss-pattern').textContent=guarded?'ESCORT SHIELD / 護衛を壊すと本体が露出':'MIDBOSS / 集中射撃で突破';el('boss-fill').style.width=Math.max(0,mini.hp/mini.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(mini.hp/mini.maxHp*100))+'%';el('parts-status').textContent=(guarded?'ESCORT ACTIVE':'CORE EXPOSED')+' / 撤退まで '+Math.max(0,Math.ceil((22-mini.age)/GAME_SPEED))+'s';}
   const cue=stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
   const panel=el('stage-cue');panel.hidden=!cue;
@@ -191,6 +193,9 @@ function events(){
     else if(e.type==='missionstart')showMessage('SECTOR OPERATION',e.text||'PRIORITY TARGET',1.8,e.color===0xffa572);
     else if(e.type==='missionclear')showMessage('MISSION COMPLETE',e.text||'BOSS DEFENSE REDUCED',1.8);
     else if(e.type==='missionfail')showMessage('MISSION FAILED',e.text||'BOSS DEFENSE REINFORCED',1.8,true);
+    else if(e.type==='bossform')showMessage('BOSS EVOLUTION',e.text||'MORPHING ARMATURE',1.8,e.color===0xff9762);
+    else if(e.type==='bosstransform')showMessage('PHASE TRANSFORMATION',e.text||'CORE ALTERED',1.4,e.color===0xff9762);
+    else if(e.type==='bossreinforce')toast(e.text||'LASER GRID ACTIVATED');
     else if(e.type==='missionsupport')toast(e.text||'ESCORT INBOUND');
     else if(e.type==='finish')continue;
     else if(e.text)toast(e.text);
