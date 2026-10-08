@@ -43,7 +43,7 @@ function screens(){
 }
 function showMessage(title:string,caption:string,seconds=2.3,danger=false){
   el('message-title').textContent=title;el('message-caption').textContent=caption;
-  el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
+  el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR|◆ DESTROY TARGET)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
 }
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
@@ -147,7 +147,7 @@ function updateUI(now:number){
      if(a.warning>0||pos.y<115){
        marker.hidden=false;
        marker.style.left=Math.max(52,Math.min(canvas.clientWidth-52,pos.x))+'px';
-       marker.style.top=Math.max(170,Math.min(canvas.clientHeight-130,pos.y-75))+'px';
+       marker.style.top=Math.max(145,Math.min(canvas.clientHeight-130,pos.y-50))+'px';
      }
    }
   const missionLabel=el('mission-status'),mission=game.sectorMission;
@@ -208,7 +208,7 @@ function events(){
       el('field-target-flash').classList.remove('on');void el('field-target-flash').offsetWidth;el('field-target-flash').classList.add('on');
     }
     else if(e.type==='fieldrisk')showMessage('FACILITY ESCAPED / 破壊失敗','増援が出現・ボス兵装が強化！',1.7,true);
-    else if(e.type==='fieldwarning'){showMessage('▼ 撃って破壊！',e.text||'戦略施設が出現',1.6);}
+    else if(e.type==='fieldwarning'){showMessage('◆ DESTROY TARGET','金色の六角リングを撃って破壊！',1.15);}
     else if(e.type==='fieldfracture')toast('装甲破損！ 炉心を狙え');
     else if(e.type==='fieldcritical')toast('赤い炉心が露出！ あと少し');
     else if(e.type==='fieldcollapse')toast(e.text||'STRUCTURE COLLAPSE');
