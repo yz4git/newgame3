@@ -7,6 +7,7 @@ import type {SoundBus} from './sound-design.ts';
 import { CanvasView } from './canvas.ts';
 import {stageCue} from './motion.ts';
 import {ENCOUNTERS} from './encounter-design.ts';
+import {fieldDamagePhase} from './battlefield.ts';
 import {zoneAt,stageDistance} from './bg-map.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -125,8 +126,8 @@ function updateUI(now:number){
   el('chain-readout').firstChild!.textContent='CHAIN '+game.chain.toString().padStart(3,'0')+' ';el('chain-fill').style.width=Math.min(100,game.chainTime/3.4*100)+'%';
   const activeField=game.nodes.find(n=>n.attach==='field'&&!n.dead);
   const fieldLabel=el('battlefield-status');fieldLabel.hidden=game.mode!=='campaign';
-  fieldLabel.textContent=activeField?'TARGET '+(activeField.index+1)+'/2 · '+Math.max(0,Math.ceil(activeField.hp/activeField.maxHp*100))+'%':game.battlefield.suppression>0?'DEFENSE OFFLINE '+Math.ceil(game.battlefield.suppression/GAME_SPEED)+'s':game.battlefield.alert>0?'ALERT ×1.25 '+Math.ceil(game.battlefield.alert/GAME_SPEED)+'s':'FIELD '+game.battlefield.stageDestroyed+'/2 · '+game.battlefield.stageEscaped+' ESCAPED';
-  fieldLabel.classList.toggle('alert',game.battlefield.alert>0);
+  fieldLabel.textContent=activeField?'TARGET '+(activeField.index+1)+'/2 · '+(fieldDamagePhase(activeField.hp,activeField.maxHp)===2?'CORE EXPOSED ':fieldDamagePhase(activeField.hp,activeField.maxHp)===1?'ARMOUR BROKEN ':'')+Math.max(0,Math.ceil(activeField.hp/activeField.maxHp*100))+'%':game.battlefield.suppression>0?'DEFENSE OFFLINE '+Math.ceil(game.battlefield.suppression/GAME_SPEED)+'s':game.battlefield.alert>0?'ALERT ×1.25 '+Math.ceil(game.battlefield.alert/GAME_SPEED)+'s':'FIELD '+game.battlefield.stageDestroyed+'/2 · '+game.battlefield.stageEscaped+' ESCAPED';
+  fieldLabel.classList.toggle('alert',game.battlefield.alert>0||!!activeField&&fieldDamagePhase(activeField.hp,activeField.maxHp)===2);
   el('focus-caption').textContent=game.weapon==='homing'?'LOCK '+game.locks.filter(l=>l.progress>=1).length:game.weapon==='laser'?'貫通強化':'集中射撃';
   el('hull').innerHTML=Array.from({length:4},(_,i)=>'<i'+(i>=game.hull?' class="empty"':'')+'></i>').join('');
   el('hull').setAttribute('aria-label','残り耐久 '+game.hull);
@@ -175,6 +176,9 @@ function events(){
     else if(e.type==='midkill')showMessage('MIDBOSS BREAK','SUPPLY DROPPED / 補給を回収',1.0);
     else if(e.type==='fieldclear')showMessage('BATTLEFIELD CHAIN',e.text||'STRATEGIC TARGET DESTROYED',1.4);
     else if(e.type==='fieldrisk')showMessage('ALERT ESCALATED',e.text||'REINFORCEMENTS INBOUND',1.4,true);
+    else if(e.type==='fieldfracture')toast(e.text||'ARMOUR FRACTURED');
+    else if(e.type==='fieldcritical')toast('CORE EXPOSED / 攻撃を集中');
+    else if(e.type==='fieldcollapse')toast(e.text||'STRUCTURE COLLAPSE');
     else if(e.type==='finish')continue;
     else if(e.text)toast(e.text);
     if(e.type==='damage'||e.type==='nova'){
