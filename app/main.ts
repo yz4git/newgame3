@@ -8,6 +8,7 @@ import { CanvasView } from './canvas.ts';
 import {stageCue} from './motion.ts';
 import {ENCOUNTERS} from './encounter-design.ts';
 import {fieldDamagePhase} from './battlefield.ts';
+import {fieldPresentation,fieldRewardLabel} from './field-clarity.ts';
 import {BOSS_FORM_NAMES} from './boss-evolution.ts';
 import {zoneAt,stageDistance} from './bg-map.ts';
 
@@ -38,7 +39,7 @@ function screens(){
   el('title-screen').hidden=game.state!=='title';el('pause-screen').hidden=game.state!=='paused'||!el('help-screen').hidden||!el('audio-screen').hidden;
   el('result-screen').hidden=game.state!=='result';const active=['playing','paused','transition'].includes(game.state);
   el('hud').hidden=!active;el('controls').hidden=!active||game.state==='paused';
-  if(game.state==='title'){el('title-best').textContent=scoreText(best('campaign'));el('boss-hud').hidden=true;}
+  if(game.state==='title'){el('title-best').textContent=scoreText(best('campaign'));el('boss-hud').hidden=true;el('field-objective').hidden=true;el('field-waypoint').hidden=true;}
 }
 function showMessage(title:string,caption:string,seconds=2.3,danger=false){
   el('message-title').textContent=title;el('message-caption').textContent=caption;
@@ -126,9 +127,29 @@ function updateUI(now:number){
   el('multiplier').textContent='×'+game.multiplier;
   el('chain-readout').firstChild!.textContent='CHAIN '+game.chain.toString().padStart(3,'0')+' ';el('chain-fill').style.width=Math.min(100,game.chainTime/3.4*100)+'%';
   const activeField=game.nodes.find(n=>n.attach==='field'&&!n.dead);
-  const fieldLabel=el('battlefield-status');fieldLabel.hidden=game.mode!=='campaign'||!!game.boss;
+  const fieldLabel=el('battlefield-status');fieldLabel.hidden=game.mode!=='campaign'||!!game.boss||!!activeField;
   const activeTerrain=game.battlefield.terrain.some(p=>!p.dead);fieldLabel.textContent=activeTerrain?'AFTERMATH '+(game.battlefield.route==='cover'?'COVER +'+game.battlefield.shotsBlocked+' BLOCK':'HAZARD · SHOOT TO CLEAR'):activeField?'TARGET '+(activeField.index+1)+'/2 · '+(fieldDamagePhase(activeField.hp,activeField.maxHp)===2?'CORE EXPOSED ':fieldDamagePhase(activeField.hp,activeField.maxHp)===1?'ARMOUR BROKEN ':'')+Math.max(0,Math.ceil(activeField.hp/activeField.maxHp*100))+'%':game.battlefield.suppression>0?'DEFENSE OFFLINE '+Math.ceil(game.battlefield.suppression/GAME_SPEED)+'s':game.battlefield.alert>0?'ALERT ×1.25 '+Math.ceil(game.battlefield.alert/GAME_SPEED)+'s':'FIELD '+game.battlefield.stageDestroyed+'/2 · '+game.battlefield.stageEscaped+' ESCAPED';
   fieldLabel.classList.toggle('alert',game.battlefield.alert>0||!!activeField&&fieldDamagePhase(activeField.hp,activeField.maxHp)===2);
+   const objective=el('field-objective'),marker=el('field-waypoint');
+   objective.hidden=!activeField||game.mode!=='campaign'||game.state!=='playing'||!!game.boss;
+   marker.hidden=true;
+   if(activeField&&!objective.hidden){
+     const a=fieldPresentation(activeField);
+     objective.classList.toggle('right',activeField.x<0);
+     objective.classList.toggle('critical',a.phase===2);objective.classList.toggle('cracked',a.phase===1);
+     el('field-objective-name').textContent=a.japanese;
+     el('field-objective-timer').textContent=Math.ceil(a.timeLeft)+'s';
+     el('field-objective-condition').textContent=a.condition;
+     el('field-objective-health-text').textContent=Math.ceil(a.ratio*100)+'%';
+     el('field-objective-fill').style.width=(a.ratio*100)+'%';
+     el('field-objective-reward').textContent=fieldRewardLabel(game.battlefield.stageDestroyed,game.battlefield.stageEscaped);
+     const pos=view.worldToScreen(activeField.x,activeField.y);
+     if(a.warning>0||pos.y<115){
+       marker.hidden=false;
+       marker.style.left=Math.max(52,Math.min(canvas.clientWidth-52,pos.x))+'px';
+       marker.style.top=Math.max(170,Math.min(canvas.clientHeight-130,pos.y-75))+'px';
+     }
+   }
   const missionLabel=el('mission-status'),mission=game.sectorMission;
   missionLabel.hidden=game.mode!=='campaign'||!mission.active||!!game.boss;
   if(mission.active){const objective=game.nodes.find(n=>n.id===mission.targetId&&!n.dead);
@@ -182,10 +203,14 @@ function events(){
     else if(e.type==='phase')showMessage('PHASE '+String(e.value??2).padStart(2,'0'),'ATTACK PATTERN SHIFT',.8,true);
     else if(e.type==='midboss'){el('touch-tip').hidden=true;}
     else if(e.type==='midkill')showMessage('MIDBOSS BREAK','SUPPLY DROPPED / 補給を回収',1.0);
-    else if(e.type==='fieldclear')showMessage('BATTLEFIELD CHAIN',e.text||'STRATEGIC TARGET DESTROYED',1.4);
-    else if(e.type==='fieldrisk')showMessage('ALERT ESCALATED',e.text||'REINFORCEMENTS INBOUND',1.4,true);
-    else if(e.type==='fieldfracture')toast(e.text||'ARMOUR FRACTURED');
-    else if(e.type==='fieldcritical')toast('CORE EXPOSED / 攻撃を集中');
+    else if(e.type==='fieldclear'){
+      showMessage('FACILITY DESTROYED / 施設破壊成功',e.text||'敵弾を消去！ ボス兵装を弱体化',1.8);
+      el('field-target-flash').classList.remove('on');void el('field-target-flash').offsetWidth;el('field-target-flash').classList.add('on');
+    }
+    else if(e.type==='fieldrisk')showMessage('FACILITY ESCAPED / 破壊失敗','増援が出現・ボス兵装が強化！',1.7,true);
+    else if(e.type==='fieldwarning'){showMessage('▼ 撃って破壊！',e.text||'戦略施設が出現',1.6);}
+    else if(e.type==='fieldfracture')toast('装甲破損！ 炉心を狙え');
+    else if(e.type==='fieldcritical')toast('赤い炉心が露出！ あと少し');
     else if(e.type==='fieldcollapse')toast(e.text||'STRUCTURE COLLAPSE');
     else if(e.type==='terrainroute')showMessage(e.color===0xff986d?'DANGER CORRIDOR':'SALVAGE CORRIDOR',e.text||'BATTLEFIELD SHIFT',1.7,e.color===0xff986d);
     else if(e.type==='terrainbreak')scorePopup('HAZARD CLEAR +650',e.x??0,e.y??0,'score');
