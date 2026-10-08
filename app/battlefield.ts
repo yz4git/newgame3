@@ -54,8 +54,9 @@ function escapeNode(g:Game,n:CombatNode){
 /** Two feedback thresholds make sustained focused fire visibly alter each strategic target. */
 export function damageBattlefieldNode(g:Game,n:CombatNode,damage:number){
  if(n.dead||n.attach!=='field')return;
- const before=n.hp/n.maxHp;
+ const before=n.hp/n.maxHp,wasFlashing=n.flash>0;
  n.hp=Math.max(0,n.hp-Math.max(0,damage));n.flash=.12;
+ if(damage>0&&!wasFlashing)g.emit('fieldhit',{x:n.x,y:n.y,size:1.8,color:0xffd289});
  if(n.hp<=0){destroyBattlefieldNode(g,n);return;}
  const after=n.hp/n.maxHp;
  if(before>.68&&after<=.68){
@@ -97,7 +98,7 @@ export function updateBattlefield(g:Game,dt:number){
   if(g.nodes.length===before)continue;
   const n=g.nodes[g.nodes.length-1];n.radius=1.5;n.shoot=2.7;
   st.seen[i]=true;
-  g.emit('fieldwarning',{x:n.x,y:n.y,text:'STRATEGIC TARGET / '+FIELD_OPERATIONS[g.stage][i].jp+' — 破壊で戦況が変わる'});
+  g.emit('fieldwarning',{x:n.x,y:n.y,size:3.5,color:0xffd679,text:'破壊可能な戦略施設 / '+FIELD_OPERATIONS[g.stage][i].jp+' · 撃って破壊！'});
  }
  for(const n of g.nodes){
   if(n.dead||n.attach!=='field')continue;
@@ -125,6 +126,10 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  n.hp=0;n.dead=true;g.clearSource(n.id,true);
  const before=g.kills,radius=reactor?8.4:5.6;
  const cleared=g.battlefieldPulse(n.x,n.y,radius,reactor?85:45);
+ // A screen-wide cancellation is an immediate, readable payoff for destroying a strategic target.
+ let clearedShots=0;for(const shot of g.bullets)if(shot.enemy&&!shot.dead){shot.dead=true;clearedShots++;}
+ for(const threat of g.threats)threat.dead=true;
+ if(clearedShots>0){g.cancelled+=clearedShots;g.addScore(clearedShots*40*g.multiplier);}
  const reactions=g.kills-before,st=g.battlefield;
  st.reactions+=reactions;st.mostReactions=Math.max(st.mostReactions,reactions);
  st.outcomes[n.index]='destroyed';st.destroyed++;st.stageDestroyed++;st.suppression=Math.max(st.suppression,reactor?5:9);st.alert=0;
@@ -143,5 +148,5 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  if(g.stage===5&&n.index===0)g.energy=Math.min(100,g.energy+12);
  g.emit('explode',{x:n.x,y:n.y,size:reactor?3.8:2.7});
  g.emit('resonance',{x:n.x,y:n.y,size:radius,color:reactor?0xffbb62:0x5ce9ff});
- g.emit('fieldclear',{x:n.x,y:n.y,text:op.name+' BREAK / '+reactions+' CHAIN KILLS · '+cleared+' CANCEL / 敵射撃停止'});
+ g.emit('fieldclear',{x:n.x,y:n.y,size:7.5,color:0xffe48b,text:'敵弾すべて消去 '+(cleared+clearedShots)+' / '+(st.stageDestroyed===2?'ボス兵装 -15%':'敵射撃停止・残骸で防御')});
 }
