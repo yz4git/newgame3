@@ -178,3 +178,25 @@ export function animateFacility(model:StrategicFacilityModel,age:number,damagePh
  if(rotor){rotor.rotation.z=Math.sin(age*.72)*.045;rotor.scale.setScalar(damagePhase===2?1.16:1);}
 }
 export const fieldWorldSpecs={models:STAGES.length*2,worldZ:-2.8,footprintRadius:5.75,visualScale:1} as const;
+
+/** A fallen structural chunk from the same materials as the facility it belonged to. */
+export function facilityDebrisModel(stage:number):T.Group{
+ const p=palettes[stage%palettes.length],root=new T.Group(),shell=new T.Group();
+ const main=material(p.plate),edge=material(p.trim),dark=material(p.dark),scorch=material(0x293039);
+ // Pieces are eccentric and have real thickness; no reappearance of the old square sprite.
+ const floor=block(shell,dark,-.18,0,-1.12,2.05,1.35,.48);floor.rotation.z=.12;
+ const plate=block(shell,main,.24,-.16,-.59,1.94,.78,.33);plate.rotation.z=-.28;
+ const brace=block(shell,edge,-.74,.56,-.65,.27,1.9,.33);brace.rotation.z=.65;
+ const fallen=block(shell,main,.91,.38,-.36,.82,.44,.44);fallen.rotation.z=-.63;
+ block(shell,scorch,.20,-.42,-.36,.74,.42,.08).rotation.z=.24;
+ cylinder(shell,.34,.28,-.39,edge,-.68,-.08,9);
+ cylinder(shell,.21,.36,-.24,dark,-.68,-.08,9);
+ for(let i=0;i<3;i++){
+  const a=(i*2.4+.7),x=Math.cos(a)*1.05,y=Math.sin(a)*.84;
+  const piece=block(shell,i===1?edge:main,x,y,-.48,.42,.22,.26);
+  piece.rotation.z=a+.5;
+ }
+ root.add(batch(shell));
+ root.name='physical-metal-debris-stage-'+stage;
+ return root;
+}
