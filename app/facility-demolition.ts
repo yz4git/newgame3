@@ -80,7 +80,7 @@ export class FacilityDemolition3D {
    ring.visible=core.visible=false;ring.frustumCulled=core.frustumCulled=false;
    this.rings.push(ring);this.cores.push(core);this.root.add(ring,core);
   }
-  this.shards=new T.InstancedMesh(new T.TetrahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xffffff,vertexColors:true,side:T.DoubleSide,depthWrite:false,toneMapped:false}),112);
+  this.shards=new T.InstancedMesh(new T.TetrahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,depthWrite:false,toneMapped:false}),112);
   this.shards.count=0;this.shards.frustumCulled=false;
   this.shards.instanceMatrix.setUsage(T.DynamicDrawUsage);
   this.root.add(this.shards);
