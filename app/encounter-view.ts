@@ -1,6 +1,7 @@
 import * as T from 'three/webgpu';
 import type {Game} from './sim.ts';
 import {fieldDamagePhase} from './battlefield.ts';
+import {fieldPresentation} from './field-clarity.ts';
 import {isTerrainActive} from './battlefield-terrain.ts';
 import {missionBeacons} from './mission-spectacle.ts';
 import {ENCOUNTERS,miniAngle,threatActive} from './encounter-design.ts';
@@ -13,7 +14,7 @@ export function encounterDiagnostics(g:Game){return {miniboss:!!g.encounter,node
 /** Fixed pools. Every pose and warning uses the same simulation clock as collision. */
 export class EncounterView {
  root=new T.Group();private mini=sprite(minibossMaps[0]);
- private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9])}));
+ private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9]),target:new T.Mesh(new T.RingGeometry(2.01,2.12,6),material(0xffd679,.90)),locator:new T.Mesh(new T.CircleGeometry(.19,3),material(0xffe3a7,.95)),fracture:new T.Mesh(plane,material(0xffb68c,.70))}));
  private collapsing=Array.from({length:3},()=>({skin:sprite(battlefieldMaps[0]),aura:sprite(tacticalFxMaps[0])}));
  private terrain=Array.from({length:12},()=>({skin:sprite(battlefieldMaps[0]),warning:sprite(tacticalFxMaps[4])}));
  private missionGlow=Array.from({length:6},()=>sprite(tacticalFxMaps[0]));
@@ -21,16 +22,34 @@ export class EncounterView {
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
  private shield=new T.Mesh(new T.RingGeometry(1.86,1.94,64),material(0xb9a3ff,.6));
  private status=encounterDiagnostics({nodes:[],threats:[],encounter:null,boss:null} as unknown as Game);
- constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
+ constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.target,n.locator,n.fracture);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
  draw(g:Game){
   this.root.visible=g.state!=='title'&&g.state!=='result';this.status=encounterDiagnostics(g);
   const m=g.encounter;this.mini.visible=!!m&&!m.dead;
   if(m){this.mini.material.map=minibossMaps[m.stage];this.mini.position.set(m.x,m.y-.5,2.6);this.mini.scale.setScalar(6.2);this.mini.material.rotation=miniAngle(m);this.mini.material.color.setScalar(m.flash>0?1.65:1);}
   for(let i=0;i<this.plumes.length;i++){const p=this.plumes[i];p.visible=this.mini.visible;if(m){p.position.set(m.x+(i?1:-1)*1.3,m.y+2.15,2.55);p.scale.set(.56,1.8+Math.sin(m.age*19)*.15,1);p.material.rotation=Math.PI;p.material.opacity=.72;}}
   for(let i=0;i<this.nodes.length;i++){
-   const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=v.back.visible=v.bar.visible=!!n;v.critical.visible=!!n&&(n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)===2||n.attach==='mission');if(!n)continue;
+   const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=v.back.visible=v.bar.visible=!!n;v.critical.visible=!!n&&(n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)===2||n.attach==='mission');v.target.visible=v.locator.visible=!!n&&n.attach==='field';v.fracture.visible=!!n&&n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)>0;if(!n)continue;
    v.skin.material.map=(n.attach==='field'||n.attach==='mission')&&battlefieldAtlasMap.image instanceof HTMLImageElement&&battlefieldAtlasMap.image.naturalWidth>0?battlefieldMaps[n.stage*2+n.index]:nodeMaps[n.stage];const phase=n.attach==='field'?fieldDamagePhase(n.hp,n.maxHp):0;v.skin.material.color.setHex(n.attach==='mission'?(n.index===1?0x9ceeff:0xffaa8d):phase===2?0xffaa80:phase===1?0xffe3b8:0xffffff).multiplyScalar(n.flash>0?1.65:1);v.skin.material.opacity=phase===2?.84:1;v.skin.material.rotation=(n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?n.age*.35:Math.sin(n.age*1.4)*.025;v.skin.position.set(n.x,n.y-.5,2.6);v.skin.scale.set(n.attach==='mission'?3.85:n.attach==='field'?3.35:2.75,n.attach==='mission'?3.85:n.attach==='field'?3.35:2.75,1);if(v.critical.visible){v.critical.material.map=tacticalFxMaps[n.attach==='mission'?(n.index===1?3:4):9];v.critical.position.set(n.x,n.y+.14,2.68);v.critical.scale.setScalar(1.28+Math.sin(n.age*9)*.1);v.critical.material.opacity=.45+Math.sin(n.age*6)*.16;}
-   const ratio=Math.max(0,n.hp/n.maxHp);v.back.position.set(n.x,n.y-1.85,2.61);v.back.scale.set(2.05,.085,1);v.bar.position.set(n.x-1.0+ratio,n.y-1.85,2.63);v.bar.scale.set(ratio*2,.045,1);v.bar.material.color.setHex(n.attach==='mission'?(n.index===1?0x76edff:0xff9980):n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color);
+   const ratio=Math.max(0,n.hp/n.maxHp);
+    const field=n.attach==='field'?fieldPresentation(n):null;
+    if(field){
+      v.target.position.set(n.x,n.y-.5,2.66);v.target.rotation.z=Math.PI/6+Math.sin(n.age*.9)*.035;
+      v.target.scale.setScalar(field.ring/2.02);
+      v.target.material.color.setHex(field.color);v.target.material.opacity=.76+Math.sin(n.age*8)*.17;
+      v.locator.position.set(n.x,n.y+2.06,2.70);v.locator.rotation.z=Math.PI+Math.sin(n.age*5)*.09;
+      v.locator.scale.setScalar(1.15+field.warning*.34);
+      v.locator.material.color.setHex(field.color);v.locator.material.opacity=.9;
+      v.fracture.position.set(n.x+.16,n.y-.46,2.69);
+      v.fracture.material.color.setHex(field.color);
+      v.fracture.material.opacity=field.phase===2?.95:.65;
+      v.fracture.rotation.z=-.55+Math.sin(n.age*.8)*.03;
+      v.fracture.scale.set(field.phase===2?.075:.055,field.phase===2?2.25:1.45,1);
+    }
+    const barY=n.y-(field?2.72:1.85),barW=field?3.50:2.05;
+    v.back.position.set(n.x,barY,2.71);v.back.scale.set(barW,field?.20:.085,1);
+    v.bar.position.set(n.x-barW/2+ratio*barW/2,barY,2.73);v.bar.scale.set(ratio*(barW-.1),field?.12:.045,1);
+    v.bar.material.color.setHex(field?field.color:n.attach==='mission'?(n.index===1?0x76edff:0xff9980):ENCOUNTERS[n.stage].color);
   }
   for(let i=0;i<this.collapsing.length;i++){
    const v=this.collapsing[i],wreck=g.battlefield.collapses[i];v.skin.visible=v.aura.visible=!!wreck;if(!wreck)continue;
@@ -87,12 +106,26 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
  const im=nodeAtlasMap.image,field=battlefieldAtlasMap.image;for(const n of g.nodes){if(n.dead)continue;c.save();c.translate(n.x,n.y);c.rotate((n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?-n.age*.35:Math.sin(n.age*1.4)*.025);c.scale(1,-1);if((n.attach==='field'||n.attach==='mission')&&field instanceof HTMLImageElement&&field.naturalWidth>0){const k=n.stage*2+n.index,w=field.width/4,h=field.height/3;c.drawImage(field,k%4*w,Math.floor(k/4)*h,w,h,-1.675,-1.675,3.35,3.35);}else{const w=im.width/3,h=im.height/2;c.drawImage(im,n.stage%3*w,Math.floor(n.stage/3)*h,w,h,-1.375,-1.375,2.75,2.75);}if(n.attach==='mission'){c.strokeStyle=n.index===1?'#78e9ff':'#ff987d';c.lineWidth=.085;c.globalAlpha=.7+.2*Math.sin(n.age*8);c.beginPath();c.arc(0,0,1.95,0,Math.PI*2);c.stroke();}
  if(n.attach==='field'){
  const phase=fieldDamagePhase(n.hp,n.maxHp);
- c.strokeStyle=phase===2?'#ff987b':'#ffd48a';c.lineWidth=.055;c.globalAlpha=.55+.2*Math.sin(n.age*3);c.beginPath();c.arc(0,0,1.66,0,Math.PI*2);c.stroke();
+ const f=fieldPresentation(n),ring=f.ring;
+  c.globalAlpha=.87;c.strokeStyle='#'+f.color.toString(16).padStart(6,'0');c.lineWidth=.105;
+  c.beginPath();for(let j=0;j<6;j++){const a=Math.PI/6+j*Math.PI/3;const x=Math.cos(a)*ring,y=Math.sin(a)*ring;j?c.lineTo(x,y):c.moveTo(x,y);}c.closePath();c.stroke();
+  // Large target brackets and an unambiguous arrow above the objective.
+  c.lineWidth=.085;c.globalAlpha=.65+.23*Math.sin(n.age*7);
+  for(let j=0;j<4;j++){const a=Math.PI/4+j*Math.PI/2;c.beginPath();c.arc(0,0,ring+.21,a-.12,a+.12);c.stroke();}
+  c.globalAlpha=1;c.fillStyle=c.strokeStyle;c.beginPath();c.moveTo(0,-ring-1.0);c.lineTo(-.37,-ring-.40);c.lineTo(.37,-ring-.40);c.closePath();c.fill();
+  // Armor fractures overlay the sprite rather than looking like a background decoration.
+  if(phase>0){c.strokeStyle='#ffb699';c.lineWidth=.09;c.globalAlpha=.92;c.beginPath();c.moveTo(-.70,-.75);c.lineTo(-.22,-.12);c.lineTo(-.50,.42);c.lineTo(.35,1.12);c.stroke();}
+  if(phase===2){c.fillStyle='#ff684e';c.globalAlpha=.36+.2*Math.sin(n.age*12);c.beginPath();c.arc(0,0,.93,0,Math.PI*2);c.fill();}
  if(phase>0){c.globalAlpha=.8;c.strokeStyle=phase===2?'#ffb494':'#fff0c1';c.lineWidth=.05;
   for(let k=0;k<phase+1;k++){const x=(k-1)*.48;c.beginPath();c.moveTo(x-.35,-.95);c.lineTo(x+.15,-.3);c.lineTo(x-.2,.35);c.lineTo(x+.36,.88);c.stroke();}
   if(phase===2){const fx=tacticalFxMaps[9].image;if(fx instanceof HTMLImageElement&&fx.naturalWidth>0){const w=fx.width/4,h=fx.height/4;c.globalAlpha=.65;c.drawImage(fx,w,h*2,w,h,-.72,-.72,1.44,1.44);}}
  }
-}c.restore();c.save();c.fillStyle='#07121d';c.fillRect(n.x-1.025,n.y-1.39,2.05,.085);c.fillStyle='#'+(n.attach==='mission'?(n.index===1?0x76edff:0xff9980):n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');c.fillRect(n.x-1,n.y-1.37,2*Math.max(0,n.hp/n.maxHp),.045);c.restore();}
+}c.restore();c.save();
+  const f=n.attach==='field'?fieldPresentation(n):null;
+  const w=f?3.50:2.05,barY=n.y-(f?2.70:1.39);
+  c.fillStyle='#06111c';c.globalAlpha=.94;c.fillRect(n.x-w/2,barY,w,f?.20:.085);
+  c.fillStyle='#'+(f?f.color:n.attach==='mission'?(n.index===1?0x76edff:0xff9980):ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');
+  c.globalAlpha=1;c.fillRect(n.x-w/2+.05,barY+.025,(w-.10)*Math.max(0,n.hp/n.maxHp),f?.15:.045);c.restore();}
  // Generated tactical VFX atlas: six world-specific orbital designs.
  const spectacle=missionBeacons(g),fxAtlas=tacticalFxMaps[0].image;
  if(spectacle&&fxAtlas instanceof HTMLImageElement&&fxAtlas.naturalWidth>0){
