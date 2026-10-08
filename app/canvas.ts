@@ -18,18 +18,18 @@ export class CanvasView {
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
-  private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
+  private worldHeight=128/3;private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
   private combatEffects=new CanvasCombatEffects();private encounterStatus={miniboss:false,nodes:0,telegraphs:0,activeThreats:0,shield:false};
   private air={clock:0,layers:0,kind:'none'};
   private wrecks:{x:number;y:number;kind:Kind|'boss';age:number;life:number;stage:number;parts?:number[];spread?:number;deploy?:number}[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];private lastBoss:Game['boss']=null;
   constructor(private canvas:HTMLCanvasElement){}
   async init(_forceWebGL=false){this.ctx=this.canvas.getContext('2d',{alpha:false})!;if(!this.ctx)throw new Error('No graphics context');this.resize();}
-  resize(){const r=this.canvas.parentElement!.getBoundingClientRect();this.width=r.width;this.height=r.height;this.ratio=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(r.width*this.ratio);this.canvas.height=Math.round(r.height*this.ratio);}
-  pointerToWorld(x:number,y:number){const r=this.canvas.getBoundingClientRect();return {x:(x-r.left)/r.width*24-12,y:(.5-(y-r.top)/r.height)*128/3};}
+  resize(){const r=this.canvas.parentElement!.getBoundingClientRect();this.width=r.width;this.height=r.height;this.worldHeight=Math.max(128/3,24*this.height/Math.max(1,this.width));this.ratio=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(r.width*this.ratio);this.canvas.height=Math.round(r.height*this.ratio);}
+  pointerToWorld(x:number,y:number){const r=this.canvas.getBoundingClientRect();return {x:(x-r.left)/r.width*24-12,y:(.5-(y-r.top)/r.height)*this.worldHeight};}
   private shape(points:number[][],fill:string,stroke?:string){const c=this.ctx;c.beginPath();c.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)c.lineTo(points[i][0],points[i][1]);c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=.045;c.stroke();}}
   private rect(x:number,y:number,w:number,h:number,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(x,y,w,h);}
   private circle(x:number,y:number,r:number,color:string){const c=this.ctx;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();}
-  worldToScreen(x:number,y:number){return {x:(x/24+.5)*this.width,y:(.5-y/(128/3))*this.height};}
+  worldToScreen(x:number,y:number){return {x:(x/24+.5)*this.width,y:(.5-y/this.worldHeight)*this.height};}
   private asset(asset:ReturnType<typeof shipSprite>,x:number,y:number,scale=1,tilt=0,bank=0,warp?:{kind:Kind;t:number;flex:number}){
     const c=this.ctx;c.save();c.translate(x,y);c.rotate(tilt);c.scale(scale*(1-Math.abs(bank)*.30),-scale);
     const sprite=warp?warpedSprite(asset,warp.kind,warp.t,warp.flex):asset;c.drawImage(sprite.canvas,sprite.left,-sprite.top,sprite.width,sprite.height);c.restore();
@@ -74,7 +74,7 @@ export class CanvasView {
     dt=animationClockRunning(g)?dt:0;this.encounterStatus=encounterDiagnostics(g);
     const c=this.ctx,state=presentationState(g),title=state==='title',active=state==='playing'||state==='transition',stage=this.stage=g.stage;
     c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle='#'+STAGES[stage].sky.toString(16).padStart(6,'0');c.fillRect(0,0,this.width,this.height);
-    c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/(128/3));
+    c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/this.worldHeight);
     this.background.draw(c,g);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.air=drawAirCanvas(c,g,reduced);
