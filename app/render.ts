@@ -139,11 +139,11 @@ export class View {
       for(let i=0;i<7;i++)this.cascades.push({at:.25+i*.35,x:x+Math.sin(i*2.3)*3.4,y:y+Math.cos(i*1.7)*2.1,size:1.2+i*.13});
     }
     if(e.type==='phase'){this.burst(x,y,50,2,e.color||0xff8b6a);this.shake=.3;}
-    if(['explode','bosskill','damage','nova','resonance'].includes(e.type)){
+    if(['explode','bosskill','damage','nova','resonance','fieldfracture','fieldcritical','fieldcollapse','fieldburst'].includes(e.type)){
       const size=e.size||1,count=e.type==='nova'?95:e.type==='bosskill'?150:Math.floor(20+size*13);
-      this.burst(x,y,count,size,e.color||0xff8743);this.shake=Math.max(this.shake,e.type==='bosskill'?1.0:e.type==='damage'?.65:e.type==='nova'?.8:.09*size);
+      this.burst(x,y,count,size,e.color||0xff8743);this.shake=Math.max(this.shake,e.type==='bosskill'?1.0:e.type==='damage'?.65:e.type==='nova'?.8:e.type==='fieldcollapse'?.52:e.type==='fieldburst'?.12:e.type==='fieldcritical'?.2:.09*size);
       if(e.type==='nova'||e.type==='bosskill'||e.type==='resonance')(this.ring.material as T.MeshBasicMaterial).opacity=0;
-      if(e.type!=='nova'&&e.type!=='resonance'){
+      if(e.type!=='nova'&&e.type!=='resonance'&&e.type!=='fieldfracture'&&e.type!=='fieldcritical'){
         for(const smoke of[false,true]){
           if(this.flares.length>=48)break;
           const sprite=new T.Sprite(new T.SpriteMaterial({map:smoke?this.smokeMap:explosionFrames[0],transparent:true,blending:T.NormalBlending,depthWrite:false,toneMapped:false}));
