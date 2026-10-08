@@ -16,7 +16,6 @@ function canvasFacility(stage:number,index:number){
  const model=facilityModel(stage,index);
  const contact=model.getObjectByName('facility-shadow');if(contact)contact.parent?.remove(contact);
  const result=meshSprite('physical-field-v29-'+id,model,27);physicalCanvasCache.set(id,result);
- model.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});
  return result;
 }
 function material(color:number,opacity=1){return new T.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,toneMapped:false});}
