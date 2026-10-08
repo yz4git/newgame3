@@ -33,7 +33,7 @@ test('Cinematic facility destruction has analytic rings and bounded metallic deb
  assert.equal(motion.pulses.length,4);
  assert.ok(motion.shards.length>=20);
  assert.ok(motion.shards.every(s=>s.size>0&&s.life>.5&&Number.isFinite(s.vx)));
- assert.ok(motion.pulses.every(p=>p.life<1&&p.size<=7.5));
+ assert.ok(motion.pulses.every(p=>p.life>=1&&p.life<=2.5&&p.size<=7.5));
 });
 test('Long continuous demolition remains strictly bounded in memory and draw capacity',()=>{
  const m=new FacilityDemolitionMotion();
@@ -44,7 +44,7 @@ test('Long continuous demolition remains strictly bounded in memory and draw cap
  const g=liveFacility().g;
  m.update(g,.4);
  assert.ok(m.diagnostics().pulses<=12&&m.diagnostics().shards<=112);
- m.update(g,2);assert.deepEqual(m.diagnostics(),{pulses:0,shards:0});
+ m.update(g,2.6);assert.deepEqual(m.diagnostics(),{pulses:0,shards:0});
 });
 test('Reduced animation mode does not leak fragments or prevent shockwave lifetime',()=>{
  const m=new FacilityDemolitionMotion(),g=liveFacility().g;
@@ -53,7 +53,7 @@ test('Reduced animation mode does not leak fragments or prevent shockwave lifeti
  m.update(g,.35,true);
  assert.equal(m.shards.length,0);
  assert.equal(m.pulses.length,1);
- m.update(g,1,true);
+ m.update(g,2.5,true);
  assert.equal(m.pulses.length,0);
  m.event({type:'fieldclear',x:0,y:0});m.event({type:'stage'});
  assert.deepEqual(m.diagnostics(),{pulses:0,shards:0});
@@ -77,4 +77,31 @@ test('Explosions and wrecks never fall back to facility atlas or generic texture
  assert.match(render,/if\(isFacilityDemolition\(e.type\)\)/);
  assert.match(canvas,/if\(isFacilityDemolition\(e.type\)\)return/);
  assert.doesNotMatch(finish,/\bfieldcollapse\b|\bfieldburst\b/);
+});
+
+test('Core explosion remains visibly active for about one full real-time second',()=>{
+ const m=new FacilityDemolitionMotion(),g=liveFacility().g;
+ m.event({type:'fieldcollapse',x:-3,y:7,color:0xffc061});
+ m.update(g,.65);
+ assert.equal(m.pulses.length,1,'A blast should still be visible after the previous .66 game-second expiry');
+ m.update(g,.65);
+ assert.equal(m.pulses.length,1,'A blast must still be present after ~.58 real seconds');
+ m.update(g,.70);
+ assert.equal(m.pulses.length,1,'Core detonation must be visible as falling starts');
+ m.update(g,.51);
+ assert.equal(m.pulses.length,0,'Expired effects must be removed');
+});
+test('Falling of a destroyed facility is delayed while its reactor detonates',async()=>{
+ const src=await readFile('app/encounter-view.ts','utf8');
+ assert.match(src,/const hold=\.93/);
+ assert.match(src,/Math\.max\(0,\(wreck\.age-hold\)/);
+ assert.match(src,/model\.position\.set\(wreck\.x\+quake/);
+ assert.match(src,/c\.translate\(wreck\.x\+quake/);
+});
+test('Glowing in-world geometry renders above collapsing architecture',async()=>{
+ const src=await readFile('app/facility-demolition.ts','utf8');
+ assert.match(src,/depthTest:false/);
+ assert.match(src,/renderOrder=901/);
+ assert.match(src,/const halo=new T\.Mesh/);
+ assert.match(src,/const core=new T\.Mesh/);
 });
