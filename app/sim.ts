@@ -8,6 +8,7 @@ import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {updateEncounters} from './encounters.ts';
 import {initialBattlefield,nextBattlefieldStage,updateBattlefield,damageBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {SHIPS,type ShipClass} from './ship-config.ts';
+import {collideTerrainPlayer,redirectTerrainEnemy,interceptTerrainShot} from './battlefield-terrain.ts';
 import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
 export {STAGES} from './stages.ts';
@@ -22,7 +23,7 @@ export interface Enemy {
   id: number; kind: Kind; x: number; y: number; origin: number; radius: number;
   hp: number; maxHp: number; age: number; shoot: number; flash: number; group: number;
   phase: number; dead: boolean; ground: boolean; pattern: number;
-  aimX: number; aimY: number; charging: boolean; volley: number; spawnY: number; recoil:number;
+  aimX: number; aimY: number; charging: boolean; volley: number; spawnY: number; recoil:number;terrainRedirected?:boolean;
 }
 export interface Bullet {
   id: number; x: number; y: number; px: number; py: number; vx: number; vy: number;
@@ -431,6 +432,7 @@ export class Game {
     }else{const len=Math.max(1,Math.hypot(input.x,input.y)),speed=input.focus?8:18;
       p.x+=input.x/len*speed*SHIPS[this.shipClass].speed*dt;p.y+=input.y/len*speed*SHIPS[this.shipClass].speed*dt;}
     p.x=Math.max(-W,Math.min(W,p.x));p.y=Math.max(BOTTOM,Math.min(TOP,p.y));
+    collideTerrainPlayer(this);if(this.state!=='playing')return;
     p.vx=(p.x-oldX)/dt;p.vy=(p.y-oldY)/dt;
     this.updateLocks(dt);this.shotTimer-=dt;if(this.shotTimer<=0)this.fire();
     while(this.waveIndex<this.schedule.length&&this.schedule[this.waveIndex].at<=this.time)this.wave(this.schedule[this.waveIndex++]);
@@ -454,6 +456,7 @@ export class Game {
       if(e.kind==='corvette'){e.x=e.origin+Math.sin(e.age*.6+e.phase)*.8;e.y+=e.age<4?1.6*dt:0;}
       if(e.kind==='sentinel')e.x=e.origin+Math.sin(e.age*1.3+e.phase)*1.7;
       if(e.kind==='strider')e.x=e.origin+Math.sin(e.age*.7+e.phase)*.8;
+      redirectTerrainEnemy(this,e,dt);
       e.shoot-=dt;
       if(this.battlefield.suppression>0)e.shoot=Math.max(.35,e.shoot);
       if(e.y<13.5&&e.y>p.y+3.8&&this.battlefield.suppression<=0){
@@ -505,6 +508,7 @@ export class Game {
       b.x+=b.vx*dt;b.y+=b.vy*dt;
       if(b.enemy&&b.ricochets&&Math.abs(b.x)>W&&this.nodes.some(n=>n.stage===3&&n.attach==='stage'&&!n.dead)){b.x=Math.sign(b.x)*W;b.vx=-b.vx;b.ricochets--;this.emit('hit',{x:b.x,y:b.y});}
       if(Math.abs(b.x)>16||b.y>25||b.y<-22||b.age>5){b.dead=true;continue;}
+      if(interceptTerrainShot(this,b))continue;
       if(b.enemy){
         const d=segmentDistance2(b.px,b.py,b.x,b.y,p.x,p.y);
         const hitRadius=this.difficulty==='casual'?.17:.23;
