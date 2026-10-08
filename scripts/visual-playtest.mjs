@@ -85,12 +85,14 @@ await page.evaluate(()=>{
  const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
  if(n){n.y=6.4;g.damageNode(n,n.hp+100);}
 });
-await scene(page,'04d-canvas-facility-blast',140);
+await scene(page,'04d-canvas-detonation-060ms',60);
+await scene(page,'04e-canvas-detonation-200ms',140);
+await scene(page,'04f-canvas-detonation-420ms',220);
 results.canvasDemolition=await page.evaluate(()=>({
   blasts:window.__nova.view.facilityDemolition?.diagnostics(),
   atlasExplosions:window.__nova.view.explosions?.length
 }));
-await scene(page,'04e-canvas-chain-bursts',680);
+await scene(page,'04g-canvas-chain-bursts',460);
 await page.evaluate(()=>{
  const g=window.__nova.game;g.nodes=[];g.enemies=[];g.bullets=[];g.encounter=null;g.battlefield.seen=[true,true];
  g.battlefield.outcomes=['destroyed',null];g.sectorMission.started=false;g.time=64*.76;
@@ -130,12 +132,22 @@ await rich.page.evaluate(()=>{
  const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
  if(n){n.y=6.4;g.damageNode(n,n.hp+100);}
 });
-await scene(rich.page,'10-gpu-facility-blast',130);
+await scene(rich.page,'10-gpu-core-flash-050ms',50);
+results.gpuDetonationEarly=await rich.page.evaluate(()=>{
+ const fx=window.__nova.view.facilityDemolition;
+ return {visibleRings:fx.rings.filter(r=>r.visible).length,opacity:fx.rings.filter(r=>r.visible).map(r=>r.material.opacity),coreVisible:fx.cores.some(c=>c.visible&&c.material.opacity>.15)};
+});
+await scene(rich.page,'10b-gpu-core-blast-180ms',130);
+await scene(rich.page,'10c-gpu-shockwave-400ms',220);
+results.gpuDetonationLate=await rich.page.evaluate(()=>{
+ const fx=window.__nova.view.facilityDemolition;
+ return {visibleRings:fx.rings.filter(r=>r.visible).length,opacity:fx.rings.filter(r=>r.visible).map(r=>r.material.opacity)};
+});
 results.gpuDemolition=await rich.page.evaluate(()=>({
   blasts:window.__nova.view.facilityDemolition?.diagnostics(),
   oldExplosionSprites:window.__nova.view.flares?.length
 }));
-await scene(rich.page,'11-gpu-chain-bursts',850);
+await scene(rich.page,'11-gpu-chain-bursts',580);
 
 
 results.errors=errors;
@@ -144,5 +156,6 @@ console.log('NOVA_REVIEW:'+JSON.stringify(results));
 await browser.close();
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
+if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility detonation invisible at 50ms or 400ms');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
