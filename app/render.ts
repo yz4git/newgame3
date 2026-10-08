@@ -104,6 +104,9 @@ export class View {
   }
   resize(){
     const rect=this.canvas.parentElement!.getBoundingClientRect();this.width=rect.width;this.height=rect.height;
+    // Expand the visible vertical flight corridor on tall phones without deforming ship and projectile geometry.
+    const vertical=Math.max(128/3,24*rect.height/Math.max(1,rect.width));
+    this.camera.left=-12;this.camera.right=12;this.camera.top=vertical/2;this.camera.bottom=-vertical/2;this.camera.updateProjectionMatrix();
     this.renderer.setSize(rect.width,rect.height,false);
     if(this.composer){this.composer.setPixelRatio(this.pixelRatio);this.composer.setSize(rect.width,rect.height);}
   }
