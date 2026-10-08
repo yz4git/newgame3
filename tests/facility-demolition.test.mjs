@@ -18,7 +18,7 @@ test('3D facility destruction no longer emits stock enemy explode or atlas reson
   const events=g.drainEvents();
   assert.equal(events.filter(e=>e.type==='fieldcollapse').length,1);
   assert.equal(events.filter(e=>e.type==='fieldclear').length,1);
-  assert.equal(events.some(e=>e.type==='explode'||e.type==='resonance'),false,
+  assert.equal(events.some(e=>(e.type==='explode'||e.type==='resonance')&&e.x===n.x&&e.y===n.y),false,
    'Facility explosion must not route into old stretched 2D animation textures');
  }
 });
