@@ -1,7 +1,7 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
 import {shipSprite,bossSprite,tankSprite,warpedSprite} from './canvas-art.ts';
 import {CanvasFortressBackground} from './canvas-background.ts';
-import {explosionAtlasMap,smokeMap,livingMaps,finishMaps,visualAssetStatus} from './visual-assets.ts';
+import {explosionAtlasMap,smokeMap,livingMaps,finishMaps,visualAssetStatus,playerShipsAtlasMap} from './visual-assets.ts';
 import {bossWingAngle,bossScars,scarPositions} from './boss-finish.ts';
 import {playerPose,enemyPose,bossPose,smooth,animationClockRunning,presentationState,type ShipPose} from './motion.ts';
 import {CanvasStageEffects,canvasGlow} from './canvas-effects.ts';
@@ -13,7 +13,7 @@ import {drawThreatsCanvas,drawEncounterActorsCanvas,drawBossShieldCanvas,encount
 // It shares the same fixed-step combat, controls, scores and progression.
 interface Spark {x:number;y:number;vx:number;vy:number;life:number;max:number;color:string;size:number;}
 export class CanvasView {
-  engine='Canvas 2D';quality='COMPATIBLE';private playerTint='#65dcff';
+  engine='Canvas 2D';quality='COMPATIBLE';private playerTint='#65dcff';private playerSkinIndex=0;
   private ctx!:CanvasRenderingContext2D;private width=0;private height=0;private ratio=1;
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
@@ -34,9 +34,11 @@ export class CanvasView {
     const sprite=warp?warpedSprite(asset,warp.kind,warp.t,warp.flex):asset;c.drawImage(sprite.canvas,sprite.left,-sprite.top,sprite.width,sprite.height);c.restore();
   }
   private ship(kind:Kind|'player',x:number,y:number,pose:ShipPose,scale=1,flash=false,t=0){
+    const c=this.ctx;
     if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')this.circle(x+.15,y+.6,kind==='cruiser'?1.9:1.05,'#02061170');
-    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
-    const c=this.ctx;c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
+    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else if(kind==='player'&&playerShipsAtlasMap.image instanceof HTMLImageElement&&playerShipsAtlasMap.image.naturalWidth>0){const image=playerShipsAtlasMap.image;const w=image.width/3;c.save();c.translate(x,y);c.rotate(pose.roll);c.scale(scale*(1-Math.abs(pose.bank)*.3),-scale);c.drawImage(image,w*this.playerSkinIndex,0,w,image.height,-1.78,-1.93,3.56,3.86);c.restore();}
+    else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
+    c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
     const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player?this.playerTint:kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
     if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')for(const side of[-1,1]){
       const ex=side*(large?1.35:kind==='bomber'?1.38:player?.50:small?.35:.62),ey=large?2.2:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:small?.78:1.05;
@@ -101,7 +103,7 @@ export class CanvasView {
     }
     const p=g.player,pose=playerPose(g),depart=state==='transition'?smooth((3.5-g.transitionTime)/3.5):g.state==='result'&&g.won&&g.boss?.dead?1:0;this.playerAnimation=state==='transition'?'depart':pose.mode;
     const playerVisible=title||g.hull>0&&(g.time<2.6||g.invulnerable<=0||Math.floor(g.invulnerable*12)%3!==0);
-    this.playerTint=g.shipClass==='falcon'?'#89bcff':g.shipClass==='bulwark'?'#ffc18e':'#65dcff';
+    this.playerTint=g.shipClass==='falcon'?'#89bcff':g.shipClass==='bulwark'?'#ffc18e':'#65dcff';this.playerSkinIndex=g.shipClass==='falcon'?1:g.shipClass==='bulwark'?2:0;
     if(playerVisible)this.ship('player',title?Math.sin(g.visualTime*.5)*.4:p.x,title?1.9:p.y+depart*34,pose,title?2:1,false,g.visualTime);
     if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();}
     if(!title&&g.power===4)for(const s of[-1,1]){this.circle(p.x+s*1.45,p.y-.15,.25,'#aedce8');this.circle(p.x+s*1.45,p.y-.05,.13,'#87f9ff');}

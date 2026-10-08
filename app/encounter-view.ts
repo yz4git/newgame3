@@ -1,7 +1,7 @@
 import * as T from 'three/webgpu';
 import type {Game} from './sim.ts';
 import {ENCOUNTERS,miniAngle,threatActive} from './encounter-design.ts';
-import {minibossMaps,nodeMaps,nodeAtlasMap,livingMaps} from './visual-assets.ts';
+import {minibossMaps,nodeMaps,nodeAtlasMap,battlefieldAtlasMap,battlefieldMaps,livingMaps} from './visual-assets.ts';
 
 const plane=new T.PlaneGeometry(1,1);
 function material(color:number,opacity=1){return new T.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,toneMapped:false});}
@@ -23,7 +23,7 @@ export class EncounterView {
   for(let i=0;i<this.plumes.length;i++){const p=this.plumes[i];p.visible=this.mini.visible;if(m){p.position.set(m.x+(i?1:-1)*1.3,m.y+2.15,2.55);p.scale.set(.56,1.8+Math.sin(m.age*19)*.15,1);p.material.rotation=Math.PI;p.material.opacity=.72;}}
   for(let i=0;i<this.nodes.length;i++){
    const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=v.back.visible=v.bar.visible=!!n;if(!n)continue;
-   v.skin.material.map=nodeMaps[n.stage];v.skin.material.color.setHex(n.attach==='field'?0xffdc91:0xffffff).multiplyScalar(n.flash>0?1.8:1);v.skin.material.rotation=n.stage===0||n.stage===4?n.age*.35:Math.sin(n.age*1.4)*.025;v.skin.position.set(n.x,n.y-.5,2.6);v.skin.scale.set(n.attach==='field'?3.35:2.75,n.attach==='field'?3.35:2.75,1);
+   v.skin.material.map=n.attach==='field'&&battlefieldAtlasMap.image instanceof HTMLImageElement&&battlefieldAtlasMap.image.naturalWidth>0?battlefieldMaps[n.stage*2+n.index]:nodeMaps[n.stage];v.skin.material.color.setHex(0xffffff).multiplyScalar(n.flash>0?1.65:1);v.skin.material.rotation=n.attach==='field'?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?n.age*.35:Math.sin(n.age*1.4)*.025;v.skin.position.set(n.x,n.y-.5,2.6);v.skin.scale.set(n.attach==='field'?3.35:2.75,n.attach==='field'?3.35:2.75,1);
    const ratio=Math.max(0,n.hp/n.maxHp);v.back.position.set(n.x,n.y-1.85,2.61);v.back.scale.set(2.05,.085,1);v.bar.position.set(n.x-1.0+ratio,n.y-1.85,2.63);v.bar.scale.set(ratio*2,.045,1);v.bar.material.color.setHex(n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color);
   }
   for(let i=0;i<this.beams.length;i++){
@@ -41,6 +41,6 @@ export function drawThreatsCanvas(c:CanvasRenderingContext2D,g:Game){
 }
 export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
  const m=g.encounter;if(m&&!m.dead){c.save();c.translate(m.x,m.y);c.rotate(miniAngle(m));c.scale(1,-1);for(const s of[-1,1]){c.save();c.translate(s*1.3,-2.65);c.rotate(Math.PI);c.globalAlpha=.72;c.drawImage(livingMaps.plume.image,-.28,-.9,.56,1.8);c.restore();}c.drawImage(minibossMaps[m.stage].image,-3.1,-3.1,6.2,6.2);if(m.flash>0){c.strokeStyle='#fff3d8';c.lineWidth=.05;c.beginPath();c.arc(0,0,2.3,0,Math.PI*2);c.stroke();}c.restore();}
- const im=nodeAtlasMap.image;for(const n of g.nodes){if(n.dead)continue;c.save();c.translate(n.x,n.y);c.rotate(n.stage===0||n.stage===4?-n.age*.35:Math.sin(n.age*1.4)*.025);c.scale(1,-1);const w=im.width/3,h=im.height/2;c.drawImage(im,n.stage%3*w,Math.floor(n.stage/3)*h,w,h,-1.375,-1.375,2.75,2.75);if(n.attach==='field'){c.strokeStyle='#ffd48a';c.lineWidth=.065;c.beginPath();c.arc(0,0,1.66,0,Math.PI*2);c.stroke();}c.restore();c.save();c.fillStyle='#07121d';c.fillRect(n.x-1.025,n.y-1.39,2.05,.085);c.fillStyle='#'+(n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');c.fillRect(n.x-1,n.y-1.37,2*Math.max(0,n.hp/n.maxHp),.045);c.restore();}
+ const im=nodeAtlasMap.image,field=battlefieldAtlasMap.image;for(const n of g.nodes){if(n.dead)continue;c.save();c.translate(n.x,n.y);c.rotate(n.attach==='field'?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?-n.age*.35:Math.sin(n.age*1.4)*.025);c.scale(1,-1);if(n.attach==='field'&&field instanceof HTMLImageElement&&field.naturalWidth>0){const k=n.stage*2+n.index,w=field.width/4,h=field.height/3;c.drawImage(field,k%4*w,Math.floor(k/4)*h,w,h,-1.675,-1.675,3.35,3.35);}else{const w=im.width/3,h=im.height/2;c.drawImage(im,n.stage%3*w,Math.floor(n.stage/3)*h,w,h,-1.375,-1.375,2.75,2.75);}if(n.attach==='field'){c.strokeStyle='#ffd48a';c.lineWidth=.055;c.globalAlpha=.55+.2*Math.sin(n.age*3);c.beginPath();c.arc(0,0,1.66,0,Math.PI*2);c.stroke();}c.restore();c.save();c.fillStyle='#07121d';c.fillRect(n.x-1.025,n.y-1.39,2.05,.085);c.fillStyle='#'+(n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');c.fillRect(n.x-1,n.y-1.37,2*Math.max(0,n.hp/n.maxHp),.045);c.restore();}
 }
 export function drawBossShieldCanvas(c:CanvasRenderingContext2D,g:Game){const b=g.boss;if(!b||b.dead||!b.guard)return;c.save();c.globalAlpha=.38+Math.sin(b.age*9)*.12;c.strokeStyle='#b9a3ff';c.lineWidth=.08;c.beginPath();c.arc(b.x,b.y-.85,1.9,0,Math.PI*2);c.stroke();c.restore();}

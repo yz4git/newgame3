@@ -26,7 +26,8 @@ const best=(mode:Mode)=>Math.max(0,Number(record[keyFor(mode)])||0);
 function selectDifficulty(d:Difficulty){difficulty=d;document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.classList.toggle('selected',b.dataset.difficulty===d));el('title-best').textContent=scoreText(best('campaign'));try{localStorage.setItem('nova-strike-difficulty',d);}catch{/* Optional storage. */}}
 const stageSelect=el<HTMLSelectElement>('stage-select');
 STAGES.forEach((stage,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(index+1).padStart(2,'0')+' / '+stage.jp;stageSelect.append(option);});
-stageSelect.addEventListener('change',()=>{selectedStage=Number(stageSelect.value);if(game.state==='title'){game.stage=selectedStage;game.visualTime=0;}});
+function updateSectorPreview(){const n=Math.max(0,Math.min(5,selectedStage)),x=n%3*50,y=Math.floor(n/3)*100;stageSelect.parentElement?.style.setProperty('--stage-art-position',x+'% '+y+'%');}
+stageSelect.addEventListener('change',()=>{selectedStage=Number(stageSelect.value);updateSectorPreview();if(game.state==='title'){game.stage=selectedStage;game.visualTime=0;}});updateSectorPreview();
 document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(button=>{const type=button.dataset.ship as ShipClass;button.classList.toggle('selected',type===selectedShip);button.addEventListener('click',()=>{selectedShip=type;game.shipClass=type;el('title-best').textContent=scoreText(best('campaign'));document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(b=>b.classList.toggle('selected',b.dataset.ship===type));try{localStorage.setItem('nova-strike-ship',type);}catch{/* Storage optional. */}});});game.shipClass=selectedShip;
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
@@ -144,6 +145,7 @@ function updateUI(now:number){
   el('cinematic-frame').hidden=!cue&&game.state!=='transition'||cue?.kind==='radio';
   el('sector-strip').hidden=!playing||!!boss||!!mini;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
   el('district').textContent=zoneAt(game.stage,stageDistance(game.time)).toUpperCase().replaceAll('-',' ');
+  el('sector-badge').style.backgroundPosition=(game.stage*20)+'% 0%';
   if(cue){
     panel.className='stage-cue '+cue.kind;panel.style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
     panel.style.opacity=String(Math.min(1,cue.progress*7,(1-cue.progress)*7));

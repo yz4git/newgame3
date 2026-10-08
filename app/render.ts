@@ -1,6 +1,6 @@
 import * as T from 'three/webgpu';
 import {FortressBackground} from './fortress.ts';
-import {explosionFrames,smokeMap,shipSkin,planetMap,terrainMaps,visualAssetStatus} from './visual-assets.ts';
+import {explosionFrames,smokeMap,shipSkin,planetMap,terrainMaps,visualAssetStatus,playerShipMaps,playerShipsAtlasMap} from './visual-assets.ts';
 import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import type {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -185,7 +185,12 @@ export class View {
     this.player.position.set(title?Math.sin(this.epoch*.5)*.5:p.x,title?1.9+Math.sin(this.epoch)*.25:p.y+depart*34,1.0);
     this.player.rotation.y+=(pose.bank-this.player.rotation.y)*(dt>0?1-Math.exp(-dt*9):0);
     this.player.rotation.z=title?Math.sin(this.epoch*.7)*.035:pose.roll;
-    const skin=this.player.getObjectByName('skin') as T.Sprite|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(this.player.quaternion).invert());skin.material.rotation=title?Math.sin(this.epoch*.7)*.035:pose.roll;skin.material.color.setHex(SHIPS[game.shipClass].tint);skin.scale.x=3.1*(1-Math.abs(this.player.rotation.y)*.3);}
+    const skin=this.player.getObjectByName('skin') as T.Sprite|undefined;if(skin){skin.position.copy(skinOffset).applyQuaternion(inverseRotation.copy(this.player.quaternion).invert());skin.material.rotation=title?Math.sin(this.epoch*.7)*.035:pose.roll;
+      // The new generated sheets contain three physically different silhouettes, not color variants.
+      if(playerShipsAtlasMap.image instanceof HTMLImageElement&&playerShipsAtlasMap.image.naturalWidth>0){
+        skin.material.map=playerShipMaps[game.shipClass==='striker'?0:game.shipClass==='falcon'?1:2];
+        skin.material.color.setHex(0xffffff);skin.scale.set(3.55*(1-Math.abs(this.player.rotation.y)*.3),3.85,1);
+      }else{skin.material.color.setHex(SHIPS[game.shipClass].tint);skin.scale.set(3.1*(1-Math.abs(this.player.rotation.y)*.3),4.25,1);}}
     animateShip(this.player,pose,this.epoch,'player');
     this.player.scale.setScalar(title?2.0:1.0);this.player.visible=game.hull>0||title;
     if(game.invulnerable>0&&!title&&game.time>2.6)this.player.visible=Math.floor(game.invulnerable*12)%3!==0;
