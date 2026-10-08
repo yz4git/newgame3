@@ -35,7 +35,7 @@ export class CanvasView {
   }
   private ship(kind:Kind|'player',x:number,y:number,pose:ShipPose,scale=1,flash=false,t=0){
     if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')this.circle(x+.15,y+.6,kind==='cruiser'?1.9:1.05,'#02061170');
-    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else if(kind==='player'&&playerShipsAtlasMap.image instanceof HTMLImageElement&&playerShipsAtlasMap.image.complete){const image=playerShipsAtlasMap.image;const w=image.width/3;c.save();c.translate(x,y);c.rotate(pose.roll);c.scale(scale*(1-Math.abs(pose.bank)*.3),-scale);c.drawImage(image,w*this.playerSkinIndex,0,w,image.height,-1.78,-1.93,3.56,3.86);c.restore();}
+    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else if(kind==='player'&&playerShipsAtlasMap.image instanceof HTMLImageElement&&playerShipsAtlasMap.image.naturalWidth>0){const image=playerShipsAtlasMap.image;const w=image.width/3;c.save();c.translate(x,y);c.rotate(pose.roll);c.scale(scale*(1-Math.abs(pose.bank)*.3),-scale);c.drawImage(image,w*this.playerSkinIndex,0,w,image.height,-1.78,-1.93,3.56,3.86);c.restore();}
     else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
     const c=this.ctx;c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
     const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player?this.playerTint:kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
