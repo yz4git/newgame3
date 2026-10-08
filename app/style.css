@@ -81,3 +81,15 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
  .sector-strip{top:20%}
  .hud{left:5%;right:5%}
 }
+
+/* Play-tested combat affordances: preserve readable shots and target silhouettes. */
+.message.tactical{top:31%;left:10%;right:10%;padding:3px 0;background:none;filter:drop-shadow(0 2px 7px #020914c0)}
+.message.tactical strong{font-size:clamp(13px,4.5vw,18px);line-height:1.1;letter-spacing:.025em}
+.message.tactical span{font-size:9px;letter-spacing:.05em;line-height:1.4;margin-bottom:4px}
+@media(max-width:600px){
+ .boss-hud{top:12.6%;padding:5px 8px 6px;background:linear-gradient(180deg,#020916f4,#020916bd 75%,#02091600)}
+ .boss-hud>div:first-child{margin-bottom:4px}
+ .boss-form,.boss-pattern,.parts-status{font-size:8px;line-height:1.25;margin-top:3px}
+ .score-area strong{font-size:23px}
+ .touch-tip{font-size:10px;bottom:18%}.touch-tip span{font-size:8px;margin-top:5px}
+}
