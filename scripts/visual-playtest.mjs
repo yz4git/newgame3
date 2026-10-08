@@ -64,6 +64,23 @@ await page.evaluate(()=>{
  g.encounterSeen={stage:true,mini:true};g.time=64*.095;g.shotTimer=1000;
 });
 await scene(page,'04-strategic-facility',500);
+results.facilityHUD=await page.evaluate(()=>{
+ const box=document.getElementById('field-objective');
+ const field=window.__nova.game.nodes.find(n=>n.attach==='field'&&!n.dead);
+ return {visible:!box.hidden,name:document.getElementById('field-objective-name').textContent,
+ health:document.getElementById('field-objective-health-text').textContent,fieldHp:field?.hp??null,cardWidth:Math.round(box.getBoundingClientRect().width)};
+});
+await page.evaluate(()=>{
+ const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
+ if(n){n.age=4.8;n.y=7.4;n.hp=n.maxHp*.57;n.shoot=200;}
+ g.shotTimer=200;
+});
+await scene(page,'04b-armor-damaged',480);
+await page.evaluate(()=>{
+ const g=window.__nova.game,n=g.nodes.find(n=>n.attach==='field'&&!n.dead);
+ if(n)n.hp=n.maxHp*.24;
+});
+await scene(page,'04c-core-exposed',300);
 await page.evaluate(()=>{
  const g=window.__nova.game;g.nodes=[];g.enemies=[];g.bullets=[];g.encounter=null;g.battlefield.seen=[true,true];
  g.battlefield.outcomes=['destroyed',null];g.sectorMission.started=false;g.time=64*.76;
@@ -91,5 +108,6 @@ results.errors=errors;
 console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
 console.log('NOVA_REVIEW:'+JSON.stringify(results));
 await browser.close();
+if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
