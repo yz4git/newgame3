@@ -1,0 +1,40 @@
+name: Review iPhone gameplay screenshots
+
+on:
+  push:
+    branches: ['feat/nova-visual-playtest']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install game and headless browser
+        run: |
+          npm ci
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Start Vite browser test server
+        run: |
+          nohup npm run dev -- --host 127.0.0.1 > /tmp/nova-vite.log 2>&1 &
+          for i in {1..30}; do if curl -fsS http://127.0.0.1:5173/ >/dev/null; then exit 0; fi; sleep 2; done
+          cat /tmp/nova-vite.log
+          exit 1
+      - name: Play game and capture real browser screens
+        run: node scripts/visual-playtest.mjs
+      - name: Store visual review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-visual-review
+          path: visual-review/
+          if-no-files-found: ignore
