@@ -36,7 +36,7 @@ function support(g:Game,route:MissionRoute,round:number){
 export function startSectorMission(g:Game){
  if(g.mode!=='campaign'||g.sectorMission.started||g.boss)return;
  const m=g.sectorMission,profile=SECTOR_MISSIONS[g.stage];
- const route:MissionRoute=g.battlefield.seen[0]&&g.battlefield.stageDestroyed>0?'secure':'intercept';
+ const route:MissionRoute=g.battlefield.outcomes[0]==='destroyed'?'secure':'intercept';
  // The authored set piece remains a regular target: player weapons and NOVA both work.
  const before=g.nodes.length;
  g.addCombatNode('mission',0,route==='secure'?1:0,route==='secure'?-2.8:2.8,15.2,
