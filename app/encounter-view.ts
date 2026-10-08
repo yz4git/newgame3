@@ -14,7 +14,7 @@ export function encounterDiagnostics(g:Game){return {miniboss:!!g.encounter,node
 /** Fixed pools. Every pose and warning uses the same simulation clock as collision. */
 export class EncounterView {
  root=new T.Group();private mini=sprite(minibossMaps[0]);
- private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9]),target:new T.Mesh(new T.RingGeometry(2.01,2.12,6),material(0xffd679,.90)),locator:new T.Mesh(new T.CircleGeometry(.19,3),material(0xffe3a7,.95)),fracture:new T.Mesh(plane,material(0xffb68c,.70))}));
+ private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9]),backplate:new T.Mesh(new T.CircleGeometry(2.32,48),material(0x020c19,.76)),target:new T.Mesh(new T.RingGeometry(2.01,2.12,6),material(0xffd679,.90)),locator:new T.Mesh(new T.CircleGeometry(.19,3),material(0xffe3a7,.95)),fracture:new T.Mesh(plane,material(0xffb68c,.70))}));
  private collapsing=Array.from({length:3},()=>({skin:sprite(battlefieldMaps[0]),aura:sprite(tacticalFxMaps[0])}));
  private terrain=Array.from({length:12},()=>({skin:sprite(battlefieldMaps[0]),warning:sprite(tacticalFxMaps[4])}));
  private missionGlow=Array.from({length:6},()=>sprite(tacticalFxMaps[0]));
@@ -22,18 +22,19 @@ export class EncounterView {
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
  private shield=new T.Mesh(new T.RingGeometry(1.86,1.94,64),material(0xb9a3ff,.6));
  private status=encounterDiagnostics({nodes:[],threats:[],encounter:null,boss:null} as unknown as Game);
- constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.target,n.locator,n.fracture);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
+ constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.backplate,n.target,n.locator,n.fracture);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
  draw(g:Game){
   this.root.visible=g.state!=='title'&&g.state!=='result';this.status=encounterDiagnostics(g);
   const m=g.encounter;this.mini.visible=!!m&&!m.dead;
   if(m){this.mini.material.map=minibossMaps[m.stage];this.mini.position.set(m.x,m.y-.5,2.6);this.mini.scale.setScalar(6.2);this.mini.material.rotation=miniAngle(m);this.mini.material.color.setScalar(m.flash>0?1.65:1);}
   for(let i=0;i<this.plumes.length;i++){const p=this.plumes[i];p.visible=this.mini.visible;if(m){p.position.set(m.x+(i?1:-1)*1.3,m.y+2.15,2.55);p.scale.set(.56,1.8+Math.sin(m.age*19)*.15,1);p.material.rotation=Math.PI;p.material.opacity=.72;}}
   for(let i=0;i<this.nodes.length;i++){
-   const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=v.back.visible=v.bar.visible=!!n;v.critical.visible=!!n&&(n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)===2||n.attach==='mission');v.target.visible=v.locator.visible=!!n&&n.attach==='field';v.fracture.visible=!!n&&n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)>0;if(!n)continue;
+   const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=v.back.visible=v.bar.visible=!!n;v.critical.visible=!!n&&(n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)===2||n.attach==='mission');v.target.visible=v.locator.visible=v.backplate.visible=!!n&&n.attach==='field';v.fracture.visible=!!n&&n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)>0;if(!n)continue;
    v.skin.material.map=(n.attach==='field'||n.attach==='mission')&&battlefieldAtlasMap.image instanceof HTMLImageElement&&battlefieldAtlasMap.image.naturalWidth>0?battlefieldMaps[n.stage*2+n.index]:nodeMaps[n.stage];const phase=n.attach==='field'?fieldDamagePhase(n.hp,n.maxHp):0;v.skin.material.color.setHex(n.attach==='mission'?(n.index===1?0x9ceeff:0xffaa8d):phase===2?0xffaa80:phase===1?0xffe3b8:0xffffff).multiplyScalar(n.flash>0?1.65:1);v.skin.material.opacity=phase===2?.84:1;v.skin.material.rotation=(n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?n.age*.35:Math.sin(n.age*1.4)*.025;v.skin.position.set(n.x,n.y-.5,2.6);v.skin.scale.set(n.attach==='mission'?3.85:n.attach==='field'?3.35:2.75,n.attach==='mission'?3.85:n.attach==='field'?3.35:2.75,1);if(v.critical.visible){v.critical.material.map=tacticalFxMaps[n.attach==='mission'?(n.index===1?3:4):9];v.critical.position.set(n.x,n.y+.14,2.68);v.critical.scale.setScalar(1.28+Math.sin(n.age*9)*.1);v.critical.material.opacity=.45+Math.sin(n.age*6)*.16;}
    const ratio=Math.max(0,n.hp/n.maxHp);
     const field=n.attach==='field'?fieldPresentation(n):null;
     if(field){
+      v.backplate.position.set(n.x,n.y-.5,2.545);v.backplate.material.opacity=.66+.1*Math.sin(n.age*3);
       v.target.position.set(n.x,n.y-.5,2.66);v.target.rotation.z=Math.PI/6+Math.sin(n.age*.9)*.035;
       v.target.scale.setScalar(field.ring/2.02);
       v.target.material.color.setHex(field.color);v.target.material.opacity=.76+Math.sin(n.age*8)*.17;
@@ -103,7 +104,11 @@ export function drawThreatsCanvas(c:CanvasRenderingContext2D,g:Game){
 }
 export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
  const m=g.encounter;if(m&&!m.dead){c.save();c.translate(m.x,m.y);c.rotate(miniAngle(m));c.scale(1,-1);for(const s of[-1,1]){c.save();c.translate(s*1.3,-2.65);c.rotate(Math.PI);c.globalAlpha=.72;c.drawImage(livingMaps.plume.image,-.28,-.9,.56,1.8);c.restore();}c.drawImage(minibossMaps[m.stage].image,-3.1,-3.1,6.2,6.2);if(m.flash>0){c.strokeStyle='#fff3d8';c.lineWidth=.05;c.beginPath();c.arc(0,0,2.3,0,Math.PI*2);c.stroke();}c.restore();}
- const im=nodeAtlasMap.image,field=battlefieldAtlasMap.image;for(const n of g.nodes){if(n.dead)continue;c.save();c.translate(n.x,n.y);c.rotate((n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?-n.age*.35:Math.sin(n.age*1.4)*.025);c.scale(1,-1);if((n.attach==='field'||n.attach==='mission')&&field instanceof HTMLImageElement&&field.naturalWidth>0){const k=n.stage*2+n.index,w=field.width/4,h=field.height/3;c.drawImage(field,k%4*w,Math.floor(k/4)*h,w,h,-1.675,-1.675,3.35,3.35);}else{const w=im.width/3,h=im.height/2;c.drawImage(im,n.stage%3*w,Math.floor(n.stage/3)*h,w,h,-1.375,-1.375,2.75,2.75);}if(n.attach==='mission'){c.strokeStyle=n.index===1?'#78e9ff':'#ff987d';c.lineWidth=.085;c.globalAlpha=.7+.2*Math.sin(n.age*8);c.beginPath();c.arc(0,0,1.95,0,Math.PI*2);c.stroke();}
+ const im=nodeAtlasMap.image,field=battlefieldAtlasMap.image;for(const n of g.nodes){if(n.dead)continue;c.save();c.translate(n.x,n.y);c.rotate((n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?-n.age*.35:Math.sin(n.age*1.4)*.025);c.scale(1,-1);if(n.attach==='field'){
+  c.globalAlpha=.72;c.fillStyle='#02111c';c.beginPath();c.arc(0,0,2.32,0,Math.PI*2);c.fill();c.globalAlpha=1;
+  c.strokeStyle='#ffcf6977';c.lineWidth=.05;c.beginPath();c.arc(0,0,2.32,0,Math.PI*2);c.stroke();
+ }
+ if((n.attach==='field'||n.attach==='mission')&&field instanceof HTMLImageElement&&field.naturalWidth>0){const k=n.stage*2+n.index,w=field.width/4,h=field.height/3;c.drawImage(field,k%4*w,Math.floor(k/4)*h,w,h,-1.675,-1.675,3.35,3.35);}else{const w=im.width/3,h=im.height/2;c.drawImage(im,n.stage%3*w,Math.floor(n.stage/3)*h,w,h,-1.375,-1.375,2.75,2.75);}if(n.attach==='mission'){c.strokeStyle=n.index===1?'#78e9ff':'#ff987d';c.lineWidth=.085;c.globalAlpha=.7+.2*Math.sin(n.age*8);c.beginPath();c.arc(0,0,1.95,0,Math.PI*2);c.stroke();}
  if(n.attach==='field'){
  const phase=fieldDamagePhase(n.hp,n.maxHp);
  const f=fieldPresentation(n),ring=f.ring;
