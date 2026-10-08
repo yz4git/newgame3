@@ -59,7 +59,7 @@ export class CanvasView {
       this.wrecks.push({x:e.x||0,y:e.y||0,kind:'boss',stage:this.stage,age:0,life:3.3,parts:[...(this.lastBoss?.parts??[1,1])],spread:this.lastBoss?.spread??0,deploy:smooth((this.lastBoss?.age??3)/3)});
       for(let i=0;i<7;i++)this.cascades.push({at:.25+i*.35,x:(e.x||0)+Math.sin(i*2.3)*3.4,y:(e.y||0)+Math.cos(i*1.7)*2.1,size:1.2+i*.13});
     }
-    if(!['explode','bosskill','damage','nova','collect','hit','graze','resonance'].includes(e.type))return;
+    if(!['explode','bosskill','damage','nova','collect','hit','graze','resonance','fieldfracture','fieldcritical','fieldcollapse','fieldburst'].includes(e.type))return;
     const size=e.size||.7,count=e.type==='nova'||e.type==='bosskill'||e.type==='resonance'?80:e.type==='hit'?4:e.type==='graze'?2:25;
     const color=e.type==='collect'||e.type==='graze'?'#79f4ff':e.type==='hit'?'#ffe9b9':'#ffb86f';
     for(let i=0;i<count&&this.sparks.length<450;i++){
@@ -67,7 +67,7 @@ export class CanvasView {
       this.sparks.push({x:e.x||0,y:e.y||0,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life,max:life,color,size:.05+Math.random()*.14});
     }
     if(e.type==='nova'||e.type==='bosskill'||e.type==='resonance'){this.ring={x:e.x||0,y:e.y||0,age:0};this.pulse=.3;}
-    if(['explode','bosskill','damage'].includes(e.type)&&this.explosions.length<48){this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.4,age:0,life:.88});this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.8,age:-.08,life:1.6,smoke:true});}
+    if(['explode','bosskill','damage','fieldcollapse','fieldburst'].includes(e.type)&&this.explosions.length<48){this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.4,age:0,life:.88});this.explosions.push({x:e.x||0,y:e.y||0,size:size*3.8,age:-.08,life:1.6,smoke:true});}
   }
   draw(g:Game,dt:number,_frameMs:number){
     dt=animationClockRunning(g)?dt:0;this.encounterStatus=encounterDiagnostics(g);
