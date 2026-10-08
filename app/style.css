@@ -93,3 +93,25 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
  .score-area strong{font-size:23px}
  .touch-tip{font-size:10px;bottom:18%}.touch-tip span{font-size:8px;margin-top:5px}
 }
+
+/* v2.8 — Strategic facilities must visually read as shootable targets, not scenery. */
+.field-objective{position:absolute;z-index:5;top:clamp(104px,13%,136px);left:5%;width:min(48%,204px);box-sizing:border-box;padding:9px 10px 10px 12px;pointer-events:none;color:#fff2cc;background:linear-gradient(100deg,#161708ef,#161a24e2 84%,#161a2420);border-left:3px solid #ffce67;box-shadow:0 3px 20px #0008,0 0 18px #ffb74c29;text-shadow:0 1px 5px #000;}
+.field-objective.right{left:auto;right:5%;background:linear-gradient(260deg,#161708ef,#161a24e2 84%,#161a2420);border-left:0;border-right:3px solid #ffce67;text-align:right;}
+.field-objective[hidden],.field-waypoint[hidden]{display:none!important}
+.field-objective-head{display:flex;justify-content:space-between;gap:4px;font-family:monospace;font-size:8px;font-weight:800;letter-spacing:.015em;color:#ffce86;}
+.field-objective strong{display:block;margin:4px 0 7px;font-size:clamp(10px,3.15vw,13px);line-height:1.2;font-weight:900;letter-spacing:.035em;color:#fff7e9;}
+.field-objective-health{height:6px;background:#0b1019;border:1px solid #de915e66;overflow:hidden}
+.field-objective-health i{display:block;height:100%;width:100%;background:#ffdc76;box-shadow:0 0 8px #ffd666a1;transition:width .11s linear}
+.field-objective-state{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin-top:5px;font-size:8px;font-weight:800;color:#ffd28d}
+.field-objective-state span:last-child{flex-shrink:0;font-family:monospace}
+.field-objective p{margin:6px 0 0;font-size:8px;line-height:1.35;color:#e0d1ad;}
+.field-objective.cracked{border-color:#ff9d60}.field-objective.critical{border-color:#ff6469;box-shadow:0 3px 20px #0008,0 0 22px #ff4c4c43;}
+.field-objective.cracked .field-objective-state{color:#ffb18a}.field-objective.critical .field-objective-state{color:#ff858a}
+.field-objective.critical .field-objective-health i{background:#ff6a6e}
+.field-waypoint{position:absolute;z-index:6;pointer-events:none;transform:translate(-50%,-50%);font-size:15px;font-weight:900;letter-spacing:.02em;color:#ffe099;text-align:center;text-shadow:0 1px 6px #000,0 0 10px #ff9a43;}
+.field-waypoint b{display:block;padding:2px 4px;border:1px solid #ffcc75a1;background:#11151ccd;color:#fff3d6;font-size:8px;white-space:nowrap;}
+.field-target-flash{position:absolute;inset:0;z-index:7;pointer-events:none;opacity:0;background:radial-gradient(circle at center,#ffc76c55,transparent 75%);}
+.field-target-flash.on{animation:field-win .38s ease-out;}
+@keyframes field-win{0%{opacity:.75}100%{opacity:0}}
+@media(max-height:620px){.field-objective{top:90px;padding:6px 8px;width:min(48%,184px)}.field-objective strong{margin:2px 0 4px}.field-objective p{display:none}}
+@media(prefers-reduced-motion:reduce){.field-target-flash.on{animation:none}.field-objective-health i{transition:none}}
