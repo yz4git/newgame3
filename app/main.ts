@@ -42,7 +42,7 @@ function screens(){
 }
 function showMessage(title:string,caption:string,seconds=2.3,danger=false){
   el('message-title').textContent=title;el('message-caption').textContent=caption;
-  el('message').classList.toggle('danger',danger);el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
+  el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
 }
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
