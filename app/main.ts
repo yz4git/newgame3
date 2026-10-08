@@ -60,7 +60,7 @@ function result(){
   el('result-title').textContent=game.won?game.mode==='caravan'?'TIME COMPLETE':game.mode==='bossrush'?'BOSS RUSH CLEAR':'MISSION COMPLETE':game.failureReason==='timeout'?'TIME LIMIT':'SIGNAL LOST';
   el('result-subtitle').textContent=game.won?game.mode==='caravan'?'2分間の戦果。次は、さらに高く。':game.mode==='bossrush'?'全6守護艦撃破。最速撃破を目指そう。':'星核を回収。夜明けは、ここから。':game.failureReason==='timeout'?'制限時間を超過。砲台を壊し、攻撃の合間に本体を狙おう。':'機体ロスト。次の出撃へ、経験をつなぐ。';
   el('final-score').textContent=scoreText(game.score);el('new-record').hidden=!newRecord;
-  el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['戦場目標破壊',String(game.battlefield.destroyed)],['目標突破を許した数',String(game.battlefield.escaped)],['誘爆撃破',String(game.battlefield.reactions)],['遮蔽物が防いだ敵弾',String(game.battlefield.shotsBlocked)],['障害物排除',String(game.battlefield.hazardsCleared)],['迂回した敵機',String(game.battlefield.rerouted)],['ロック撃破',String(game.lockKills)],['弾消し',String(game.cancelled)],['最高メダル',String(game.bestMedal)+' / 5'],['到達セクター',String(game.stage+1)+' / '+STAGES.length],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
+  el('result-stats').replaceChildren();const values=[['撃破',String(game.kills)],['最大連続撃破',String(game.maxChain)],['編隊全滅',String(game.formations)],['戦場目標破壊',String(game.battlefield.destroyed)],['目標突破を許した数',String(game.battlefield.escaped)],['誘爆撃破',String(game.battlefield.reactions)],['遮蔽物が防いだ敵弾',String(game.battlefield.shotsBlocked)],['障害物排除',String(game.battlefield.hazardsCleared)],['迂回した敵機',String(game.battlefield.rerouted)],['特別任務達成',String(game.sectorMission.totalSuccess)],['特別任務失敗',String(game.sectorMission.totalFailed)],['ロック撃破',String(game.lockKills)],['弾消し',String(game.cancelled)],['最高メダル',String(game.bestMedal)+' / 5'],['到達セクター',String(game.stage+1)+' / '+STAGES.length],['プレイ時間',Math.floor(game.totalTime/60)+':'+Math.floor(game.totalTime%60).toString().padStart(2,'0')]];
   for(const[label,value]of values){const d=document.createElement('div');d.textContent=label;const s=document.createElement('strong');s.textContent=value;d.append(s);el('result-stats').append(d);}
   el('message').classList.remove('show');el('boss-hud').hidden=true;el('touch-tip').hidden=true;screens();
 }
@@ -128,6 +128,12 @@ function updateUI(now:number){
   const fieldLabel=el('battlefield-status');fieldLabel.hidden=game.mode!=='campaign';
   const activeTerrain=game.battlefield.terrain.some(p=>!p.dead);fieldLabel.textContent=activeTerrain?'AFTERMATH '+(game.battlefield.route==='cover'?'COVER +'+game.battlefield.shotsBlocked+' BLOCK':'HAZARD · SHOOT TO CLEAR'):activeField?'TARGET '+(activeField.index+1)+'/2 · '+(fieldDamagePhase(activeField.hp,activeField.maxHp)===2?'CORE EXPOSED ':fieldDamagePhase(activeField.hp,activeField.maxHp)===1?'ARMOUR BROKEN ':'')+Math.max(0,Math.ceil(activeField.hp/activeField.maxHp*100))+'%':game.battlefield.suppression>0?'DEFENSE OFFLINE '+Math.ceil(game.battlefield.suppression/GAME_SPEED)+'s':game.battlefield.alert>0?'ALERT ×1.25 '+Math.ceil(game.battlefield.alert/GAME_SPEED)+'s':'FIELD '+game.battlefield.stageDestroyed+'/2 · '+game.battlefield.stageEscaped+' ESCAPED';
   fieldLabel.classList.toggle('alert',game.battlefield.alert>0||!!activeField&&fieldDamagePhase(activeField.hp,activeField.maxHp)===2);
+  const missionLabel=el('mission-status'),mission=game.sectorMission;
+  missionLabel.hidden=game.mode!=='campaign'||!mission.active;
+  if(mission.active){const objective=game.nodes.find(n=>n.id===mission.targetId&&!n.dead);
+    missionLabel.textContent='MISSION '+mission.name+' · '+Math.ceil(Math.max(0,mission.timeLeft)/GAME_SPEED)+'s'+(objective?' · '+Math.ceil(Math.max(0,objective.hp)/objective.maxHp*100)+'%':'');
+    missionLabel.classList.toggle('danger',mission.route==='intercept');}
+
   el('focus-caption').textContent=game.weapon==='homing'?'LOCK '+game.locks.filter(l=>l.progress>=1).length:game.weapon==='laser'?'貫通強化':'集中射撃';
   el('hull').innerHTML=Array.from({length:4},(_,i)=>'<i'+(i>=game.hull?' class="empty"':'')+'></i>').join('');
   el('hull').setAttribute('aria-label','残り耐久 '+game.hull);
@@ -182,6 +188,10 @@ function events(){
     else if(e.type==='terrainroute')showMessage(e.color===0xff986d?'DANGER CORRIDOR':'SALVAGE CORRIDOR',e.text||'BATTLEFIELD SHIFT',1.7,e.color===0xff986d);
     else if(e.type==='terrainbreak')scorePopup('HAZARD CLEAR +650',e.x??0,e.y??0,'score');
     else if(e.type==='terrainflank')toast(e.text||'HOSTILE FLANK');
+    else if(e.type==='missionstart')showMessage('SECTOR OPERATION',e.text||'PRIORITY TARGET',1.8,e.color===0xffa572);
+    else if(e.type==='missionclear')showMessage('MISSION COMPLETE',e.text||'BOSS DEFENSE REDUCED',1.8);
+    else if(e.type==='missionfail')showMessage('MISSION FAILED',e.text||'BOSS DEFENSE REINFORCED',1.8,true);
+    else if(e.type==='missionsupport')toast(e.text||'ESCORT INBOUND');
     else if(e.type==='finish')continue;
     else if(e.text)toast(e.text);
     if(e.type==='damage'||e.type==='nova'){
