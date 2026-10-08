@@ -1,6 +1,7 @@
 import type {Game} from './sim.ts';
 import type {CombatNode} from './encounter-design.ts';
 import {STAGES} from './stages.ts';
+import {DIFFICULTY_BALANCE} from './difficulty-balance.ts';
 
 /** Six authored late-sector events. Route is chosen by the first strategic objective. */
 export const SECTOR_MISSIONS=[
@@ -40,12 +41,12 @@ export function startSectorMission(g:Game){
  // The authored set piece remains a regular target: player weapons and NOVA both work.
  const before=g.nodes.length;
  g.addCombatNode('mission',0,route==='secure'?1:0,route==='secure'?-2.8:2.8,15.2,
-   (route==='secure'?36:48)+g.stage*5,11.6);
+   ((route==='secure'?62:80)+g.stage*8)*DIFFICULTY_BALANCE[g.difficulty].missionHealth,12.4);
  if(g.nodes.length===before)return;
  const node=g.nodes[g.nodes.length-1];
  node.radius=1.6;node.shoot=2.7;
  m.started=true;m.active=true;m.result='pending';m.route=route;m.targetId=node.id;
- m.timeLeft=11.6;m.name=route==='secure'?profile.safe:profile.risky;m.supportSent=false;
+ m.timeLeft=12.4;m.name=route==='secure'?profile.safe:profile.risky;m.supportSent=false;
  support(g,route,0);
  g.emit('missionstart',{x:node.x,y:node.y,color:route==='secure'?0x70efff:0xffa572,
   text:profile.name+' / '+profile.jp+' · '+m.name+' を破壊せよ'});
