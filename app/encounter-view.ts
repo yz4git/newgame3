@@ -2,6 +2,7 @@ import * as T from 'three/webgpu';
 import type {Game} from './sim.ts';
 import {fieldDamagePhase} from './battlefield.ts';
 import {isTerrainActive} from './battlefield-terrain.ts';
+import {missionBeacons} from './mission-spectacle.ts';
 import {ENCOUNTERS,miniAngle,threatActive} from './encounter-design.ts';
 import {minibossMaps,nodeMaps,nodeAtlasMap,battlefieldAtlasMap,battlefieldMaps,tacticalFxMaps,livingMaps} from './visual-assets.ts';
 
@@ -15,11 +16,12 @@ export class EncounterView {
  private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9])}));
  private collapsing=Array.from({length:3},()=>({skin:sprite(battlefieldMaps[0]),aura:sprite(tacticalFxMaps[0])}));
  private terrain=Array.from({length:12},()=>({skin:sprite(battlefieldMaps[0]),warning:sprite(tacticalFxMaps[4])}));
+ private missionGlow=Array.from({length:6},()=>sprite(tacticalFxMaps[0]));
  private beams=Array.from({length:12},()=>({band:new T.Mesh(plane,material(0xffb655,.14)),line:new T.Mesh(plane,material(0xffbd6c,.8)),core:new T.Mesh(plane,material(0xfff8e8,.9))}));
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
  private shield=new T.Mesh(new T.RingGeometry(1.86,1.94,64),material(0xb9a3ff,.6));
  private status=encounterDiagnostics({nodes:[],threats:[],encounter:null,boss:null} as unknown as Game);
- constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
+ constructor(){this.root.add(this.mini,this.shield,...this.plumes);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical);for(const c of this.collapsing)this.root.add(c.skin,c.aura);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
  draw(g:Game){
   this.root.visible=g.state!=='title'&&g.state!=='result';this.status=encounterDiagnostics(g);
   const m=g.encounter;this.mini.visible=!!m&&!m.dead;
@@ -58,6 +60,15 @@ export class EncounterView {
     v.warning.scale.setScalar(piece.radius*2.5);
    }
   }
+  const spectacle=missionBeacons(g);
+  for(let i=0;i<this.missionGlow.length;i++){
+   const marker=this.missionGlow[i],part=spectacle?.pieces[i];marker.visible=!!part;if(!part||!spectacle)continue;
+   marker.material.map=tacticalFxMaps[spectacle.style.fx];
+   marker.material.color.setHex(spectacle.style.color);
+   marker.material.opacity=part.alpha;
+   marker.position.set(part.x,part.y,2.54);marker.scale.setScalar(part.scale*2.8);
+   marker.material.rotation=part.angle;
+  }
   for(let i=0;i<this.beams.length;i++){
    const v=this.beams[i],t=g.threats.filter(t=>!t.dead)[i];v.band.visible=v.line.visible=!!t;v.core.visible=!!t&&threatActive(t);if(!t)continue;
    const active=threatActive(t),length=Math.hypot(t.bx-t.ax,t.by-t.ay),angle=-Math.atan2(t.bx-t.ax,t.by-t.ay),pulse=.6+Math.abs(Math.sin(t.age*10))*.4;
@@ -82,6 +93,16 @@ export function drawEncounterActorsCanvas(c:CanvasRenderingContext2D,g:Game){
   if(phase===2){const fx=tacticalFxMaps[9].image;if(fx instanceof HTMLImageElement&&fx.naturalWidth>0){const w=fx.width/4,h=fx.height/4;c.globalAlpha=.65;c.drawImage(fx,w,h*2,w,h,-.72,-.72,1.44,1.44);}}
  }
 }c.restore();c.save();c.fillStyle='#07121d';c.fillRect(n.x-1.025,n.y-1.39,2.05,.085);c.fillStyle='#'+(n.attach==='mission'?(n.index===1?0x76edff:0xff9980):n.attach==='field'?0xffc778:ENCOUNTERS[n.stage].color).toString(16).padStart(6,'0');c.fillRect(n.x-1,n.y-1.37,2*Math.max(0,n.hp/n.maxHp),.045);c.restore();}
+ // Generated tactical VFX atlas: six world-specific orbital designs.
+ const spectacle=missionBeacons(g),fxAtlas=tacticalFxMaps[0].image;
+ if(spectacle&&fxAtlas instanceof HTMLImageElement&&fxAtlas.naturalWidth>0){
+  const w=fxAtlas.width/4,h=fxAtlas.height/4,k=spectacle.style.fx;
+  for(const p of spectacle.pieces){
+   c.save();c.translate(p.x,p.y);c.rotate(-p.angle);c.scale(1,-1);c.globalAlpha=Math.max(0,Math.min(.65,p.alpha));
+   c.drawImage(fxAtlas,k%4*w,Math.floor(k/4)*h,w,h,-p.scale*1.4,-p.scale*1.4,p.scale*2.8,p.scale*2.8);
+   c.restore();
+  }
+ }
  // A dynamic corridor is visible in every renderer, with precise circular danger telegraphs.
  const art=battlefieldAtlasMap.image;
  for(const piece of g.battlefield.terrain){
