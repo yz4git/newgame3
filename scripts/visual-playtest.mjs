@@ -133,6 +133,7 @@ await rich.page.evaluate(()=>{
  if(n){n.y=6.4;g.damageNode(n,n.hp+100);}
 });
 await scene(rich.page,'10-gpu-core-flash-050ms',50);
+results.explosionUnobstructed=await rich.page.evaluate(()=>({stageCueHidden:document.getElementById('stage-cue').hidden,centerBannerCompact:document.getElementById('message').classList.contains('facility')}));
 results.gpuDetonationEarly=await rich.page.evaluate(()=>{
  const fx=window.__nova.view.facilityDemolition;
  return {visibleRings:fx.rings.filter(r=>r.visible).length,opacity:fx.rings.filter(r=>r.visible).map(r=>r.material.opacity),coreVisible:fx.cores.some(c=>c.visible&&c.material.opacity>.15)};
@@ -157,5 +158,6 @@ await browser.close();
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
 if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility detonation invisible at 50ms or 400ms');
+if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
