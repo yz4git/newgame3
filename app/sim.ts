@@ -8,6 +8,7 @@ import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {updateEncounters} from './encounters.ts';
 import {initialBattlefield,nextBattlefieldStage,updateBattlefield,damageBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {SHIPS,type ShipClass} from './ship-config.ts';
+import {initialSectorMission,resetSectorMission,updateSectorMission,completeSectorMission,failSectorMission,type SectorMission} from './sector-missions.ts';
 import {collideTerrainPlayer,redirectTerrainEnemy,interceptTerrainShot} from './battlefield-terrain.ts';
 import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
@@ -132,7 +133,7 @@ export function bossPartPosition(b:Boss,index:number) {
   return {x:b.x+side*(3+b.spread),y:b.y-b.spread*.65};
 }
 export class Game {
-  state: State = 'title'; mode: Mode = 'campaign'; difficulty: Difficulty = 'normal'; battlefield:BattlefieldState=initialBattlefield();shipClass:ShipClass='striker';
+  state: State = 'title'; mode: Mode = 'campaign'; difficulty: Difficulty = 'normal'; battlefield:BattlefieldState=initialBattlefield();shipClass:ShipClass='striker';sectorMission:SectorMission=initialSectorMission();
   stage=0; time=0; totalTime=0; visualTime=0; score=0; kills=0; chain=0; maxChain=0;
   chainTime=0; multiplier=1; formations=0; relics=0; grazes=0;
   locks:Lock[]=[];lockKills=0;resonances=0;cancelled=0;medalStreak=0;bestMedal=0;pointBlanks=0;
@@ -148,7 +149,7 @@ export class Game {
   emit(type: string, fields: Omit<GameEvent,'type'>={}) { if(this.events.length<600)this.events.push({type,...fields}); }
   drainEvents() { const r=this.events; this.events=[]; return r; }
   start(mode: Mode='campaign', difficulty: Difficulty='normal',startStage=0,shipClass:ShipClass='striker') {
-    this.mode=mode; this.difficulty=difficulty;this.shipClass=shipClass;this.battlefield=initialBattlefield(); this.stage=mode!=='campaign'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
+    this.mode=mode; this.difficulty=difficulty;this.shipClass=shipClass;this.battlefield=initialBattlefield();this.sectorMission=initialSectorMission(); this.stage=mode!=='campaign'?0:Math.max(0,Math.min(STAGES.length-1,Math.floor(startStage)||0)); this.time=0; this.totalTime=0;this.visualTime=0;
     this.score=0; this.kills=0; this.chain=0; this.maxChain=0; this.chainTime=0; this.multiplier=1;
     this.formations=0; this.relics=0; this.grazes=0; this.power=1; this.hull=difficulty==='casual'?4:3;
     this.locks=[];this.lockKills=0;this.resonances=0;this.cancelled=0;this.medalStreak=0;this.bestMedal=0;this.pointBlanks=0;
@@ -336,9 +337,11 @@ export class Game {
     this.pickup('power',this.player.x,this.player.y+3.5);
   }
   spawnBoss() {
+    if(this.sectorMission.active){const node=this.nodes.find(n=>n.id===this.sectorMission.targetId&&!n.dead);if(node)failSectorMission(this,node);}
     const maxHp=460+this.stage*220;
     this.clearEncounterSources('mini');this.encounter=null;for(const n of this.nodes)this.clearSource(n.id);this.nodes=[];this.threats=[];
-    const branch=this.mode==='campaign'?(this.battlefield.stageDestroyed===2?.85:this.battlefield.stageEscaped>0?1.10:1):1;
+    const battlefieldBranch=this.mode==='campaign'?(this.battlefield.stageDestroyed===2?.85:this.battlefield.stageEscaped>0?1.10:1):1;
+    const branch=battlefieldBranch*(this.mode==='campaign'&&this.sectorMission.started?(this.sectorMission.result==='success'?.91:this.sectorMission.result==='failed'?1.05:1):1);
     if(this.mode==='campaign')this.emit('fieldoutcome',{text:branch<1?'DEFENSE SUPPRESSED / ボス兵装 -15%':branch>1?'ALERT ESCALATED / ボス兵装 +10%':'BATTLEFIELD SECURED / ボス接近'});
     const id=++this.uid;this.uid+=2;
     this.boss={id,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[(100+this.stage*45)*branch,(100+this.stage*45)*branch],
@@ -371,6 +374,7 @@ export class Game {
   damageNode(n:CombatNode,damage:number){
     if(n.dead)return;
     if(n.attach==='field'){if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:0xffcf78});damageBattlefieldNode(this,n,damage);return;}
+    if(n.attach==='mission'){if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:0x89e8ff});n.hp-=Math.max(0,damage);n.flash=.12;if(n.hp<=0)completeSectorMission(this,n);return;}
     if(n.flash<=0)this.emit('hit',{x:n.x,y:n.y,color:ENCOUNTERS[n.stage].color});n.hp-=damage;n.flash=.10;if(n.hp>0)return;n.hp=0;n.dead=true;this.clearSource(n.id,true);this.addScore(800*this.multiplier);this.energy=Math.min(100,this.energy+5);
     this.emit('explode',{x:n.x,y:n.y,size:1.6});this.emit('part',{x:n.x,y:n.y,text:ENCOUNTERS[n.stage].hint+' / +800 × CHAIN'});this.pickup('medal',n.x,n.y);
   }
@@ -407,7 +411,7 @@ export class Game {
   private nextStage() {
     if(this.stage>=STAGES.length-1){this.finish(true);return;}
     this.stage++;this.time=0;this.enemies=[];this.bullets=[];this.pickups=[];this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
-    nextBattlefieldStage(this);
+    nextBattlefieldStage(this);resetSectorMission(this);
     this.groups.clear();this.waveIndex=0;this.schedule=waves(this.stage,this.mode);this.locks=[];
     this.hull=Math.min(4,this.hull+1);this.bombs=Math.min(3,this.bombs+1);
     this.invulnerable=2.5;this.state='playing';this.emit('stage',{text:STAGES[this.stage].name});
@@ -483,7 +487,7 @@ export class Game {
       if(!e.ground&&Math.hypot(e.x-p.x,e.y-p.y)<e.radius*.8+.23)this.hitPlayer();
       if(e.y<-19){e.dead=true;const group=this.groups.get(e.group);if(group)group.escaped=true;}
     }
-    if(this.state!=='playing')return;updateEncounters(this,dt);updateBattlefield(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
+    if(this.state!=='playing')return;updateEncounters(this,dt);updateBattlefield(this,dt);updateSectorMission(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
     for(const b of this.bullets){
       if(b.dead)continue;b.age+=dt;b.px=b.x;b.py=b.y;
       if(b.homing&&!b.enemy){
@@ -557,7 +561,7 @@ export class Game {
   }
   snapshot() { return {state:this.state,stage:this.stage,time:this.time,totalTime:this.totalTime,score:this.score,
     hull:this.hull,power:this.power,bombs:this.bombs,energy:this.energy,weapon:this.weapon,kills:this.kills,
-    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},shipClass:this.shipClass,
+    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},sectorMission:{...this.sectorMission},shipClass:this.shipClass,
     boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest}:null,
     encounter:this.encounter?{name:ENCOUNTERS[this.stage].mini,hp:this.encounter.hp,maxHp:this.encounter.maxHp,age:this.encounter.age,attack:this.encounter.attack}:null,stageEvent:{...this.encounterSeen,nodes:this.nodes.length,threats:this.threats.length},
     player:{...this.player},won:this.won,failureReason:this.failureReason}; }
