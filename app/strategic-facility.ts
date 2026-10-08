@@ -115,7 +115,26 @@ export function facilityModel(stage:number,index:number):StrategicFacilityModel{
    for(let j=0;j<2;j++)beam(deck,bright,side*1.0,(-1+j)*.49,-.99,1.6,side*.22,.15);
   }
  }
- // Different reactors/relay silhouettes. Distinct variants, but neither rotates in screen space.
+ // Asymmetric docking architecture connects the target to adjacent world structures;
+ // the facility reads as an occupied installation rather than a symmetrical emblem.
+ const side=index===0?-1:1;
+ beam(deck,dark,side*3.50,.22,-2.10,3.85,Math.PI/2,1.00);
+ beam(deck,steel,side*3.47,.22,-1.78,3.55,Math.PI/2,.71);
+ for(let j=0;j<3;j++){
+  block(deck,bright,side*(2.5+j*1.1),-.12,-1.60,.54,.18,.09);
+  block(deck,edge,side*(2.5+j*1.1),.53,-1.60,.54,.15,.09);
+ }
+ pad(deck,side*4.80,.22,-1.79,1.85,1.66,dark);
+ pad(deck,side*4.80,.22,-1.49,1.66,1.35,steel);
+ cylinder(deck,.47,.48,-1.21,bright,side*4.80,.22);
+ cylinder(deck,.30,.14,-.91,lamp,side*4.80,.22);
+ // Load-bearing pylons descend into the same floor elevation as the scrolling scenery.
+ for(const [x,y] of [[-1.31,-1.25],[1.31,-1.25],[0,1.65]]){
+  cylinder(deck,.33,2.12,-3.72,dark,x,y);
+  cylinder(deck,.27,.17,-4.81,steel,x,y);
+  cylinder(deck,.48,.12,-4.92,worn,x,y);
+ }
+  // Different reactors/relay silhouettes. Distinct variants, but neither rotates in screen space.
  if(index===0){
   cylinder(deck,.86,.33,-.89,dark);
   ring(deck,.87,.11,-.66,bright);
@@ -141,7 +160,7 @@ export function facilityModel(stage:number,index:number):StrategicFacilityModel{
  ring(reactor,index===0?.52:.41,.065,-.16,bright);
  reactor.position.z=0;g.add(reactor);
  const shadow=new T.Mesh(new T.CircleGeometry(3.5,48),new T.MeshBasicMaterial({color:0x020710,transparent:true,opacity:.25,depthWrite:false}));
- shadow.name='facility-shadow';shadow.scale.set(1,.72,1);shadow.position.set(.18,-.48,-3.55);
+ shadow.name='facility-shadow';shadow.scale.set(1,.72,1);shadow.position.set(.18,-.48,-4.85);
  g.add(shadow);
  // Invisible in combat gameplay? No: these are true side walls and contact geometry.
  g.userData={reactor,inner:deck,lighting:core,stage,variant:index};
@@ -158,4 +177,4 @@ export function animateFacility(model:StrategicFacilityModel,age:number,damagePh
  const rotor=model.userData.reactor as T.Group|undefined;
  if(rotor){rotor.rotation.z=Math.sin(age*.72)*.045;rotor.scale.setScalar(damagePhase===2?1.16:1);}
 }
-export const fieldWorldSpecs={models:STAGES.length*2,worldZ:-2.8,footprintRadius:3.5,visualScale:1} as const;
+export const fieldWorldSpecs={models:STAGES.length*2,worldZ:-2.8,footprintRadius:5.75,visualScale:1} as const;
