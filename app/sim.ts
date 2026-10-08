@@ -12,6 +12,7 @@ import {SHIPS,type ShipClass} from './ship-config.ts';
 import {initialSectorMission,resetSectorMission,updateSectorMission,completeSectorMission,failSectorMission,type SectorMission} from './sector-missions.ts';
 import {collideTerrainPlayer,redirectTerrainEnemy,interceptTerrainShot} from './battlefield-terrain.ts';
 import {WEAPON_BALANCE,PLAYER_BALANCE} from './player-balance.ts';
+import {DIFFICULTY_BALANCE,stageRecovery,regainBombAfterHit} from './difficulty-balance.ts';
 import {ENCOUNTERS,BOSS_ATTACKS,encounterTimes,type CombatNode,type Miniboss,type Threat} from './encounter-design.ts';
 export {STAGES} from './stages.ts';
 export {SHIPS} from './ship-config.ts';
@@ -172,8 +173,8 @@ export class Game {
   }
   addScore(amount: number) {
     this.score+=Math.round(amount);
-    const ext=Math.floor(this.score/80000);
-    if(ext>this.lastExtend){this.lastExtend=ext;this.hull=Math.min(4,this.hull+1);this.emit('extend',{text:'80,000 BONUS / HULL +1'});}
+    const ext=Math.floor(this.score/DIFFICULTY_BALANCE[this.difficulty].extendEvery);
+    if(ext>this.lastExtend){this.lastExtend=ext;this.hull=Math.min(4,this.hull+1);this.emit('extend',{text:DIFFICULTY_BALANCE[this.difficulty].extendEvery.toLocaleString('en-US')+' BONUS / HULL +1'});}
   }
   nova() {
     if(this.state!=='playing'||this.novaTime>0)return false;
@@ -329,8 +330,8 @@ export class Game {
   }
   hitPlayer() {
     if(this.invulnerable>0||this.state!=='playing')return;
-    this.hull--;this.invulnerable=2.8;this.chain=0;this.multiplier=1;this.chainTime=0;
-    this.power=Math.max(1,this.power-1);this.bombs=Math.min(3,this.bombs+1);
+    this.hull--;this.invulnerable=DIFFICULTY_BALANCE[this.difficulty].hitInvulnerable;this.chain=0;this.multiplier=1;this.chainTime=0;
+    this.power=Math.max(1,this.power-1);this.bombs=Math.min(3,this.bombs+regainBombAfterHit(this.bombs,this.difficulty));
     this.locks=[];this.medalStreak=0;
     for(const b of this.bullets)if(b.enemy&&Math.hypot(b.x-this.player.x,b.y-this.player.y)<7)b.dead=true;
     this.emit('damage',{x:this.player.x,y:this.player.y,size:1.4,text:'HULL HIT / 一時無敵',kind:'player'});
@@ -339,7 +340,7 @@ export class Game {
   }
   spawnBoss() {
     if(this.sectorMission.active){const node=this.nodes.find(n=>n.id===this.sectorMission.targetId&&!n.dead);if(node)failSectorMission(this,node);}
-    const maxHp=460+this.stage*220;
+    const maxHp=(460+this.stage*220)*DIFFICULTY_BALANCE[this.difficulty].bossHealth;
     this.clearEncounterSources('mini');this.encounter=null;for(const n of this.nodes)this.clearSource(n.id);this.nodes=[];this.threats=[];
     const battlefieldBranch=this.mode==='campaign'?(this.battlefield.stageDestroyed===2?.85:this.battlefield.stageEscaped>0?1.10:1):1;
     const branch=battlefieldBranch*(this.mode==='campaign'&&this.sectorMission.started?(this.sectorMission.result==='success'?.91:this.sectorMission.result==='failed'?1.05:1):1);
@@ -416,7 +417,7 @@ export class Game {
     this.stage++;this.time=0;this.enemies=[];this.bullets=[];this.pickups=[];this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
     nextBattlefieldStage(this);resetSectorMission(this);
     this.groups.clear();this.waveIndex=0;this.schedule=waves(this.stage,this.mode);this.locks=[];
-    this.hull=Math.min(4,this.hull+1);this.bombs=Math.min(3,this.bombs+1);
+    this.hull=Math.min(4,this.hull+stageRecovery(this.hull,this.difficulty));this.bombs=Math.min(3,this.bombs+1);
     this.invulnerable=2.5;this.state='playing';this.emit('stage',{text:STAGES[this.stage].name});
   }
   finish(won: boolean,reason:'hull'|'timeout'='hull') {this.won=won;this.failureReason=won?null:reason;this.state='result';this.emit('finish',{text:won?'MISSION COMPLETE':'SIGNAL LOST'});}
