@@ -10,8 +10,8 @@ export function fieldPresentation(n:CombatNode){
   condition:phase===2?'CORE EXPOSED / 炉心露出':phase===1?'ARMOUR BROKEN / 装甲破損':'DESTROY THIS / 破壊せよ',
   name:FIELD_OPERATIONS[n.stage][n.index].name,
   japanese:FIELD_OPERATIONS[n.stage][n.index].jp,
-  /** The object spawns near y=15 and moves down the screen at 1.52 game-units per second. */
-  timeLeft:Math.max(0,(21-n.age)/2.25),
+  /** The structure is embedded in the environment and advances at the same 4.4 units/sec as the background. */
+  timeLeft:Math.max(0,8.3-n.age),
   ring:2.02+Math.sin(n.age*4.5)*.09,
   warning:n.age<2.9?1-n.age/2.9:0,
  };
