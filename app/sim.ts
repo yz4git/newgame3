@@ -5,6 +5,7 @@ export const STEP = 1 / 60;
 export const GAME_SPEED = 2.25;
 import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
+import {selectBossForm,BOSS_FORM_NAMES,type BossForm} from './boss-evolution.ts';
 import {updateEncounters} from './encounters.ts';
 import {initialBattlefield,nextBattlefieldStage,updateBattlefield,damageBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {SHIPS,type ShipClass} from './ship-config.ts';
@@ -38,7 +39,7 @@ export interface Boss {
   id: number; x: number; y: number; age: number; encounterTime: number; hp: number; maxHp: number;
   parts: number[]; maxPart: number; shoot: number; attack: number; cycle: number;
   warning: number; beam: number; beamX: number; dead: boolean; flash: number;
-  phase: number; rest: boolean; spread: number; recoil:number; patternTime:number; guard:number; heat:number;
+  phase: number; rest: boolean; spread: number; recoil:number; patternTime:number; guard:number; heat:number;form:BossForm;
 }
 export interface Lock { id: number; progress: number; x: number; y: number; }
 export interface GameEvent { type: string; x?: number; y?: number; size?: number; color?: number; text?: string; value?: number; source?:number; kind?:Kind|'player'|'boss'; }
@@ -343,13 +344,15 @@ export class Game {
     const battlefieldBranch=this.mode==='campaign'?(this.battlefield.stageDestroyed===2?.85:this.battlefield.stageEscaped>0?1.10:1):1;
     const branch=battlefieldBranch*(this.mode==='campaign'&&this.sectorMission.started?(this.sectorMission.result==='success'?.91:this.sectorMission.result==='failed'?1.05:1):1);
     if(this.mode==='campaign')this.emit('fieldoutcome',{text:branch<1?'DEFENSE SUPPRESSED / ボス兵装 -15%':branch>1?'ALERT ESCALATED / ボス兵装 +10%':'BATTLEFIELD SECURED / ボス接近'});
+    const form=selectBossForm(this);
     const id=++this.uid;this.uid+=2;
     this.boss={id,x:0,y:23,age:0,encounterTime:0,hp:maxHp,maxHp,parts:[(100+this.stage*45)*branch,(100+this.stage*45)*branch],
-      maxPart:(100+this.stage*45)*branch,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0,patternTime:0,guard:0,heat:0};
+      maxPart:(100+this.stage*45)*branch,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0,patternTime:0,guard:0,heat:0,form};
+    if(form!=='standard')this.emit('bossform',{x:0,y:9,size:6.2,color:form==='shattered'?0x83ffda:0xff9762,text:BOSS_FORM_NAMES[form]});
     this.emit('warning',{text:'WARNING / '+STAGES[this.stage].boss});
   }
   private updateBoss(dt:number){updateBossPattern(this,dt);}
-  attackName(){const b=this.boss;if(!b)return '';return b.rest?'CORE EXPOSED / DAMAGE ×1.6':BOSS_ATTACKS[this.stage][b.attack]+(b.guard?' / CORE ARMOR':this.stage===5?' / '+Math.round(b.heat*100)+'%':'');}
+  attackName(){const b=this.boss;if(!b)return '';const suffix=b.form==='shattered'?' / EXPOSED':b.form==='overcharged'?' / OVERCHARGE':'';return b.rest?'CORE EXPOSED / DAMAGE ×1.6':BOSS_ATTACKS[this.stage][b.attack]+(b.guard?' / CORE ARMOR':this.stage===5?' / '+Math.round(b.heat*100)+'%':'')+suffix;}
   nextCombatId(){return ++this.uid;}
   addCombatNode(attach:CombatNode['attach'],owner:number,index:number,x:number,y:number,hp:number,life:number){
     if(this.nodes.filter(n=>!n.dead).length>=8)return;
@@ -562,7 +565,7 @@ export class Game {
   snapshot() { return {state:this.state,stage:this.stage,time:this.time,totalTime:this.totalTime,score:this.score,
     hull:this.hull,power:this.power,bombs:this.bombs,energy:this.energy,weapon:this.weapon,kills:this.kills,
     bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},sectorMission:{...this.sectorMission},shipClass:this.shipClass,
-    boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest}:null,
+    boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest,form:this.boss.form}:null,
     encounter:this.encounter?{name:ENCOUNTERS[this.stage].mini,hp:this.encounter.hp,maxHp:this.encounter.maxHp,age:this.encounter.age,attack:this.encounter.attack}:null,stageEvent:{...this.encounterSeen,nodes:this.nodes.length,threats:this.threats.length},
     player:{...this.player},won:this.won,failureReason:this.failureReason}; }
 }
