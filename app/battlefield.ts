@@ -1,6 +1,7 @@
 import type {Game} from './sim.ts';
 import type {CombatNode} from './encounter-design.ts';
 import {STAGES} from './stages.ts';
+import {terrainSpawn,updateTerrain,type TerrainPiece,type TerrainRoute} from './battlefield-terrain.ts';
 
 /** Two fixed strategic encounters per world. Clearing changes the fight, fleeing raises stakes. */
 export const FIELD_OPERATIONS=[
@@ -32,12 +33,13 @@ export interface BattlefieldState {
  seen:[boolean,boolean];destroyed:number;escaped:number;stageDestroyed:number;stageEscaped:number;
  reactions:number;suppression:number;alert:number;mostReactions:number;
  fractures:number;criticals:number;collapses:BattlefieldCollapse[];
+ terrain:TerrainPiece[];terrainSerial:number;terrainCreated:number;shotsBlocked:number;hazardsCleared:number;rerouted:number;route:TerrainRoute|null;
 }
 export function initialBattlefield():BattlefieldState{
- return {seen:[false,false],destroyed:0,escaped:0,stageDestroyed:0,stageEscaped:0,reactions:0,suppression:0,alert:0,mostReactions:0,fractures:0,criticals:0,collapses:[]};
+ return {seen:[false,false],destroyed:0,escaped:0,stageDestroyed:0,stageEscaped:0,reactions:0,suppression:0,alert:0,mostReactions:0,fractures:0,criticals:0,collapses:[],terrain:[],terrainSerial:0,terrainCreated:0,shotsBlocked:0,hazardsCleared:0,rerouted:0,route:null};
 }
 export function nextBattlefieldStage(g:Game){
- const b=g.battlefield;b.seen=[false,false];b.stageDestroyed=0;b.stageEscaped=0;b.suppression=0;b.alert=0;b.collapses=[];
+ const b=g.battlefield;b.seen=[false,false];b.stageDestroyed=0;b.stageEscaped=0;b.suppression=0;b.alert=0;b.collapses=[];b.terrain=[];b.route=null;
 }
 function escapeNode(g:Game,n:CombatNode){
  n.dead=true;g.clearSource(n.id);
@@ -46,6 +48,7 @@ function escapeNode(g:Game,n:CombatNode){
  // Escaped controller summons two faster reinforcements but pays +25% during the alert.
  for(const side of [-1,1])g.spawn(g.stage===1||g.stage===2?'corvette':g.stage===4?'sentinel':'interceptor',side*6.3,18+(side+1)*1.8);
  if(g.stage===2||g.stage===5)g.addThreat(n.x,n.y,g.player.x,-18,.48,n.id,2,1.25);
+ terrainSpawn(g,'hazard',n.index,n.x);
  g.emit('fieldrisk',{x:n.x,y:n.y,text:op.name+' ESCAPED / 増援出現・得点 +25%'});
 }
 /** Two feedback thresholds make sustained focused fire visibly alter each strategic target. */
@@ -73,6 +76,7 @@ export function updateBattlefield(g:Game,dt:number){
  const st=g.battlefield;
  st.suppression=Math.max(0,st.suppression-dt);
  st.alert=Math.max(0,st.alert-dt);
+ updateTerrain(g,dt);
  for(const c of st.collapses){
   c.age+=dt;
   const thresholds=[.32,.9,1.52,2.12];
@@ -127,6 +131,7 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  st.collapses.push({stage:g.stage,index:n.index,x:n.x,y:n.y,age:0,life:3.3,burst:0});
  if(st.collapses.length>3)st.collapses.shift();
  g.emit('fieldcollapse',{x:n.x,y:n.y,size:reactor?5.4:4.6,color:reactor?0xffb05d:0x78e9ff,text:STAGE_COLLAPSE_TITLES[g.stage]});
+ terrainSpawn(g,'cover',n.index,n.x);
  g.energy=Math.min(100,g.energy+15+Math.min(20,cleared));
  g.addScore((reactor?2500:3000)*g.multiplier);g.pickup('medal',n.x,n.y);
  if(st.stageDestroyed===2)g.pickup('power',n.x,n.y+1.7);
