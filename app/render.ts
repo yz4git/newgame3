@@ -196,10 +196,10 @@ export class View {
         skin.material.color.setHex(0xffffff);skin.scale.set(3.55*(1-Math.abs(this.player.rotation.y)*.3),3.85,1);
       }else{skin.material.color.setHex(SHIPS[game.shipClass].tint);skin.scale.set(3.1*(1-Math.abs(this.player.rotation.y)*.3),4.25,1);}}
     animateShip(this.player,pose,this.epoch,'player');
-    this.player.scale.setScalar(title?2.0:1.0);this.player.visible=game.hull>0||title;
-    if(game.invulnerable>0&&!title&&game.time>2.6)this.player.visible=Math.floor(game.invulnerable*12)%3!==0;
+    this.player.scale.setScalar(title?2.0:game.invulnerable>0?1.015+Math.sin(game.visualTime*15)*.025:1.0);this.player.visible=game.hull>0||title;
+    // Never hide the craft during invulnerability: on a busy background players must keep visual tracking.
     this.indicator.position.set(p.x,p.y-.5625,2.8);this.indicator.visible=!title&&game.hull>0&&state!=='transition'&&game.state!=='result';
-    this.indicator.scale.setScalar(p.focus?1.1:.85);
+    this.indicator.scale.setScalar(game.invulnerable>0&&!title?1.2+Math.sin(game.visualTime*11)*.12:p.focus?1.1:.85);
     for(let i=0;i<2;i++){
       const flame=this.flames[i],side=i===0?-1:1,scale=title?2:1;
       flame.visible=this.player.visible&&(active||title);flame.position.set(this.player.position.x+side*.496*scale,this.player.position.y-2.03*scale,1.05);
