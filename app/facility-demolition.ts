@@ -17,6 +17,8 @@ export interface MetalShard {
 }
 const unit=(n:number)=>{const a=Math.sin(n*125.173+9.73)*41753.88;return a-Math.floor(a);};
 const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
+/** Limit additive light layers so a facility detonation never whitewashes the playfield. */
+export const FACILITY_GLARE_LIMITS={coreRadius:.95,coreOpacity:.42,haloOpacity:.07,blastRingOpacity:.46,clearRingOpacity:.24,innerRingOpacity:.20,canvasBloomOpacity:.32} as const;
 
 /** Stable effects state, advanced by the same game clock as destruction and hitboxes. */
 export class FacilityDemolitionMotion {
@@ -101,28 +103,31 @@ export class FacilityDemolition3D {
   this.motion.update(g,dt,reduced);
   this.rings.forEach((ring,i)=>{
    const p=this.motion.pulses[i],core=this.cores[i],halo=this.halos[i],second=this.secondRings[i];
-   ring.visible=core.visible=halo.visible=second.visible=!!p;if(!p)return;
+   ring.visible=!!p;
+   // Bullet-clearing shockwaves are gameplay feedback, not a SECOND reactor flash.
+   core.visible=halo.visible=second.visible=!!p&&p.type!=='fieldclear';
+   if(!p)return;
    const u=clamp(p.age/p.life,0,1);
    const size=p.size,outer=(.22+u*(p.type==='fieldclear'?1.18:1.04))*size;
-   const intensity=Math.pow(1-u,.7);
-   const typeColor=p.type==='fieldclear'?0xb6eeff:p.color;
+   const intensity=Math.pow(1-u,1.08);
+   const typeColor=p.type==='fieldclear'?0x8dbec7:p.color;
    // All layers are rendered above in-world architecture, not depth-occluded by the falling model.
    ring.position.set(p.x,p.y,6.25);ring.scale.setScalar(outer);
-   ring.material.opacity=intensity*(p.type==='fieldclear'?.95:1.0);
+   ring.material.opacity=intensity*(p.type==='fieldclear'?FACILITY_GLARE_LIMITS.clearRingOpacity:FACILITY_GLARE_LIMITS.blastRingOpacity);
    ring.material.color.setHex(typeColor);ring.rotation.z=u*.15;
    second.position.set(p.x,p.y,6.24);
    second.scale.setScalar(outer*(.66+u*.17));
-   second.material.color.setHex(0xffe7ad);
-   second.material.opacity=intensity*.55;
+   second.material.color.setHex(0xe5af75);
+   second.material.opacity=intensity*FACILITY_GLARE_LIMITS.innerRingOpacity;
    halo.position.set(p.x,p.y,6.20);
-   halo.scale.setScalar(size*(.65+u*.55));
+   halo.scale.setScalar(size*(.32+u*.35));
    halo.material.color.setHex(typeColor);
-   halo.material.opacity=(1-u)**1.35*(p.type==='fieldclear'?.15:.23);
+   halo.material.opacity=(1-u)**1.7*FACILITY_GLARE_LIMITS.haloOpacity;
    core.position.set(p.x,p.y,6.31);
    const flicker=.95+.12*Math.sin(p.age*27);
-   core.scale.setScalar(Math.min(2.8,size*.54)*(.65+u*.28)*flicker);
-   core.material.color.setHex(p.type==='fieldclear'?0xd9ffff:0xfff4c9);
-   core.material.opacity=Math.max(0,1-u*1.7)*(p.type==='fieldburst'?.78:.98);
+   core.scale.setScalar(Math.min(FACILITY_GLARE_LIMITS.coreRadius,size*.24)*(.78+u*.22)*flicker);
+   core.material.color.setHex(p.type==='fieldcritical'?0xffd99a:0xffb96f);
+   core.material.opacity=Math.max(0,1-u*2.4)*FACILITY_GLARE_LIMITS.coreOpacity*(p.type==='fieldburst'?.85:1);
   });
   let n=0;
   for(const p of this.motion.shards){
@@ -146,20 +151,20 @@ export function drawFacilityDemolitionCanvas(c:CanvasRenderingContext2D,motion:F
   const rgb=red+','+green+','+blue;
   c.save();
   // Screen-space core plasma bloom, drawn analytically instead of stretching a baked animation sheet.
-  if(u<.72){
-   const r=Math.min(3.6,p.size)*(.57+u*.52);
+  if(p.type!=='fieldclear'&&u<.55){
+   const r=Math.min(1.55,p.size*.34)*(.72+u*.35);
    const gradient=c.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
-   gradient.addColorStop(0,'rgba(255,249,221,'+((1-u/.72)*.94)+')');
-   gradient.addColorStop(.29,'rgba('+rgb+','+((1-u/.72)*.75)+')');
+   gradient.addColorStop(0,'rgba(255,214,159,'+((1-u/.55)*FACILITY_GLARE_LIMITS.canvasBloomOpacity)+')');
+   gradient.addColorStop(.29,'rgba('+rgb+','+((1-u/.55)*.21)+')');
    gradient.addColorStop(1,'rgba('+rgb+',0)');
    c.fillStyle=gradient;c.beginPath();c.arc(p.x,p.y,r,0,Math.PI*2);c.fill();
   }
-  c.globalAlpha=(1-u)**.72*(p.type==='fieldclear'?.88:1);
+  c.globalAlpha=(1-u)**1.08*(p.type==='fieldclear'?FACILITY_GLARE_LIMITS.clearRingOpacity:FACILITY_GLARE_LIMITS.blastRingOpacity);
   c.strokeStyle='#'+p.color.toString(16).padStart(6,'0');
-  c.lineWidth=Math.max(.05,.20*(1-u*.6));
+  c.lineWidth=Math.max(.04,.12*(1-u*.6));
   c.beginPath();c.arc(p.x,p.y,radius,0,Math.PI*2);c.stroke();
   if(p.type==='fieldcollapse'){
-   c.globalAlpha=(1-u)**.85*.72;c.lineWidth=.10;
+   c.globalAlpha=(1-u)**1.08*FACILITY_GLARE_LIMITS.innerRingOpacity;c.lineWidth=.065;
    c.beginPath();c.arc(p.x,p.y,radius*.75,0,Math.PI*2);c.stroke();
   }
   c.restore();
