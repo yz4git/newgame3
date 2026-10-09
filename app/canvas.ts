@@ -1,5 +1,6 @@
 import { Game, STAGES, type GameEvent, type Kind } from './sim.ts';
-import {shipSprite,bossSprite,tankSprite,warpedSprite} from './canvas-art.ts';
+import {shipSprite,bossSprite,tankSprite,warpedSprite,playerWorldSprite} from './canvas-art.ts';
+import {usesRebuiltGraphics,currentVisualStyle} from './visual-style.ts';
 import {CanvasFortressBackground} from './canvas-background.ts';
 import {explosionAtlasMap,smokeMap,livingMaps,finishMaps,visualAssetStatus,playerShipsAtlasMap} from './visual-assets.ts';
 import {bossWingAngle,bossScars,scarPositions} from './boss-finish.ts';
@@ -20,7 +21,7 @@ export class CanvasView {
   private background=new CanvasFortressBackground();private sparks:Spark[]=[];private pulse=0;private ring={x:0,y:0,age:2};
   private explosions:{x:number;y:number;size:number;age:number;life:number;smoke?:boolean}[]=[];
    private facilityDemolition=new FacilityDemolitionMotion();
-  private worldHeight=128/3;private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;
+  private worldHeight=128/3;private stageEffects=new CanvasStageEffects();private playerAnimation='cruise';private bossAnimation='none';private enemyAnimations:Record<string,number>={};private stage=0;private gameShipClass:'striker'|'falcon'|'bulwark'='striker';
   private combatEffects=new CanvasCombatEffects();private encounterStatus={miniboss:false,nodes:0,telegraphs:0,activeThreats:0,shield:false};
   private air={clock:0,layers:0,kind:'none'};
   private wrecks:{x:number;y:number;kind:Kind|'boss';age:number;life:number;stage:number;parts?:number[];spread?:number;deploy?:number}[]=[];private cascades:{at:number;x:number;y:number;size:number}[]=[];private lastBoss:Game['boss']=null;
@@ -39,7 +40,8 @@ export class CanvasView {
   private ship(kind:Kind|'player',x:number,y:number,pose:ShipPose,scale=1,flash=false,t=0){
     const c=this.ctx;
     if(kind!=='tank'&&kind!=='relic'&&kind!=='strider')this.circle(x+.15,y+.6,kind==='cruiser'?1.9:1.05,'#02061170');
-    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else if(kind==='player'&&playerShipsAtlasMap.image instanceof HTMLImageElement&&playerShipsAtlasMap.image.naturalWidth>0){const image=playerShipsAtlasMap.image;const w=image.width/3;c.save();c.translate(x,y);c.rotate(pose.roll);c.scale(scale*(1-Math.abs(pose.bank)*.3),-scale);c.drawImage(image,w*this.playerSkinIndex,0,w,image.height,-1.78,-1.93,3.56,3.86);c.restore();}
+    if(kind==='tank'){this.asset(tankSprite('chassis'),x,y,scale);this.asset(tankSprite('turret'),x,y+pose.recoil*.18,scale,pose.turret);}else if(kind==='player'&&usesRebuiltGraphics())this.asset(playerWorldSprite(this.gameShipClass),x,y,scale,pose.roll,pose.bank);
+     else if(kind==='player'&&playerShipsAtlasMap.image instanceof HTMLImageElement&&playerShipsAtlasMap.image.naturalWidth>0){const image=playerShipsAtlasMap.image;const w=image.width/3;c.save();c.translate(x,y);c.rotate(pose.roll);c.scale(scale*(1-Math.abs(pose.bank)*.3),-scale);c.drawImage(image,w*this.playerSkinIndex,0,w,image.height,-1.78,-1.93,3.56,3.86);c.restore();}
     else this.asset(shipSprite(kind),x,y,scale,pose.roll,pose.bank,['bomber','strider','sentinel'].includes(kind)?{kind:kind as Kind,t,flex:pose.flex}:undefined);
     c.save();c.translate(x,y);c.rotate(kind==='tank'?pose.turret:pose.roll);c.scale(scale,scale);
     const player=kind==='player',large=kind==='cruiser'||kind==='corvette',small=kind==='drone'||kind==='dart',color=player?this.playerTint:kind==='carrier'?'#65dcff':kind==='weaver'||kind==='lancer'||kind==='sentinel'?'#ff9adb':'#ffb56d';
@@ -76,7 +78,7 @@ export class CanvasView {
   }
   draw(g:Game,dt:number,_frameMs:number){
     dt=animationClockRunning(g)?dt:0;this.encounterStatus=encounterDiagnostics(g);
-    const c=this.ctx,state=presentationState(g),title=state==='title',active=state==='playing'||state==='transition',stage=this.stage=g.stage;
+    const c=this.ctx,state=presentationState(g),title=state==='title',active=state==='playing'||state==='transition',stage=this.stage=g.stage;this.gameShipClass=g.shipClass;
     c.setTransform(this.ratio,0,0,this.ratio,0,0);c.fillStyle='#'+STAGES[stage].sky.toString(16).padStart(6,'0');c.fillRect(0,0,this.width,this.height);
     c.translate(this.width/2,this.height/2);c.scale(this.width/24,-this.height/this.worldHeight);
     this.background.draw(c,g);
@@ -130,5 +132,5 @@ export class CanvasView {
     this.ring.age+=dt;
     this.pulse=Math.max(0,this.pulse-dt);if(this.pulse>0){c.globalAlpha=this.pulse*.35;this.rect(-12,-22,24,44,'#92ecff');c.globalAlpha=1;}
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterStatus,facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {visualStyle:currentVisualStyle(),background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.air,animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterStatus,facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),engine:this.engine,quality:this.quality,dpr:this.ratio,frameMs:0,particles:this.sparks.length,width:this.width,height:this.height};}
 }
