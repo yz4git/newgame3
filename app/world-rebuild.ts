@@ -2,6 +2,7 @@ import * as T from 'three/webgpu';
 import {block,hull,ball,batch} from './art.ts';
 import type {EnvironmentPalette} from './environment-art.ts';
 import {STAGES} from './stages.ts';
+import {WORLD_REBUILD_STAGES} from './world-rebuild-spec.ts';
 
 /**
  * Six physical centrepiece structures. They are placed beneath the flight plane,
@@ -9,14 +10,7 @@ import {STAGES} from './stages.ts';
  * and are CPU rasterized from the SAME geometry on Canvas-only devices.
  * No full-screen matte paintings or perpendicular billboard sheets.
  */
-export const WORLD_REBUILD_STAGES=[
- {id:'asteroid-quarry',focus:'orbital refinery',parts:6},
- {id:'pelagic-carrier',focus:'sea fortress docks',parts:7},
- {id:'fortress-city',focus:'tiered orbital citadel',parts:8},
- {id:'ice-arcology',focus:'cryogenic research terraces',parts:7},
- {id:'verdant-temple',focus:'stone temple and overgrowth',parts:7},
- {id:'vulcan-foundry',focus:'molten industrial reactor',parts:8},
-] as const;
+
 const cy=(g:T.Group,r:number,z:number,mat:T.Material,x=0,y=0,h=.35,segments=14)=>{
  const m=new T.Mesh(new T.CylinderGeometry(r,r,h,segments),mat);
  m.rotation.x=Math.PI/2;m.position.set(x,y,z);g.add(m);return m;
