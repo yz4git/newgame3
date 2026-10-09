@@ -1,6 +1,8 @@
 import * as T from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Kind } from './sim.ts';
+import type {ShipClass} from './ship-config.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 import {STAGES} from './stages.ts';
 import {armourMap,planetMap,shipSkin,bossSkin} from './visual-assets.ts';
 
@@ -54,7 +56,7 @@ function loft(g:T.Group,sections:number[][],mat:T.Material){
   for(let i=0;i<sections.length-1;i++)for(let j=0;j<8;j++)for(const[a,b]of[[i,j],[i+1,j+1],[i+1,j],[i,j],[i,j+1],[i+1,j+1]]){positions.push(...point(a,b));uvs.push(b/8,a/(sections.length-1));}
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.computeVertexNormals();g.add(new T.Mesh(geo,mat));
 }
-export function shipModel(kind:Kind|'player'){
+export function shipModel(kind:Kind|'player',variant:ShipClass='striker'){
   const g=new T.Group(),attachments:T.Group[]=[];
   if(kind==='player'){
     loft(g,[[1.9,.015,.035,.09],[1.1,.15,.17,.14],[.35,.36,.30,.17],[-.55,.39,.25,.13],[-1.35,.20,.16,.10]],white);
@@ -151,9 +153,34 @@ export function shipModel(kind:Kind|'player'){
       for(let j=0;j<4;j++)block(g,alloy,side*1.58,-.8+j*.58,1.12,.16,.11,.06);
     }
   }
+  if(kind==='player'&&usesRebuiltGraphics()){
+    if(variant==='falcon'){
+      for(const side of[-1,1]){
+        hull(g,[[side*.50,.38],[side*1.15,-.13],[side*1.75,-1.01],[side*1.15,-.73]],.17,white,.18);
+        block(g,cyan,side*.97,-.53,.48,.075,.55,.05);
+        turbine(g,side*.78,-1.29,.47,.28,cyan);
+      }
+      hull(g,[[0,1.94],[-.16,1.05],[.16,1.05]],.20,alloy,.31);
+      g.scale.x=.91;
+    }else if(variant==='bulwark'){
+      for(const side of[-1,1]){
+        hull(g,[[side*.70,.53],[side*1.86,.37],[side*2.02,-1.33],[side*.78,-1.09]],.40,steel,.23);
+        block(g,bronze,side*1.42,-.28,.67,.46,1.26,.20);
+        block(g,alloy,side*1.39,-.34,.83,.20,.91,.09);
+        turbine(g,side*.62,-1.12,.43,.39,gold);
+      }
+      block(g,steel,0,.24,.71,.80,1.34,.24);
+      vents(g,0,.25,.88,alloy,7,.62);
+    }else{
+      for(const side of[-1,1]){
+        hull(g,[[side*.71,.28],[side*1.46,-.53],[side*1.12,-.89]],.10,alloy,.25);
+        block(g,cyan,side*1.18,-.53,.41,.10,.37,.04);
+      }
+    }
+  }
   const result=batch(g);if(kind==='player')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(.8,1.14,1.2);});
   if(kind==='cruiser')result.traverse(o=>{if(o instanceof T.Mesh)o.geometry.scale(1.25,1.22,1);});
-  const skin=shipSkin(kind);if(skin){
+  const skin=usesRebuiltGraphics()?undefined:shipSkin(kind);if(skin){
     const geometries:T.BufferGeometry[]=[];result.traverse(o=>{if(o instanceof T.Mesh)geometries.push(o.geometry);});const proxy=mergeGeometries(geometries,false);result.clear();for(const geometry of geometries)geometry.dispose();if(proxy){const mesh=new T.Mesh(proxy,shadowProxy);mesh.castShadow=true;result.add(mesh);}
     if(['strider','sentinel','bomber'].includes(kind)){
       const mesh=new T.Mesh(new T.PlaneGeometry(skin.width,skin.height,12,12),new T.MeshBasicMaterial({map:skin.map,color:skin.color,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:T.DoubleSide}));
@@ -164,7 +191,7 @@ export function shipModel(kind:Kind|'player'){
   return result;
 }
 export function bossModel(stage:number){
-  if(bossSkin(stage)){
+  if(!usesRebuiltGraphics()&&bossSkin(stage)){
     const g=new T.Group();g.userData.texturedBoss=true;g.userData.stage=stage;
     for(let part=0;part<3;part++){
       const skin=bossSkin(stage,part)!,group=part===0?g:new T.Group();if(part){group.name='wing'+(part-1);g.add(group);}
@@ -204,6 +231,7 @@ export function bossModel(stage:number){
   if(stage===3)for(let i=0;i<5;i++){const x=(i-2)*.65;hull(body,[[x-.22,1.5],[x-.30,2.5],[x,3.6-Math.abs(i-2)*.3],[x+.30,2.5],[x+.22,1.5]],.18,metal(0x9ebfcf),.6);}
   if(stage===4)for(const side of[-1,1]){hull(body,[[side*.5,1.8],[side*2.0,3.6],[side*2.7,2.8],[side*1.7,1.0]],.25,metal(0x658b77),.4);for(let i=0;i<4;i++)block(body,accent,side*(1.0+i*.22),2+i*.2,.72,.12,.30,.05);}
   if(stage===5)for(const side of[-1,1]){hull(body,[[side*1.2,1.2],[side*2.2,3.0],[side*2.8,2.5],[side*1.9,.1]],.3,bronze,.5);for(let j=0;j<4;j++)block(body,accent,side*1.75,.3+j*.42,1.24,.30,.08,.06);}
+  g.userData.stage=stage;
   g.add(batch(body));
   for(let i=0;i<2;i++){
     const wing=new T.Group(),side=i===0?-1:1;
