@@ -1,4 +1,5 @@
 import './style.css';
+import {currentVisualStyle,setVisualStyle,type VisualStyle} from './visual-style.ts';
 import {loadVisualAssets} from './visual-assets.ts';
 import { Game, STEP, GAME_SPEED, STAGES, W, BOTTOM, TOP, type Difficulty, type Mode, type ShipClass, SHIPS } from './sim.ts';
 import { View } from './render.ts';
@@ -32,6 +33,17 @@ STAGES.forEach((stage,index)=>{const option=document.createElement('option');opt
 function updateSectorPreview(){const n=Math.max(0,Math.min(5,selectedStage)),x=n%3*50,y=Math.floor(n/3)*100;stageSelect.parentElement?.style.setProperty('--stage-art-position',x+'% '+y+'%');}
 stageSelect.addEventListener('change',()=>{selectedStage=Number(stageSelect.value);updateSectorPreview();if(game.state==='title'){game.stage=selectedStage;game.visualTime=0;}});updateSectorPreview();
 document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(button=>{const type=button.dataset.ship as ShipClass;button.classList.toggle('selected',type===selectedShip);button.addEventListener('click',()=>{selectedShip=type;game.shipClass=type;el('title-best').textContent=scoreText(best('campaign'));document.querySelectorAll<HTMLButtonElement>('[data-ship]').forEach(b=>b.classList.toggle('selected',b.dataset.ship===type));try{localStorage.setItem('nova-strike-ship',type);}catch{/* Storage optional. */}});});game.shipClass=selectedShip;
+document.querySelectorAll<HTMLButtonElement>('[data-visual]').forEach(button=>{
+  const style=button.dataset.visual as VisualStyle;
+  button.classList.toggle('selected',style===currentVisualStyle());
+  button.addEventListener('click',()=>{
+    if(style===currentVisualStyle())return;
+    setVisualStyle(style);
+    // Models and Canvas sprites are generated once at boot. Reload only on title selection.
+    const next=new URL(location.href);next.searchParams.delete('visual');
+    location.replace(next.href);
+  });
+});
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
