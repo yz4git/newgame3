@@ -174,6 +174,7 @@ await scene(rich.page,'11-gpu-chain-bursts',580);
 
 
 results.worldRebuild={};
+results.cinematicLayers={};
 for(let stage=0;stage<6;stage++){
  await rich.page.evaluate(stage=>{
   const {game:g,view}=window.__nova;
@@ -186,6 +187,14 @@ for(let stage=0;stage<6;stage++){
   view.draw(g,.02,16.7);
  },stage);
  await scene(rich.page,'world-rebuild-stage-'+String(stage+1).padStart(2,'0'),420);
+ results.cinematicLayers[stage]=await rich.page.evaluate(()=>{
+  const {view}=window.__nova;
+  const detail=view.getDiagnostics().volumetric;
+  const kinetic=view.background.scenes[0].getObjectByName('kinetic-world-assembly');
+  return {detail,kineticRings:kinetic?.children.filter(x=>x.name.startsWith('kinetic-ring-')).length??0,
+   kineticArms:kinetic?.children.filter(x=>x.name.startsWith('kinetic-arm-')).length??0,
+   realWorldRoot:!!view.scene.getObjectByName('world-space-cinematics-v31')};
+ });
  results.worldRebuild[stage]=await rich.page.evaluate(()=>{
   const {view,game:g}=window.__nova;
   const scene=view.background.scenes.some(m=>m.name==='physical-world-centrepiece-'+g.stage);
@@ -200,10 +209,25 @@ await rich.page.evaluate(()=>{
  g.spawnBoss();view.draw(g,.02,16.7);
 });
 await scene(rich.page,'world-rebuild-boss-physical',600);
+results.cinematicBoss=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().volumetric);
 results.worldBoss=await rich.page.evaluate(()=>{
  const view=window.__nova.view;
  return {hasBoss:!!view.boss,skin:!!view.boss?.getObjectByName('boss-skin0'),meshes:(()=>{let n=0;view.boss?.traverse(o=>{if(o.isMesh)n++});return n})()};
 });
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.state='transition';g.transitionTime=2.4;view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v31-world-space-warp-tunnel',120);
+results.cinematicWarp=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().volumetric);
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.state='playing';g.boss=null;
+ view.event({type:'bosskill',x:1.5,y:5,size:5.5,color:0xffab65});
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v31-depth-explosion-debris',150);
+results.cinematicBlast=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().volumetric);
 const classic=await setup({width:390,height:844},{renderer:'canvas',visual:'classic'});
 results.classic=await classic.page.evaluate(()=>({
  visual:window.__nova.view.getDiagnostics().visualStyle,
@@ -225,4 +249,9 @@ if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.u
 if(!Object.values(results.worldRebuild).every(x=>x.worldScene&&x.enemy3D>=2&&x.enemyBillboards===0&&x.style==='rebuilt'))throw new Error('3D world and physical enemy meshes not rendered consistently: '+JSON.stringify(results.worldRebuild));
 if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
 if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
+if(!Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.kineticRings===3&&x.kineticArms===4&&x.detail&&x.detail.motes>0&&x.detail.flybys>0))throw new Error('3D cinematics/kinetic world models missing: '+JSON.stringify(results.cinematicLayers));
+if(results.cinematicBoss.bossHalos!==3)throw new Error('Boss 3D halo fails to render');
+if(results.cinematicWarp.warpRings!==9)throw new Error('Transition 3D warp tunnel invisible');
+if(results.cinematicBlast.fragments<10||results.cinematicBlast.shockwaves<2)throw new Error('3D debris or shockwave invisible after boss destruction');
+if(Object.values(results.cinematicLayers).some(x=>x.detail.instances>420||x.detail.fragments>90||x.detail.contrails>48))throw new Error('3D cinematic budgets exceeded');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
