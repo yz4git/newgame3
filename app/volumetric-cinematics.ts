@@ -233,7 +233,7 @@ export class VolumetricCinematics {
    const multi=e.kind==='bomber'||e.kind==='cruiser'||e.kind==='corvette'?2:1;
    for(let i=0;i<multi&&jets<96;i++){
     dummy.position.set(e.x+(multi===1?0:(i?side:-side)),e.y+e.radius*.7,1.05);
-    dummy.rotation.set(0,0,e.vx*.025);
+    dummy.rotation.set(0,0,Math.sin(e.age*1.7+e.id)*.08);
     dummy.scale.set(.67,.66+Math.sin(t*14+e.id)*.12,.7);
     dummy.updateMatrix();this.enemyJets.setMatrixAt(jets++,dummy.matrix);
    }
