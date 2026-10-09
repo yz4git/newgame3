@@ -12,12 +12,12 @@ async function scene(page,name,delay=650){
  console.log('NOVA_SHOT:'+name+':'+picture.toString('base64'));
  return path;
 }
-async function setup(viewport,{renderer='canvas'}={}){
+async function setup(viewport,{renderer='canvas',visual='rebuilt'}={}){
  const context=await browser.newContext({viewport,deviceScaleFactor:1,isMobile:true,hasTouch:true,locale:'ja-JP',reducedMotion:'no-preference'});
  const page=await context.newPage();
  page.on('pageerror',e=>errors.push('PAGEERROR '+e.message));
  page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE '+msg.text());});
- const url='http://127.0.0.1:5173/?renderer='+renderer;
+ const url='http://127.0.0.1:5173/?renderer='+renderer+'&visual='+visual;
  await page.goto(url,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>!!window.__nova&&document.getElementById('boot').hidden,{timeout:90000});
  return {page,context};
@@ -172,6 +172,46 @@ results.gpuDemolition=await rich.page.evaluate(()=>({
 await scene(rich.page,'11-gpu-chain-bursts',580);
 
 
+
+results.worldRebuild={};
+for(let stage=0;stage<6;stage++){
+ await rich.page.evaluate(stage=>{
+  const {game:g,view}=window.__nova;
+  g.start('campaign','normal',stage,['striker','falcon','bulwark'][stage%3]);
+  g.time=[64,74,82,78,82,86][stage]*.49;
+  g.invulnerable=900;g.shotTimer=900;
+  g.battlefield.seen=[true,true];g.encounterSeen={stage:true,mini:true};
+  g.sectorMission.started=true;g.nodes=[];g.enemies=[];g.bullets=[];
+  g.spawn('fighter',-3.7,7.5);g.spawn('corvette',3.8,10.3);
+  view.draw(g,.02,16.7);
+ },stage);
+ await scene(rich.page,'world-rebuild-stage-'+String(stage+1).padStart(2,'0'),420);
+ results.worldRebuild[stage]=await rich.page.evaluate(()=>{
+  const {view,game:g}=window.__nova;
+  const scene=view.background.scenes.some(m=>m.name==='physical-world-centrepiece-'+g.stage);
+  const enemies=[...view.models.values()];
+  const skinCount=enemies.reduce((a,m)=>a+(m.getObjectByName('skin')?1:0),0);
+  return {worldScene:scene,enemy3D:enemies.length,enemyBillboards:skinCount,
+    style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background};
+ });
+}
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;g.start('campaign','normal',5,'striker');
+ g.spawnBoss();view.draw(g,.02,16.7);
+});
+await scene(rich.page,'world-rebuild-boss-physical',600);
+results.worldBoss=await rich.page.evaluate(()=>{
+ const view=window.__nova.view;
+ return {hasBoss:!!view.boss,skin:!!view.boss?.getObjectByName('boss-skin0'),meshes:(()=>{let n=0;view.boss?.traverse(o=>{if(o.isMesh)n++});return n})()};
+});
+const classic=await setup({width:390,height:844},{renderer:'canvas',visual:'classic'});
+results.classic=await classic.page.evaluate(()=>({
+ visual:window.__nova.view.getDiagnostics().visualStyle,
+ buttons:[...document.querySelectorAll('[data-visual]')].map(b=>({style:b.dataset.visual,selected:b.classList.contains('selected')}))
+}));
+await scene(classic.page,'world-rebuild-classic-preserved',450);
+await classic.context.close();
+
 results.errors=errors;
 console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
 console.log('NOVA_REVIEW:'+JSON.stringify(results));
@@ -182,4 +222,7 @@ if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
+if(!Object.values(results.worldRebuild).every(x=>x.worldScene&&x.enemy3D>=2&&x.enemyBillboards===0&&x.style==='rebuilt'))throw new Error('3D world and physical enemy meshes not rendered consistently: '+JSON.stringify(results.worldRebuild));
+if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
+if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
