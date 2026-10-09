@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {Game,STEP,STAGES} from '../app/sim.ts';
 import {updateBattlefield} from '../app/battlefield.ts';
-import {FacilityDemolitionMotion,isFacilityDemolition,drawFacilityDemolitionCanvas} from '../app/facility-demolition.ts';
+import {FacilityDemolitionMotion,FACILITY_GLARE_LIMITS,isFacilityDemolition,drawFacilityDemolitionCanvas} from '../app/facility-demolition.ts';
 const idle={x:0,y:0,focus:false};
 function liveFacility(stage=0){
  const g=new Game();g.start('campaign','normal',stage);
@@ -104,4 +104,31 @@ test('Glowing in-world geometry renders above collapsing architecture',async()=>
  assert.match(src,/renderOrder=901/);
  assert.match(src,/const halo=new T\.Mesh/);
  assert.match(src,/const core=new T\.Mesh/);
+});
+
+test('Facility glow caps reduce whiteout while retaining visible shockwaves',async()=>{
+ const c=FACILITY_GLARE_LIMITS;
+ assert.ok(c.coreRadius<=1,'glowing white core must be much smaller than the facility itself');
+ assert.ok(c.coreOpacity<=.45&&c.coreOpacity>.17,'visible but never opaque additive plasma');
+ assert.ok(c.haloOpacity<=.08,'halo must not bleach the gameplay');
+ assert.ok(c.clearRingOpacity<=.27,'enemy-bullet clear must not add a second whiteout');
+ assert.ok(c.innerRingOpacity<=.22&&c.blastRingOpacity<=.49);
+ assert.ok(c.canvasBloomOpacity<=.35,'Canvas bloom must be warm and transparent');
+ const src=await readFile('app/facility-demolition.ts','utf8');
+ assert.match(src,/core\.visible=halo\.visible=second\.visible=!!p&&p\.type!=='fieldclear'/);
+ assert.match(src,/if\(p\.type!=='fieldclear'&&u<\.55\)/);
+ assert.match(src,/core\.scale\.setScalar\(Math\.min\(FACILITY_GLARE_LIMITS\.coreRadius/);
+});
+test('Facility keeps falling wreck and metal debris despite glare reduction',async()=>{
+ const src=await readFile('app/encounter-view.ts','utf8');
+ assert.match(src,/wreck\.age<hold\?1\.85/);
+ const g=new Game();g.start('campaign','normal');
+ g.time=STAGES[0].duration*.095;g.update(STEP,idle);
+ const n=g.nodes.find(x=>x.attach==='field'&&!x.dead);
+ assert.ok(n);g.damageNode(n,n.hp+10);
+ const m=new FacilityDemolitionMotion();for(const e of g.drainEvents())m.event(e);
+ assert.ok(m.shards.length>=42&&m.pulses.length>=2);
+ assert.equal(g.battlefield.collapses.length,1);
+ m.update(g,.4);
+ assert.ok(m.pulses.length>=2);
 });
