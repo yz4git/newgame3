@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {WORLD_REBUILD_STAGES} from '../app/world-rebuild.ts';
+import {WORLD_REBUILD_STAGES} from '../app/world-rebuild-spec.ts';
 import {Game,STAGES,STEP} from '../app/sim.ts';
 import {visualStyleInfo,currentVisualStyle,setVisualStyle,usesRebuiltGraphics} from '../app/visual-style.ts';
 test('All six campaigns have their own physical set piece identity',()=>{
