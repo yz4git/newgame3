@@ -85,7 +85,7 @@ export class EncounterView {
    animateFacility(model,wreck.age,2,wreck.age<hold?1:0);
    const core=model.userData.lighting as T.Mesh|undefined;
    if(core&&core.material instanceof T.MeshPhysicalMaterial){
-    core.material.emissiveIntensity=Math.max(0,(wreck.age<hold?4.0+Math.sin(wreck.age*43)*1.5:2)*(1-u));
+    core.material.emissiveIntensity=Math.max(0,(wreck.age<hold?1.85+Math.sin(wreck.age*43)*.35:1.4)*(1-u));
     core.material.opacity=Math.max(.08,1-u);
    }
   }
