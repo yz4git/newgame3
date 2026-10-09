@@ -3,6 +3,8 @@ import { shipModel, bossModel } from './art.ts';
 import type { Kind } from './sim.ts';
 import {shipSkin,bossSkin,bossMaps} from './visual-assets.ts';
 import {skinWarp} from './motion.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
+import type {ShipClass} from './ship-config.ts';
 
 interface SpriteAsset { canvas:HTMLCanvasElement;left:number;top:number;width:number;height:number; }
 interface Face {points:number[][];depth:number;color:string;uv?:number[][];image?:HTMLImageElement|HTMLCanvasElement;cutout?:boolean;}
@@ -53,17 +55,19 @@ export function meshSprite(key:string,model:T.Object3D,pixels=48):SpriteAsset {
   }
   const result={canvas,left,top,width,height};cache.set(key,result);return result;
 }
+export function playerWorldSprite(variant:ShipClass){return meshSprite('world-player-'+variant,shipModel('player',variant),44);}
 export function shipSprite(kind:Kind|'player'){
   const existing=cache.get(kind);if(existing)return existing;
-  const skin=shipSkin(kind);if(!skin)return meshSprite(kind,shipModel(kind));
+  if(usesRebuiltGraphics())return meshSprite('world-ship-'+kind,shipModel(kind),40);
+ const skin=shipSkin(kind);if(!skin)return meshSprite(kind,shipModel(kind));
   const canvas=document.createElement('canvas'),image=skin.map.image as unknown as HTMLImageElement;canvas.width=image.width;canvas.height=image.height;const c=canvas.getContext('2d')!;c.drawImage(image,0,0);
   if(skin.color!==0xffffff){c.globalCompositeOperation='multiply';c.fillStyle='#'+skin.color.toString(16).padStart(6,'0');c.fillRect(0,0,canvas.width,canvas.height);c.globalCompositeOperation='destination-in';c.drawImage(image,0,0);}
   const result={canvas,left:-skin.width/2,top:skin.height/2,width:skin.width,height:skin.height};cache.set(kind,result);return result;
 }
 export function bossSprite(stage:number,part:'core'|'wing0'|'wing1'){
-  const key='boss'+stage+part,existing=cache.get(key);if(existing)return existing;
+  const key=(usesRebuiltGraphics()?'world-boss':'boss')+stage+part,existing=cache.get(key);if(existing)return existing;
   const index=part==='core'?0:part==='wing0'?1:2,skin=bossSkin(stage,index);
-  if(skin){
+  if(skin&&!usesRebuiltGraphics()){
     for(const k of cache.keys())if(k.startsWith('boss')&&!k.startsWith('boss'+stage))cache.delete(k);
     const image=bossMaps[stage].image as unknown as HTMLImageElement,col=[1,0,2][index],canvas=document.createElement('canvas');canvas.width=Math.round(image.width/3);canvas.height=image.height;
     canvas.getContext('2d')!.drawImage(image,col*image.width/3,0,image.width/3,image.height,0,0,canvas.width,canvas.height);
