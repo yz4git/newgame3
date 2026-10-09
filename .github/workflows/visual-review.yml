@@ -2,7 +2,7 @@ name: Review iPhone gameplay screenshots
 
 on:
   push:
-    branches: ['feat/nova-visual-playtest', 'feat/field-clarity-v28', 'feat/field-world-geometry-v29', 'feat/facility-demolition-no-atlas-v30', 'fix/facility-explosion-visible-v292', 'fix/facility-glare-reduction-v293']
+    branches: ['feat/nova-visual-playtest', 'feat/field-clarity-v28', 'feat/field-world-geometry-v29', 'feat/facility-demolition-no-atlas-v30', 'fix/facility-explosion-visible-v292', 'fix/facility-glare-reduction-v293', 'feat/world-rebuild-v3']
   workflow_dispatch:
 
 permissions:
