@@ -8,6 +8,7 @@ import {worldClock} from './motion.ts';
 import {SCENES,sceneVisible} from './scenery.ts';
 import {drawCanvasSurface} from './canvas-surface.ts';
 import {cloudPose} from './surface-motion.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 
 /** CPU view caches the same textured meshes, rather than rebuilding a flat map. */
 export class CanvasFortressBackground {
@@ -41,7 +42,7 @@ export class CanvasFortressBackground {
       }
     }
     for(let i=0;i<LANDMARKS[g.stage].length;i++){const entry=LANDMARKS[g.stage][i],y=entry.distance-this.distance;if(Math.abs(y)>36)continue;c.save();c.translate(entry.x,y+(env==='ocean'&&entry.kind==='submarine'?Math.sin(t*.9+i)*.04:0));if(env==='ocean'&&entry.kind==='submarine')c.rotate(Math.sin(t*.45+i)*.012);this.asset(c,this.cached('environment-landmark-'+g.stage+'-'+i,()=>this.fortress.getLandmark(g.stage,i)),0,0);c.restore();}
-    for(let i=0;i<SCENES[g.stage].length;i++){const e=SCENES[g.stage][i];if(!sceneVisible(e,this.distance))continue;c.save();c.translate(e.x,e.distance-this.distance+(env==='ocean'&&e.kind==='artwork'?Math.sin(t*.65)*.036:0));c.rotate(e.angle+(env==='ocean'&&e.kind==='artwork'?Math.sin(t*.45)*.009:0));if(e.kind==='artwork'){c.globalAlpha=.94;c.scale(1,-1);c.drawImage(sceneMaps[g.stage].image,-e.width/2,-e.height/2,e.width,e.height);}else this.asset(c,this.cached('setpiece-'+g.stage+'-'+i,()=>this.fortress.getScene(g.stage,i)),0,0);c.restore();}
+    for(let i=0;i<SCENES[g.stage].length;i++){const e=SCENES[g.stage][i];if(!sceneVisible(e,this.distance))continue;c.save();c.translate(e.x,e.distance-this.distance+(env==='ocean'&&e.kind==='artwork'?Math.sin(t*.65)*.036:0));c.rotate(e.angle+(env==='ocean'&&e.kind==='artwork'?Math.sin(t*.45)*.009:0));if(e.kind==='artwork'&&!usesRebuiltGraphics()){c.globalAlpha=.94;c.scale(1,-1);c.drawImage(sceneMaps[g.stage].image,-e.width/2,-e.height/2,e.width,e.height);}else this.asset(c,this.cached('setpiece-'+g.stage+'-'+i,()=>this.fortress.getScene(g.stage,i)),0,0);c.restore();}
     for(let i=0;i<4;i++){const p=cloudPose(i,t,this.distance);c.save();c.translate(p.x,p.y);c.rotate(p.angle);c.scale(1,-1);c.globalAlpha=p.opacity;c.drawImage(livingMaps.cloud.image,-15,-13,30,26);c.restore();}c.restore();
   }
   diagnostics(){const env=STAGES[this.stage].environment,fluid=['ocean','ice','jungle','lava'].includes(env);return {technique:'TEXTURED 3D BG CHIPS / CPU CACHE',environment:env,zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:fluid?5:4,speeds:[.30,1,1.38,.16],surfaceSpeed:fluid?.72:0,surface:this.surface,landmarks:LANDMARKS[this.stage].length+SCENES[this.stage].length,setpieces:SCENES[this.stage].length,variants:SCENERY_VARIANTS,route:routeAt(this.stage,this.distance),cached:this.assets.size};}
