@@ -11,6 +11,7 @@ import {Game} from './sim.ts';
 import {worldClock} from './motion.ts';
 import {SCENES,sceneVisible} from './scenery.ts';
 import {sceneModel} from './scene-art.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 
 const ROW=8;
 type Palette=EnvironmentPalette;
@@ -169,5 +170,5 @@ export class FortressBackground {
   getScene(stage:number,index:number){this.setStage(stage);const m=this.scenes[index].clone();m.position.set(0,0,0);m.rotation.z=0;return m;}
   getLandmark(stage:number,index:number){this.setStage(stage);const m=this.objects[index].clone();m.position.set(0,0,0);return m;}
   getFar(stage:number,index:number){this.setStage(stage);const m=this.far[index].clone();m.position.set(0,0,0);return m;}
-  diagnostics(){return {technique:'TEXTURED 3D BG CHIPS',environment:STAGES[this.stage].environment,zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:this.surface?5:4,speeds:[.30,1,1.38,.16],surfaceSpeed:this.surface?.72:0,surface:this.surface?.diagnostics()??null,chunks:this.rows.size,landmarks:LANDMARKS[this.stage].length+SCENES[this.stage].length,setpieces:SCENES[this.stage].length,variants:SCENERY_VARIANTS,route:routeAt(this.stage,this.distance)};}
+  diagnostics(){return {technique:usesRebuiltGraphics()?'PHYSICAL WORLD ARCHITECTURE':'TEXTURED 3D BG CHIPS',environment:STAGES[this.stage].environment,zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:this.surface?5:4,speeds:[.30,1,1.38,.16],surfaceSpeed:this.surface?.72:0,surface:this.surface?.diagnostics()??null,chunks:this.rows.size,landmarks:LANDMARKS[this.stage].length+SCENES[this.stage].length,setpieces:SCENES[this.stage].length,variants:SCENERY_VARIANTS,route:routeAt(this.stage,this.distance)};}
 }
