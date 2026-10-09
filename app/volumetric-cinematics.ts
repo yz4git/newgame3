@@ -27,6 +27,10 @@ export class VolumetricCinematics {
  private contrails:T.InstancedMesh;
  private fragments:T.InstancedMesh;
  private lanterns:T.InstancedMesh;
+ private enemyJets:T.InstancedMesh;
+ private missileSpirals:T.InstancedMesh;
+ private warpTunnel:T.Mesh<T.TorusGeometry,T.MeshBasicMaterial>[]=[];
+ private stageLightning:T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>[]=[];
  private exhaust:T.Mesh<T.ConeGeometry,T.MeshBasicMaterial>[]=[];
  private gantries:T.Group[]=[];
  private rotors:T.Mesh<T.TorusGeometry,T.MeshStandardMaterial>[]=[];
@@ -60,6 +64,23 @@ export class VolumetricCinematics {
   this.contrails=instance(new T.CylinderGeometry(.09,.21,1,5),new T.MeshBasicMaterial({color:0x9dcfff,transparent:true,opacity:.40,depthWrite:false,toneMapped:true}),LIMIT.contrails,this.shipFx);
   this.fragments=instance(new T.IcosahedronGeometry(.38,0),new T.MeshStandardMaterial({color:0xb4ad9f,metalness:.64,roughness:.43,transparent:true,opacity:.92,depthWrite:true}),LIMIT.shards,this.actorFx);
   this.lanterns=instance(new T.SphereGeometry(.12,6,4),new T.MeshBasicMaterial({color:0xe2eedf,transparent:true,opacity:.63,depthWrite:false,toneMapped:true}),32,this.backdrop);
+  this.enemyJets=instance(new T.ConeGeometry(.16,.75,5),new T.MeshBasicMaterial({color:0xf1ab78,transparent:true,opacity:.36,depthWrite:false,toneMapped:true}),96,this.shipFx);
+  this.missileSpirals=instance(new T.TorusGeometry(.19,.045,4,10),new T.MeshBasicMaterial({color:0xeea16c,transparent:true,opacity:.52,depthWrite:false,toneMapped:true}),48,this.actorFx);
+  for(let i=0;i<9;i++){
+   const ring=new T.Mesh(new T.TorusGeometry(1,.06,5,40),new T.MeshBasicMaterial({color:0x84c5dc,transparent:true,opacity:.22,depthWrite:false,toneMapped:true}));
+   ring.name='stage-transition-3d-warp-gate-'+i;ring.visible=false;
+   ring.position.z=-2-i*.9;ring.rotation.x=.15;this.backdrop.add(ring);this.warpTunnel.push(ring);
+  }
+  // Low-duty-cycle branching lightning, true geometry with distant and near depth.
+  for(let i=0;i<2;i++){
+   const positions:number[]=[];for(let j=0;j<10;j++){
+    const y=4-j*1.0,x=Math.sin(j*2.6+i*7.3)*.20+(j%2?.24:-.28),z=-2.7+(j%3)*-.20;
+    positions.push(x,y,z);
+   }
+   const curve=new T.CatmullRomCurve3(Array.from({length:10},(_,j)=>new T.Vector3(positions[j*3],positions[j*3+1],positions[j*3+2])));
+   const mesh=new T.Mesh(new T.TubeGeometry(curve,24,.055,4,false),new T.MeshBasicMaterial({color:0xafd9fd,transparent:true,opacity:.30,depthWrite:false,toneMapped:true}));
+   mesh.name='real-3d-storm-discharge-'+i;mesh.visible=false;this.backdrop.add(mesh);this.stageLightning.push(mesh);
+  }
   for(const [i,m]of [this.flybys,this.contrails,this.fragments].entries()){
    m.setColorAt(0,new T.Color(0xffffff));m.instanceColor!.setUsage(T.DynamicDrawUsage);
   }
@@ -103,7 +124,7 @@ export class VolumetricCinematics {
    m.name='volumetric-impact-depth-'+i;m.visible=false;this.actorFx.add(m);
    this.rings.push({mesh:m,age:999,life:1,radius:1,grow:1,x:0,y:0,z:0});
   }
-  this.fragments.count=this.contrails.count=this.flybys.count=this.motes.count=this.lanterns.count=0;
+  this.fragments.count=this.contrails.count=this.flybys.count=this.motes.count=this.lanterns.count=this.enemyJets.count=this.missileSpirals.count=0;
  }
  event(e:GameEvent){
   const types=['explode','resonance','part','fieldcollapse','fieldburst','fieldcritical','nova','bosskill','bosstransform','bossform','phase','damage','midkill','missionclear','fieldclear'];
@@ -142,6 +163,8 @@ export class VolumetricCinematics {
   (this.contrails.material as T.MeshBasicMaterial).color.setHex(stage===5?0xffbb89:0x8cceeb);
   (this.fragments.material as T.MeshStandardMaterial).color.setHex(stage===5?0xaf7957:0xaaaeb3);
   for(const cone of this.sweeps){cone.material.color.copy(envColor);}
+  for(const ring of this.warpTunnel)ring.material.color.copy(envColor);
+  (this.missileSpirals.material as T.MeshBasicMaterial).color.setHex(stage===5?0xffbf8c:0xffa67e);
   for(const jet of this.exhaust){jet.material.color.setHex(stage===5?0xffb174:0x83d4ed);}
  }
  draw(g:Game,dt:number,reduced=false,performance=false){
@@ -202,6 +225,48 @@ export class VolumetricCinematics {
    dummy.scale.setScalar(.1+seed(i+91)*.07);dummy.rotation.set(0,0,0);dummy.updateMatrix();
    this.lanterns.setMatrixAt(i,dummy.matrix);
   }this.lanterns.count=lightCount;this.lanterns.instanceMatrix.needsUpdate=true;
+  // A 3D thrust cone for airborne hostiles: the underside of each craft reacts
+  // to rolls, unlike the old face-on engine sprite. Bounded, independent of bullets.
+  let jets=0;for(const e of g.enemies){
+   if(e.dead||e.ground||jets>=96)continue;
+   const side=e.kind==='bomber'||e.kind==='cruiser'||e.kind==='corvette'?1.1:.45;
+   const multi=e.kind==='bomber'||e.kind==='cruiser'||e.kind==='corvette'?2:1;
+   for(let i=0;i<multi&&jets<96;i++){
+    dummy.position.set(e.x+(multi===1?0:(i?side:-side)),e.y+e.radius*.7,1.05);
+    dummy.rotation.set(0,0,e.vx*.025);
+    dummy.scale.set(.67,.66+Math.sin(t*14+e.id)*.12,.7);
+    dummy.updateMatrix();this.enemyJets.setMatrixAt(jets++,dummy.matrix);
+   }
+  }
+  this.enemyJets.count=reduced?0:performance?Math.min(jets,34):jets;
+  this.enemyJets.instanceMatrix.needsUpdate=true;
+  // Missiles have physical circular ion wake, not another full-screen glow sprite.
+  let missiles=0;
+  for(const b of g.bullets){
+   if(b.shape!=='missile'||missiles>=48)continue;
+   dummy.position.set(b.x,b.y,b.enemy?1.13:1.24);
+   dummy.rotation.set(Math.PI*.10,Math.sin(t*8+missiles)*.3,t*6+missiles);
+   dummy.scale.setScalar(.6+.25*Math.sin(t*11+missiles));
+   dummy.updateMatrix();this.missileSpirals.setMatrixAt(missiles++,dummy.matrix);
+  }
+  this.missileSpirals.count=reduced?0:performance?Math.min(missiles,20):missiles;
+  this.missileSpirals.instanceMatrix.needsUpdate=true;
+  // Stage changes become a receding 3D tunnel instead of a white screen flash.
+  const warp=g.state==='transition'&&!reduced;
+  for(let i=0;i<this.warpTunnel.length;i++){
+   const gate=this.warpTunnel[i];gate.visible=warp;if(!warp)continue;
+   const u=mod(3.5-g.transitionTime+i*.36,3.5)/3.5;
+   gate.position.set(0,(i-4)*1.2,(u*11)-12);
+   gate.scale.setScalar(3.0+u*8.5);
+   gate.rotation.z=t*.21+i*.34;
+   gate.material.opacity=.045+.16*(1-u)**1.2;
+  }
+  for(let i=0;i<this.stageLightning.length;i++){
+   const bolt=this.stageLightning[i];
+   bolt.visible=!reduced&&!performance&&(stage===3||stage===5)&&Math.sin(t*(stage===3?1.8:1.1)+i*9)>.982;
+   bolt.position.set((i?1:-1)*10.5,mod(i*27+13-t*3.8,90)-45,-2);
+   bolt.rotation.z=Math.sin(t*.7+i)*.16;
+  }
   const showJet=active&&g.hull>0&&g.state!=='transition';
   this.exhaust.forEach((jet,i)=>{
    jet.visible=showJet;jet.position.set(g.player.x+(i?1:-1)*.54,g.player.y-1.90,.70);
@@ -264,7 +329,7 @@ export class VolumetricCinematics {
    shardCount++;
   }
   this.fragments.count=shardCount;this.fragments.instanceMatrix.needsUpdate=true;if(this.fragments.instanceColor)this.fragments.instanceColor.needsUpdate=true;
-  this.visualCount=density+flybyCount+lightCount+this.contrails.count+shardCount+this.rings.filter(r=>r.mesh.visible).length;
+  this.visualCount=density+flybyCount+lightCount+this.contrails.count+shardCount+this.rings.filter(r=>r.mesh.visible).length+this.enemyJets.count+this.missileSpirals.count;
  }
- diagnostics(){return {enabled:this.root.visible,stage:this.currentStage,features:22,motes:this.motes.count,flybys:this.flybys.count,gantries:this.gantries.filter(m=>m.visible).length,rotors:this.rotors.filter(m=>m.visible).length,searchlights:this.sweeps.filter(m=>m.visible).length,contrails:this.contrails.count,fragments:this.fragments.count,shockwaves:this.rings.filter(r=>r.mesh.visible).length,bossHalos:this.bossHalos.filter(m=>m.visible).length,instances:this.visualCount,limits:LIMIT};}
+ diagnostics(){return {enabled:this.root.visible,stage:this.currentStage,features:22,motes:this.motes.count,flybys:this.flybys.count,gantries:this.gantries.filter(m=>m.visible).length,rotors:this.rotors.filter(m=>m.visible).length,searchlights:this.sweeps.filter(m=>m.visible).length,lightning:this.stageLightning.filter(m=>m.visible).length,warpRings:this.warpTunnel.filter(m=>m.visible).length,enemyJets:this.enemyJets.count,missileSpirals:this.missileSpirals.count,contrails:this.contrails.count,fragments:this.fragments.count,shockwaves:this.rings.filter(r=>r.mesh.visible).length,bossHalos:this.bossHalos.filter(m=>m.visible).length,instances:this.visualCount,limits:LIMIT};}
 }
