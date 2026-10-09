@@ -54,8 +54,7 @@ function gantry(g:T.Group,p:EnvironmentPalette,x:number,y:number,w:number,h:numb
 }
 export function buildWorldSetpiece(p:EnvironmentPalette,stage:number,width:number,height:number){
  const g=new T.Group();g.name='world-rebuild-'+WORLD_REBUILD_STAGES[stage].id;
- const accent=STAGES[stage].color;
- const left=-width*.24,right=width*.24,h=height;
+ const h=height;
  switch(stage){
  case 0:{ // An orbital quarry wrapped in heavy girder frames and socketed excavator pylons
   scaffold(g,p,0,0,8.8,12.4);
