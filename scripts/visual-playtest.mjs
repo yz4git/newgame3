@@ -139,6 +139,27 @@ results.gpuDetonationEarly=await rich.page.evaluate(()=>{
  return {visibleRings:fx.rings.filter(r=>r.visible).length,opacity:fx.rings.filter(r=>r.visible).map(r=>r.material.opacity),coreVisible:fx.cores.some(c=>c.visible&&c.material.opacity>.15)};
 });
 await scene(rich.page,'10b-gpu-core-blast-180ms',130);
+const blastPng=(await rich.page.screenshot({type:'png',animations:'disabled'})).toString('base64');
+results.glare=await rich.page.evaluate(async encoded=>{
+ const bitmap=new Image();bitmap.src='data:image/png;base64,'+encoded;await bitmap.decode();
+ const cv=document.createElement('canvas');cv.width=bitmap.naturalWidth;cv.height=bitmap.naturalHeight;
+ const ctx=cv.getContext('2d',{willReadFrequently:true});ctx.drawImage(bitmap,0,0);
+ const g=window.__nova.game,view=window.__nova.view;
+ const active=g.battlefield.collapses[0],position=view.worldToScreen(active.x,active.y);
+ const targetRect=document.getElementById('game').getBoundingClientRect();
+ const cx=position.x+targetRect.left,cy=position.y+targetRect.top;
+ const x=Math.max(0,Math.floor(cx-90)),y=Math.max(0,Math.floor(cy-90));
+ const w=Math.min(180,cv.width-x),h=Math.min(180,cv.height-y);
+ const rgba=ctx.getImageData(x,y,w,h).data;let nearWhite=0,bright=0;
+ for(let i=0;i<rgba.length;i+=4){
+  if(rgba[i]>242&&rgba[i+1]>242&&rgba[i+2]>232)nearWhite++;
+  if(rgba[i]>220&&rgba[i+1]>217&&rgba[i+2]>205)bright++;
+ }
+ const fx=view.facilityDemolition;
+ return {nearWhiteFraction:nearWhite/(w*h),brightFraction:bright/(w*h),width:w,height:h,
+  visibleCoreScale:fx.cores.filter(c=>c.visible).map(c=>c.scale.x),
+  visibleCoreOpacity:fx.cores.filter(c=>c.visible).map(c=>c.material.opacity)};
+},blastPng);
 await scene(rich.page,'10c-gpu-shockwave-400ms',220);
 results.gpuDetonationLate=await rich.page.evaluate(()=>{
  const fx=window.__nova.view.facilityDemolition;
@@ -158,6 +179,7 @@ await browser.close();
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
 if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility detonation invisible at 50ms or 400ms');
+if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
