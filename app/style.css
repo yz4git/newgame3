@@ -121,3 +121,12 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
 .message.facility strong{font-size:clamp(11px,3.6vw,14px);font-style:normal;color:#ffedbb;line-height:1.3}
 .message.facility span{font-size:8px;line-height:1.25;letter-spacing:.02em;margin:0 0 4px}
 @media(max-width:400px){.message.facility{left:13%;right:13%;top:12.5%}}
+
+/* Rebuilt and original graphics remain fully selectable on the title screen. */
+.visual-picker{display:flex;align-items:center;gap:4px;padding:3px 0 4px;border-bottom:1px solid #6a99b137}
+.visual-picker>span{font-family:monospace;font-size:8px;color:#a1c7d2;letter-spacing:.07em;flex:0 0 63px}
+.visual-picker button{flex:1;min-width:0;padding:7px 2px;color:#8eacba;background:#0b2233ba;border:1px solid #4b728c66;font-size:8px;letter-spacing:.025em;font-weight:800}
+.visual-picker button.selected{color:#d1fff4;border-color:#88f4da;background:#2c6b655e;box-shadow:inset 0 0 10px #6ff1cb1c}
+.visual-picker button:focus-visible{outline:2px solid #b9ffe8;outline-offset:2px}
+@media(max-height:720px){.visual-picker{gap:2px;padding:1px 0}.visual-picker>span{font-size:6px;flex-basis:49px}.visual-picker button{font-size:6.5px;padding:4px 1px}}
+@media(max-height:600px){.visual-picker button{padding:3px 1px}.visual-picker>span{font-size:6px}}
