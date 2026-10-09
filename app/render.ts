@@ -13,6 +13,7 @@ import {CombatEffects} from './combat-effects.ts';
 import {FacilityDemolition3D,isFacilityDemolition} from './facility-demolition.ts';
 import {AirEffects} from './air-effects.ts';
 import {EncounterView} from './encounter-view.ts';
+import {usesRebuiltGraphics,currentVisualStyle} from './visual-style.ts';
 
 const boxGeometry=new T.BoxGeometry(1,1,1);
 const shotGeometry=new T.SphereGeometry(1,10,6);
@@ -27,7 +28,7 @@ export class View {
   renderer!: T.WebGPURenderer | import('three').WebGLRenderer;
   pipeline: T.RenderPipeline | null=null;engine='';quality='';
   private composer?:EffectComposer;
-  private player=addShipRig(shipModel('player'),'player');private satellites:T.Group[]=[];
+  private player=addShipRig(shipModel('player'),'player');private renderedShip='striker';private satellites:T.Group[]=[];
   private models=new Map<number,T.Group>();private templates=new Map<Kind,T.Group>();private boss:T.Group|null=null;private bossStage=-1;
   private theme=-1;private background=new FortressBackground();private atmosphere=new T.Group();
   private stars:T.InstancedMesh;private starData:Float32Array;
@@ -179,6 +180,11 @@ export class View {
   private disposeWreck(w:Wreck){this.scene.remove(w.model);w.model.traverse(o=>{if(o instanceof T.Sprite||o instanceof T.Mesh){if(!Array.isArray(o.material))o.material.dispose();if(o instanceof T.Mesh&&o.userData.deformSkin)o.geometry.dispose();}});}
   draw(game:Game,dt:number,frameMs:number){
     dt=animationClockRunning(game)?dt:0;this.epoch=game.visualTime;this.setTheme(game.stage);
+    if(usesRebuiltGraphics()&&this.renderedShip!==game.shipClass){
+      this.scene.remove(this.player);
+      this.player=addShipRig(shipModel('player',game.shipClass),'player');
+      this.scene.add(this.player);this.renderedShip=game.shipClass;
+    }
     const state=presentationState(game),active=state==='playing'||state==='transition',title=state==='title';
     const scroll=active?4.4:title?1.4:0;
     this.background.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -300,6 +306,6 @@ export class View {
     if(this.pixelRatio<=1.01&&this.frames>300&&this.epoch-this.lastDprChange>7&&this.frameAverage>32){this.useBloom=false;this.key.castShadow=false;this.quality='PERFORMANCE';}
     if(this.useBloom&&this.pipeline)this.pipeline.render();else if(this.useBloom&&this.composer)this.composer.render();else this.renderer.render(this.scene,this.camera);
   }
-  getDiagnostics(){return {background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {visualStyle:currentVisualStyle(),background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
 }
 function shipTint(kind:Kind){return kind==='dart'?0xb69add:kind==='lancer'?0xd2ddf7:0xffffff;}
