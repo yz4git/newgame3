@@ -155,7 +155,44 @@ export function buildWorldSetpiece(p:EnvironmentPalette,stage:number,width:numbe
   if(j%2===0)uplight(g,p.lamp,x,y,-4.34);
  }
  const result=batch(g);
+ // Physical moving machinery on every giant 3D stage structure.
+ const machinery=new T.Group();machinery.name='kinetic-world-assembly';
+ for(let i=0;i<3;i++){
+  const radius=(i===0?1.85:i===1?1.29:.72)+(stage===2?.2:0);
+  const material=i===1?p.steel:i===2?p.warm:p.plate;
+  const m=new T.Mesh(new T.TorusGeometry(radius,i===0?.115:.065,7,28),material);
+  m.name='kinetic-ring-'+i;m.position.set(stage===3?2.2:0,stage===5?.9:stage===4?.85:0,-1.83+i*.20);
+  m.rotation.x=i*.12;machinery.add(m);
+ }
+ for(let i=0;i<4;i++){
+  const arm=new T.Group();arm.name='kinetic-arm-'+i;
+  arm.position.set((i%2?1:-1)*(stage===1?3.55:stage===4?2.5:2.9),(i<2?-1:1)*(stage===2?3.0:2.5),-1.82);
+  const deck=new T.Mesh(new T.BoxGeometry(.30,2.25,.32),p.dark);deck.position.y=.15;arm.add(deck);
+  const alloy=new T.Mesh(new T.BoxGeometry(.22,1.40,.23),p.steel);alloy.position.set(.10,.3,.28);arm.add(alloy);
+  const beacon=new T.Mesh(new T.SphereGeometry(.18,8,5),p.lamp);beacon.position.set(.14,1.18,.34);beacon.name='kinetic-spot-'+i;arm.add(beacon);
+  machinery.add(arm);
+ }
+ result.add(machinery);
  result.name='physical-world-centrepiece-'+stage;
  result.userData={stage,worldScale:true,materialFamily:STAGES[stage].environment};
  return result;
+}
+
+/** Animates world-space machinery while the structure is in view. */
+export function animateWorldSetpiece(scene:T.Group,time:number,reduced=false){
+ const m=scene.getObjectByName('kinetic-world-assembly');if(!m||reduced)return;
+ for(let i=0;i<3;i++){
+  const ring=m.getObjectByName('kinetic-ring-'+i);if(!ring)continue;
+  ring.rotation.z=time*(i===1?-.31:i===2?.64:.19)+i*1.3;
+  ring.rotation.x=Math.sin(time*(.31+i*.11)+i)*(.13+i*.07);
+  ring.rotation.y=Math.cos(time*(.19+i*.04))*.10;
+ }
+ for(let i=0;i<4;i++){
+  const arm=m.getObjectByName('kinetic-arm-'+i);if(!arm)continue;
+  const phase=time*.71+i*1.31;
+  arm.position.z=-1.82+Math.sin(phase)*.22;
+  arm.rotation.z=Math.sin(phase*.7)*.21*(i%2?-1:1);
+  const light=arm.getObjectByName('kinetic-spot-'+i);
+  if(light)light.scale.setScalar(.83+.2*Math.sin(time*2.4+i*1.5));
+ }
 }
