@@ -2,7 +2,7 @@ name: Verify NOVA STRIKE
 
 on:
   push:
-    branches: ['feat/**', 'fix/facility-explosion-visible-v292']
+    branches: ['feat/**', 'fix/facility-explosion-visible-v292', 'fix/facility-glare-reduction-v293']
   pull_request:
     branches: [main]
 
