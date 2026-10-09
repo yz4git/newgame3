@@ -4,9 +4,12 @@ import {rock,type EnvironmentPalette} from './environment-art.ts';
 import {sceneMaps} from './visual-assets.ts';
 import {STAGES} from './stages.ts';
 import type {Scene} from './scenery.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
+import {buildWorldSetpiece} from './world-rebuild.ts';
 /** Authored scenery sits below the combat plane and never affects hit detection. */
 export function sceneModel(p:EnvironmentPalette,entry:Scene,stage:number){
  const g=new T.Group(),env=STAGES[stage].environment;
+ if(entry.kind==='artwork'&&usesRebuiltGraphics())return buildWorldSetpiece(p,stage,entry.width,entry.height);
  if(entry.kind==='artwork'){const mat=new T.MeshBasicMaterial({map:sceneMaps[stage],color:0xb3c0c9,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false});const m=new T.Mesh(new T.PlaneGeometry(entry.width,entry.height),mat);m.position.z=.10;m.name='generated-landmark';g.add(m);return g;}
  const metal=p.plate,natural=env==='ice'?p.ice:env==='jungle'?p.moss:p.rock;
  const ring=(r:number,t:number,z=-3)=>{const m=new T.Mesh(new T.TorusGeometry(r,t,6,40),natural);m.position.z=z;g.add(m);return m;};
