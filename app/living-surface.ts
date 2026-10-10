@@ -33,8 +33,8 @@ export class LivingSurface {
    const position=this.geometry.getAttribute('position');
    this.originalZ=Float32Array.from({length:position.count},(_,i)=>position.getZ(i));
    this.geometry.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(position.count*3),3));
-   mat=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,metalness:env==='ocean'?.34:.13,
-    roughness:env==='lava'?.76:env==='ice'?.29:.42,side:T.FrontSide});
+   mat=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,metalness:env==='ocean'?.08:env==='ice'?.12:.05,
+    roughness:env==='lava'?.82:env==='ice'?.44:env==='jungle'?.67:.45,side:T.FrontSide});
   }else{
    const map=(env==='lava'?terrainMaps.lava:env==='ice'?terrainMaps.ice:livingMaps.swell).clone();
    map.repeat.set(1,3);map.needsUpdate=true;this.maps.push(map);
@@ -100,8 +100,8 @@ export class LivingSurface {
    }
    const original=this.originalZ![i],top=original>0;
    // Actual varying geometry, not a static 2D image with a bump texture.
-   const swell=(s.height*2.25+Math.sin(x*.91+y*.30-t*1.4)*.17)
-    *(reduced?.42:1);
+   const swell=(s.height*(env==='ocean'?3.3:2.25)+Math.sin(x*.91+y*.30-t*1.4)*(env==='ocean'?.25:.17)
+     +(env==='lava'?Math.abs(Math.sin(x*1.33+(y+distance*.72)*.47-t*.60))*.24:0))*(reduced?.42:1);
    pos.setZ(i,original+(top?swell:0));
    // Vertex-defined materials: light scatters across 3D waves, glowing cracks
    // and banks. Deliberately avoid white-hot colors which obscure enemy bullets.
@@ -110,15 +110,18 @@ export class LivingSurface {
    const n=clamp(.50+a*.25+b*.15+s.height*.5,0,1);
    let r:number,g:number,bl:number;
    if(env==='lava'){
-    const crack=clamp((a*.62+b*.38+.38)*1.35,0,1);
-    const hot=crack*crack*crack;
-    r=.115+hot*.43;g=.065+hot*.115;bl=.058+hot*.022;
+    // Intersecting molten fissures expose hot glowing seams between
+    // dark, physically raised basalt crust; never a giant flat orange texture.
+    const seam=Math.max(0,Math.sin(x*1.16+(y+distance*.72)*.59-t*.66)
+      +.46*Math.sin(x*.45-(y+distance*.72)*.29+t*.40)-.22);
+    const hot=clamp(seam*seam*.55,0,1);
+    r=.026+hot*.46;g=.012+hot*.115;bl=.010+hot*.024;
    }else if(env==='ocean'){
-    r=.045+n*.105;g=.17+n*.23;bl=.24+n*.23;
+    r=.009+n*.035;g=.052+n*.10;bl=.083+n*.15;
    }else if(env==='ice'){
-    r=.063+n*.105;g=.18+n*.22;bl=.28+n*.23;
+    r=.024+n*.068;g=.085+n*.16;bl=.14+n*.19;
    }else{
-    r=.045+n*.065;g=.15+n*.16;bl=.14+n*.13;
+    r=.019+n*.040;g=.065+n*.09;bl=.057+n*.080;
    }
    // The underside and sidewalls are dark solid matter, not a floating card.
    if(!top){r*=.55;g*=.55;bl*=.58;}
@@ -143,7 +146,7 @@ export class LivingSurface {
    let n=0;const rockCount=performance?14:36;
    for(let i=0;i<rockCount;i++){
     const y=((i*9.7-distance*.72)%104+104)%104-52;
-    const x=(i%2?1:-1)*(7.0+((i*7)%17)*.43);
+    const x=(env==='lava'&&i%6===0)?Math.sin(i*3.37)*4.2:(i%2?1:-1)*(7.0+((i*7)%17)*.43);
     const z=surfaceSample(this.stage,x,y+distance*.72,t).height*2.25;
     const size=.32+(i%5)*.10;
     dummy.position.set(x,y,this.base.position.z+.38+z+size*.28);
@@ -155,7 +158,7 @@ export class LivingSurface {
    const seamCount=performance?24:64;let q=0;
    for(let i=0;i<seamCount;i++){
     const y=((i*4.35-distance*.72*.95)%96+96)%96-48;
-    const x=(i%2?1:-1)*(5.7+((i*13)%19)*.41);
+    const x=((env==='ocean'||env==='lava')&&i%7===0)?Math.sin(i*2.3)*4.1:(i%2?1:-1)*(5.7+((i*13)%19)*.41);
     const z=surfaceSample(this.stage,x,y+distance*.72,t).height*2.25;
     dummy.position.set(x,y,this.base.position.z+.48+z);
     dummy.rotation.set(.05,Math.sin(t*.21+i)*.32,.2*Math.sin(i*4.7+t*.16));
