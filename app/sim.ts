@@ -7,7 +7,7 @@ import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {selectBossForm,BOSS_FORM_NAMES,type BossForm} from './boss-evolution.ts';
 import {updateEncounters} from './encounters.ts';
-import {initialWorldAlive,resetWorldAlive,updateWorldAlive,enterWorldBoss,updateWorldBoss,collapseWorldBoss,advanceWorldEscape,type WorldAliveState} from './world-alive.ts';
+import {initialWorldAlive,resetWorldAlive,updateWorldAlive,enterWorldBoss,updateWorldBoss,breakWorldBossWing,collapseWorldBoss,advanceWorldEscape,type WorldAliveState} from './world-alive.ts';
 import {initialBattlefield,nextBattlefieldStage,updateBattlefield,damageBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {SHIPS,type ShipClass} from './ship-config.ts';
 import {initialSectorMission,resetSectorMission,updateSectorMission,completeSectorMission,failSectorMission,type SectorMission} from './sector-missions.ts';
@@ -329,6 +329,7 @@ export class Game {
     for(const n of this.nodes)if(n.attach==='boss'&&n.index===index){n.dead=true;this.clearSource(n.id);}
     this.addScore(2500*this.multiplier);this.pickup('power',pos.x,pos.y-1);
     this.emit('explode',{...pos,size:2.7});this.emit('part',{...pos,text:'PART BREAK / +'+2500*this.multiplier+' / '+converted+' CANCEL'});
+    breakWorldBossWing(this,index,pos.x,pos.y);
   }
   hitPlayer() {
     if(this.invulnerable>0||this.state!=='playing')return;
