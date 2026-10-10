@@ -114,10 +114,26 @@ export class WorldAliveScene {
   const g=new T.Group(),rotor=new T.Group();
   g.name='authored-stage-'+stage+'-colossal-side-'+index;
   const x=side*11.4;g.position.set(x,-3,-13.3-index*1.6);
-  this.wall(g,this.innerMat,0,0,-1,4.9,33,3.8);
-  for(let j=0;j<8;j++){
-   this.wall(g,j%3?this.archMat:this.panelMat,0,-14+j*4.0,1.13,5.1,.42,.95);
-   this.wall(g,this.panelMat,-side*1.75,-14+j*4.0,1.6,.28,3.6,.26);
+  // No continuous 33 m monorail wall, and no eight evenly repeated
+  // cross-bars. Real cutouts reveal the far world between irregular bays.
+  const gap=(stage+index*2)%5;
+  for(let j=0;j<5;j++){
+   const y=-13.2+j*6.5+(hash(j*13+stage*5+index*17)-.5)*1.5;
+   if(j===gap){
+    for(const dx of[-1,1])this.wall(g,this.panelMat,dx*2.0,y,-.4,.49,5.2,1.3);
+    const brace=this.wall(g,this.archMat,-side*.85,y+1.8,.9,.47,5.2,.55);
+    brace.rotation.z=side*.32;
+    continue;
+   }
+   const wide=j%3===0,bevel=j%2?this.archMat:this.panelMat;
+   this.wall(g,this.innerMat,side*(j%2?.5:-.45),y,-1,
+    wide?5.3:3.6,3.6+(j%3)*.75,2.7);
+   this.wall(g,bevel,-side*.55,y+(j%2?.95:-.80),.75,
+    3.4+(j%2)*.9,.50,.63);
+   if(j%2===0){
+    const diagonal=this.wall(g,this.panelMat,side*.65,y-.35,1.16,.41,4.3,.58);
+    diagonal.rotation.z=side*(j%4===0?.38:-.31);
+   }
   }
   rotor.position.set(-side*.35,5,.9);g.add(rotor);
   const theme=STAGES[stage].environment;
