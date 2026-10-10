@@ -63,14 +63,16 @@ export function updateWorldAlive(g:Game){
    continue;
   }
   // Do not overload a busy boss/mission encounter with surprise enemies.
-  const allowed=!g.encounter&&!g.sectorMission.active&&g.enemies.filter(e=>!e.dead).length<WORLD_ALIVE_BUDGET.maxActiveEnemies&&g.bullets.length<WORLD_ALIVE_BUDGET.maxLiveBullets;
+  const activeEnemies=g.enemies.filter(e=>!e.dead).length;
+  const allowed=!g.encounter&&!g.sectorMission.active&&activeEnemies<WORLD_ALIVE_BUDGET.maxActiveEnemies&&g.bullets.length<WORLD_ALIVE_BUDGET.maxLiveBullets;
   if(!allowed){
-   cue(g,p.bay+' / HOLD','worldbayhold',index===0?-6:6,13);
+   cue(g,p.bay+' / STAND DOWN','worldbayhold',index===0?-6:6,13);
    continue;
   }
   const side=index===0?-1:1,x=side*WORLD_ALIVE_BUDGET.sourceSideX;
   const kind=p.troops[index] as Kind;
-  const count=index===0?2:WORLD_ALIVE_BUDGET.maxExtraEnemies;
+  const count=Math.min(index===0?2:WORLD_ALIVE_BUDGET.maxExtraEnemies,
+   WORLD_ALIVE_BUDGET.maxActiveEnemies-activeEnemies);
   // The enemy's actual world spawn and its animated hangar mouth match.
   for(let i=0;i<count;i++){
    const enemy=g.spawn(kind,x+side*(i-1)*.47,WORLD_ALIVE_BUDGET.launchY+i*1.25,0,2);
