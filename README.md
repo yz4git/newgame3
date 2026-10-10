@@ -1,3 +1,54 @@
+## NOVA STRIKE 4.1 — LIVING RAIL DISTRICTS (2026-10-11)
+
+The left/right backgrounds were too repetitive even after the 3D texture
+rebuild: repeated 8-meter *vertical rails* and 33-meter corridor walls
+made the large environments feel like repeating lanes. This is a geometry
+and movement overhaul, not another layer of bright effects:
+
+- **Seven real, very different 3D architectural chapters:**
+  open docking voids, giant rotary-turbine chambers, deep freight lifts,
+  diagonal truss bridges, genuinely shattered/open sections, complex
+  pipe manifolds, and antenna-observation balconies.
+  The original physical `fortressChip` rail stripes are now **broken
+  into variable-length offset segments, gaps and junction pads**. The
+  Classic appearance is unchanged.
+- **Moving structures that are not parallel to the scroll:** the new
+  `app/rail-district-motion.ts` streams independently timed left/right
+  side modules, including laterally sliding freight cars, vertical lift
+  platforms, rotating turbines and articulated cantilever service arms.
+  Modules are separated in broad 22-meter chapters, using nonmatching
+  silhouettes on the two sides and seven module families per stage.
+- **Rebuilt large fortress walls:** the former 33-meter side walls with
+  eight evenly repeated bars are now *five irregularly sized chambers*,
+  negative-space cutouts, broken diagonal braces and asymmetrical
+  structural edges, retaining the stage-specific giant machinery.
+- **Fewer repetitive vertical streaks:** the old 48 identically shaped
+  moving cable rails are reduced to at most 22 staggered transverse /
+  oblique steel conduits with different parallax velocities.
+- **Distinct stages:** asteroid processing racks, ocean docks, orbital
+  military gantries, glacial crystal chambers, jungle relic apparatus
+  and foundry pistons each get a uniquely tinted additional 3D structural
+  variation.
+- **Real campaign interaction:** the physical section doors move on
+  facility failures, hangar launches, boss entry, wing/core breaks and
+  world-escape collapse. Events are triggered by the 4.0 simulation's
+  actual facility and boss systems.
+- **Readability and iPhone budget:** only 3 pooled district sections per
+  side (6 total) may exist simultaneously; normally at most 2–3 are
+  visible on each side. Performance, heavy bullet scenes and reduced
+  motion keep one quiet background silhouette per side. Animated module
+  highlights are capped at opacity 0.18; no new particle floods, point
+  lights, collision boxes or gameplay changes.
+- **Auditable:** `getDiagnostics().railDistricts` exposes rendered
+  section type, motion and geometry counts with left/right budgets.
+  Dedicated `tests/rail-district-motion.test.mjs` tests module
+  variety, true horizontal motion and readability; the Playwright
+  iPhone-size GPU test now checks six stages and screenshots two moments
+  of rail motion plus an actual breached sector.
+
+This is GPU World Rebuild only. The original Classic sprite art and the
+Canvas 2D compatibility renderer are deliberately preserved.
+
 ## NOVA STRIKE 4.0 — WORLD ALIVE / COLOSSAL BOSS CAMPAIGN (2026-10-11)
 
 World Rebuild's fully physical six-stage levels are **now part of the
