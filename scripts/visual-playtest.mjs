@@ -204,9 +204,29 @@ for(let stage=0;stage<6;stage++){
   const enemies=[...view.models.values()];
   const skinCount=enemies.reduce((a,m)=>a+(m.getObjectByName('skin')?1:0),0);
   return {worldScene:scene,enemy3D:enemies.length,enemyBillboards:skinCount,
-    style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background};
+    style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background,
+    scenic:view.getDiagnostics().scenic};
  });
 }
+// Intentionally quiet airspace proves the new 3D cargo lanes are actually
+// visible when enemy bullets don't need the screen. Then verify a real field
+// event physically moves background wall shutters rather than flashing HUD.
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.start('campaign','normal',1,'striker');
+ g.time=14;g.enemies=[];g.bullets=[];g.nodes=[];g.invulnerable=900;g.shotTimer=900;
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v39-3d-background-harbor-freight',450);
+results.scenicPeace=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().scenic);
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.enemies=[];g.bullets=[];
+ view.event({type:'fieldcollapse',x:0,y:7.5,size:5.5});
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v39-3d-reactive-dock-machinery',160);
+results.scenicResponse=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().scenic);
 await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;g.start('campaign','normal',5,'striker');
  g.spawnBoss();view.draw(g,.02,16.7);
@@ -253,6 +273,9 @@ if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.u
 if(!Object.values(results.worldRebuild).every(x=>x.worldScene&&x.enemy3D>=2&&x.enemyBillboards===0&&x.style==='rebuilt'))throw new Error('3D world and physical enemy meshes not rendered consistently: '+JSON.stringify(results.worldRebuild));
 if(!Object.values(results.worldRebuild).every(x=>x.background?.physicalAudit?.textureMappedMeshes===0&&x.background.physicalAudit.flatImageCards===0&&x.background.physicalAudit.sprites===0))throw new Error('2D image/textured photo backdrop still present in REAL World Rebuild scene: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.background?.physicalAudit)));
 if(![3,4,5].every(stage=>results.worldRebuild[stage]?.background?.physicalAudit?.terrainReliefMeshes>0&&results.worldRebuild[stage].background.physicalAudit.terrainTriangles>200))throw new Error('Ice, jungle and lava banks require actual tessellated 3D relief instead of flat painted cliffs');
+if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Number(stage)&&x.scenic?.machines>=1&&x.scenic?.farWeather>0&&x.scenic?.style==='world-space-3d-only'))throw new Error('Missing moving real-3D scenic backdrops in all six stages: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.scenic)));
+if(results.scenicPeace?.traffic<2||results.scenicPeace?.machines<1||results.scenicPeace?.farWeather<20)throw new Error('Background freight and weather must appear when no bullets block the view: '+JSON.stringify(results.scenicPeace));
+if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
 if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
 if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
 if(!Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.kineticRings===3&&x.kineticArms===4&&x.detail&&x.detail.motes>0&&(x.crowded?x.detail.flybys===0:x.detail.flybys>0)))throw new Error('3D cinematics missing or decorative flybys not hidden during dangerous bullet/enemy crowding: '+JSON.stringify(results.cinematicLayers));
