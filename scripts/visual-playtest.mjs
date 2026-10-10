@@ -205,9 +205,63 @@ for(let stage=0;stage<6;stage++){
   const skinCount=enemies.reduce((a,m)=>a+(m.getObjectByName('skin')?1:0),0);
   return {worldScene:scene,enemy3D:enemies.length,enemyBillboards:skinCount,
     style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background,
-    scenic:view.getDiagnostics().scenic};
+    scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene};
  });
 }
+// 4.0 real campaign + physical scene proof. The stage's actual Game.update
+// triggers a launch from the left background dock; destroying the linked
+// field node closes that bay and prevents future reinforcements.
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.start('campaign','normal',2,'striker');
+ g.time=82*.25;
+ g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];
+ g.sectorMission.started=true;g.waveIndex=999;g.schedule=[];
+ g.shotTimer=900;g.invulnerable=900;g.enemies=[];g.bullets=[];
+ g.update(1/60,{x:0,y:0,focus:false});
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v40-real-hangar-3d-enemy-sortie',360);
+results.worldAliveLaunch=await rich.page.evaluate(()=>({
+ game:window.__nova.game.snapshot().worldAlive,
+ scene:window.__nova.view.getDiagnostics().worldAliveScene,
+ actualEnemyCount:window.__nova.game.enemies.length,
+ actualKinds:window.__nova.game.enemies.map(e=>e.kind)
+}));
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.addCombatNode('field',0,1,3.25,9.3,38,8.3);
+ const n=g.nodes.find(n=>n.attach==='field'&&n.index===1);
+ if(n)g.damageNode(n,n.hp+2);
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v40-3d-defence-grid-disabled',300);
+results.worldAliveBreach=await rich.page.evaluate(()=>({
+ game:window.__nova.game.snapshot().worldAlive,
+ scene:window.__nova.view.getDiagnostics().worldAliveScene
+}));
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.spawnBoss();g.boss.y=9;g.boss.age=5;g.boss.phase=2;
+ g.boss.parts[0]=0;
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v40-boss-vault-weakpoint-break',220);
+results.worldAliveBoss=await rich.page.evaluate(()=>({
+ game:window.__nova.game.snapshot().worldAlive,
+ scene:window.__nova.view.getDiagnostics().worldAliveScene
+}));
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.boss.hp=1;g.nova();
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v40-fortress-collapse-and-escape',220);
+results.worldAliveEscape=await rich.page.evaluate(()=>({
+ game:window.__nova.game.snapshot().worldAlive,
+ scene:window.__nova.view.getDiagnostics().worldAliveScene,
+ state:window.__nova.game.state
+}));
 // Intentionally quiet airspace proves the new 3D cargo lanes are actually
 // visible when enemy bullets don't need the screen. Then verify a real field
 // event physically moves background wall shutters rather than flashing HUD.
@@ -277,6 +331,11 @@ if(![3,4,5].every(stage=>results.worldRebuild[stage]?.background?.physicalAudit?
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Number(stage)&&x.scenic?.machines>=1&&x.scenic?.farWeather>0&&x.scenic?.style==='world-space-3d-only'))throw new Error('Missing moving real-3D scenic backdrops in all six stages: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.scenic)));
 if(results.scenicPeace?.traffic<2||results.scenicPeace?.machines<1||results.scenicPeace?.farWeather<20)throw new Error('Background freight and weather must appear when no bullets block the view: '+JSON.stringify(results.scenicPeace));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
+if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount>=1&&r.worldAlive.hangars===2))throw new Error('4.0 requires real stage-aligned 3D megastructures and game enemy hangars in all six worlds: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
+if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==2)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
+if(results.worldAliveBreach?.game?.baysOpen?.[1]!==false||results.worldAliveBreach?.game?.destroyed?.[1]!==true)throw new Error('4.0 strategic facility blast failed to close the physical right-side hangar: '+JSON.stringify(results.worldAliveBreach));
+if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1)throw new Error('4.0 reactor armour destruction failed to update the boss 3D vault: '+JSON.stringify(results.worldAliveBoss));
+if(results.worldAliveEscape?.state!=='transition'||results.worldAliveEscape?.game?.escape!==true)throw new Error('4.0 actual NOVA boss defeat did not collapse base and start the escape: '+JSON.stringify(results.worldAliveEscape));
 if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
 if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
 if(!Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.kineticRings===3&&x.kineticArms===4&&x.detail&&x.detail.motes>0&&(x.crowded?x.detail.flybys===0:x.detail.flybys>0)))throw new Error('3D cinematics missing or decorative flybys not hidden during dangerous bullet/enemy crowding: '+JSON.stringify(results.cinematicLayers));
