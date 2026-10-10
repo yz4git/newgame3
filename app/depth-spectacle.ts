@@ -1,7 +1,7 @@
 import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
 import {CINEMATIC_STAGE_COLORS} from './cinematics-spec.ts';
-import {DEPTH_SPECTACLE_BUDGET as CAP} from './depth-spectacle-spec.ts';
+import {DEPTH_SPECTACLE_BUDGET as CAP,DEPTH_SPECTACLE_FEATURES} from './depth-spectacle-spec.ts';
 
 const dummy=new T.Object3D();
 const up=new T.Vector3(0,1,0);
@@ -34,8 +34,6 @@ export class DepthSpectacle {
  private shield:T.Mesh<T.SphereGeometry,T.MeshBasicMaterial>;
  private novaShell:T.Mesh<T.IcosahedronGeometry,T.MeshBasicMaterial>;
  private bossCore:T.Mesh<T.TorusGeometry,T.MeshBasicMaterial>;
- private shockAge=999;
- private shockSize=1;
  private shieldAge=999;
  private novaAge=999;
  private novaSize=1;
@@ -84,7 +82,7 @@ export class DepthSpectacle {
  event(e:GameEvent){
   if(e.type==='stage'){
    this.pulsePool.length=this.dustPool.length=this.ghosts.length=0;
-   this.novaAge=this.shieldAge=this.shockAge=999;this.lastGhostAt=-100;return;
+   this.novaAge=this.shieldAge=999;this.lastGhostAt=-100;return;
   }
   const x=e.x??0,y=e.y??0,size=clamp(e.size??1,.3,12);
   if(e.type==='graze')this.addPulse(x,y,1.75,.48,0x90d2e3,'graze',.35);
@@ -104,7 +102,6 @@ export class DepthSpectacle {
    this.addPulse(x,y,z,clamp(size*.7,.7,3.8),color,e.type,boss?1.25:.8);
    if(boss||e.type==='fieldcollapse'||e.type==='fieldclear')this.addPulse(x,y,z-.5,clamp(size*.55,1,4.3),0x8aaec4,'deep',1.2);
    if(structural&&['fieldcollapse','fieldclear','fieldburst'].includes(e.type)){
-    this.shockAge=0;this.shockSize=size;
     for(let i=0;i<14;i++){
      if(this.dustPool.length>=CAP.dust)this.dustPool.shift();
      const n=++this.serial,a=rand(n)*Math.PI*2,v=.75+rand(n+11)*3.2;
@@ -249,7 +246,7 @@ export class DepthSpectacle {
   if(dt>0){
    for(const pulse of this.pulsePool)pulse.age+=dt;
    for(const part of this.dustPool){part.age+=dt;part.x+=part.vx*dt;part.y+=part.vy*dt;part.z+=part.vz*dt;part.vz-=3.1*dt;}
-   this.shieldAge+=dt;this.novaAge+=dt;this.shockAge+=dt;
+   this.shieldAge+=dt;this.novaAge+=dt;
   }
   this.pulsePool=this.pulsePool.filter(p=>p.age<p.life);
   this.dustPool=this.dustPool.filter(p=>p.age<p.life);
@@ -295,5 +292,5 @@ export class DepthSpectacle {
   }
   this.total=this.tracer.count+this.warningRails.count+this.activeBeams.count+this.lockGyros.count+this.pickupOrbits.count+this.enemyVortices.count+this.pilotGhosts.count+this.driftFrames.count+this.iris.count+this.pulses.count+this.dust.count;
  }
- diagnostics(){return {features:14,stage:this.stage,instances:this.total,tracers:this.tracer.count,warnings:this.warningRails.count,beams:this.activeBeams.count,locks:this.lockGyros.count,salvage:this.pickupOrbits.count,enemyVortices:this.enemyVortices.count,ghosts:this.pilotGhosts.count,iris:this.iris.count,debris:this.dust.count,pulses:this.pulses.count,shield:this.shield.visible,nova:this.novaShell.visible,budget:CAP};}
+ diagnostics(){return {features:DEPTH_SPECTACLE_FEATURES.length,stage:this.stage,instances:this.total,tracers:this.tracer.count,warnings:this.warningRails.count,beams:this.activeBeams.count,locks:this.lockGyros.count,salvage:this.pickupOrbits.count,enemyVortices:this.enemyVortices.count,ghosts:this.pilotGhosts.count,iris:this.iris.count,debris:this.dust.count,pulses:this.pulses.count,shield:this.shield.visible,nova:this.novaShell.visible,budget:CAP};}
 }
