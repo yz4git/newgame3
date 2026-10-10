@@ -95,3 +95,18 @@ test('there are no painted sprite rails, white-out, random gameplay changes or i
  assert.match(src,/texture|image|photo/i);
  assert.ok(RAIL_DISTRICT_LIMITS.pulseOpacity<=.18);
 });
+
+test('all six stages retain both asymmetric moving rail sides across scrolling and heavy-fire windows',()=>{
+ for(let stage=0;stage<6;stage++){
+  const g=testGame(stage),fx=new FxDirector(),r=new RailDistrictMotion3D();
+  for(const seconds of [0,3,11,19,27,42,61,83,110,144]){
+   g.time=seconds;g.visualTime=seconds;
+   g.bullets=Array.from({length:42},()=>({}));
+   r.draw(g,.016,fx.plan(g),false,true);
+   const d=r.diagnostics();
+   assert.ok(d.left>=1&&d.right>=1,`missing a side at stage ${stage} t=${seconds}: ${JSON.stringify(d)}`);
+   assert.ok(d.types.length===2,`repeated matching left/right section at stage ${stage} t=${seconds}: ${JSON.stringify(d)}`);
+   assert.ok(d.modules<=RAIL_DISTRICT_LIMITS.sides);
+  }
+ }
+});
