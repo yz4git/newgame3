@@ -13,8 +13,8 @@ test('Massive objects are bounded even during repeated facility destruction',asy
  const src=await readFile('app/colossal-cinematics.ts','utf8');
  assert.match(src,/this\.impacts\.length>=B\.fragments/);
  assert.match(src,/this\.root\.visible=active\|\|g\.state==='title'/);
- assert.match(src,/this\.warpStage\.visible=moving&&!reduced/);
- assert.match(src,/this\.irisRoot\.visible=!!boss&&!reduced/);
+ assert.match(src,/this\.warpStage\.visible=false/);
+ assert.match(src,/this\.irisRoot\.visible=false/);
  assert.doesNotMatch(src,/new T\.PlaneGeometry|new T\.Sprite|AdditiveBlending|Math\.random/);
 });
 test('Every stage has unique authored metal and mechanical 3D structures',async()=>{
