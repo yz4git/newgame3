@@ -224,5 +224,22 @@ export class FortressBackground {
   getScene(stage:number,index:number){this.setStage(stage);const m=this.scenes[index].clone();m.position.set(0,0,0);m.rotation.z=0;return m;}
   getLandmark(stage:number,index:number){this.setStage(stage);const m=this.objects[index].clone();m.position.set(0,0,0);return m;}
   getFar(stage:number,index:number){this.setStage(stage);const m=this.far[index].clone();m.position.set(0,0,0);return m;}
-  diagnostics(){return {technique:usesRebuiltGraphics()?'PHYSICAL WORLD ARCHITECTURE':'TEXTURED 3D BG CHIPS',environment:STAGES[this.stage].environment,zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:this.surface?5:4,speeds:[.30,1,1.38,.16],surfaceSpeed:this.surface?.72:0,surface:this.surface?.diagnostics()??null,chunks:this.rows.size,landmarks:LANDMARKS[this.stage].length+SCENES[this.stage].length,setpieces:SCENES[this.stage].length,variants:SCENERY_VARIANTS,route:routeAt(this.stage,this.distance)};}
+  diagnostics(){
+    // Observed, not claimed: audit the *live* background scene for legacy photo
+    // cards and texture-mapped painted ground, including dynamically cloned rows.
+    const audit={meshCount:0,textureMappedMeshes:0,flatImageCards:0,sprites:0,terrainReliefMeshes:0,terrainTriangles:0};
+    if(usesRebuiltGraphics())this.root.traverse(object=>{
+      if(object instanceof T.Sprite){audit.sprites++;return;}
+      if(!(object instanceof T.Mesh))return;
+      audit.meshCount++;
+      const materials=Array.isArray(object.material)?object.material:[object.material];
+      if(materials.some(mat=>('map' in mat)&&!!mat.map))audit.textureMappedMeshes++;
+      if(object.geometry instanceof T.PlaneGeometry)audit.flatImageCards++;
+      if(object.name==='world-rebuild-physical-relief-cliff'){
+        audit.terrainReliefMeshes++;
+        audit.terrainTriangles+=object.geometry.index?object.geometry.index.count/3:object.geometry.getAttribute('position').count/3;
+      }
+    });
+    return {technique:usesRebuiltGraphics()?'FULLY GEOMETRIC 3D BACKGROUND':'TEXTURED 3D BG CHIPS',environment:STAGES[this.stage].environment,zone:zoneAt(this.stage,this.distance),distance:Math.round(this.distance),layers:this.surface?5:4,speeds:[.30,1,1.38,.16],surfaceSpeed:this.surface?.72:0,surface:this.surface?.diagnostics()??null,physicalAudit:audit,chunks:this.rows.size,landmarks:LANDMARKS[this.stage].length+SCENES[this.stage].length,setpieces:SCENES[this.stage].length,variants:SCENERY_VARIANTS,route:routeAt(this.stage,this.distance)};
+  }
 }
