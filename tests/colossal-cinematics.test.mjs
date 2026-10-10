@@ -7,7 +7,7 @@ test('3.3 adds 20 authored large-scale physical 3D sequences',()=>{
  assert.ok(F.length>=20);assert.equal(new Set(F).size,F.length);
  assert.ok(B.maxRollRadians<=.05&&B.maxZoom<=1.05&&B.maxLuminance<=.6);
 });
-test('Massive objects are bounded even during repeated facility destruction',()=>{
+test('Massive objects are bounded even during repeated facility destruction',async()=>{
  assert.ok(B.monoliths<=2&&B.capitalShips<=3&&B.bossFins<=12);
  assert.ok(B.warpRings<=8&&B.collapses<=3&&B.fragments<=60);
  const src=await readFile('app/colossal-cinematics.ts','utf8');
