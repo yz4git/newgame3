@@ -98,10 +98,11 @@ test('Falling of a destroyed facility is delayed while its reactor detonates',as
  assert.match(src,/model\.position\.set\(wreck\.x\+quake/);
  assert.match(src,/c\.translate\(wreck\.x\+quake/);
 });
-test('Glowing in-world geometry renders above collapsing architecture',async()=>{
+test('Facility shockwave obeys scene depth and never forces itself above live bullets',async()=>{
  const src=await readFile('app/facility-demolition.ts','utf8');
- assert.match(src,/depthTest:false/);
- assert.match(src,/renderOrder=901/);
+ assert.doesNotMatch(src,/depthTest:false/);
+ assert.match(src,/depthTest:true/);
+ assert.match(src,/blending:T.NormalBlending/);
  assert.match(src,/const halo=new T\.Mesh/);
  assert.match(src,/const core=new T\.Mesh/);
 });
