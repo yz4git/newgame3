@@ -104,3 +104,32 @@ test('rendering 4.0 connects to real game state, 3D topology and explicit scene 
  assert.match(scene,/WORLD_ALIVE_BUDGET\.firstLaunch/);
  assert.doesNotMatch(scene,/new T\.PlaneGeometry|new T\.Sprite|AdditiveBlending|Math\.random|new T\.PointLight/);
 });
+
+test('true destruction path on game nodes closes a real hangar before its launch',()=>{
+ const g=new Game();g.start('campaign','normal',3);
+ g.addCombatNode('field',0,0,-3.25,8,45,8.3);
+ const n=g.nodes.find(n=>n.attach==='field'&&n.index===0);
+ assert.ok(n);
+ g.damageNode(n,n.hp+5);
+ assert.equal(g.battlefield.outcomes[0],'destroyed');
+ assert.deepEqual(g.worldAlive.destroyed,[true,false]);
+ assert.equal(g.worldAlive.baysOpen[0],false);
+ g.time=STAGES[3].duration*.25;updateWorldAlive(g);
+ assert.equal(g.worldAlive.launched,0);
+});
+test('boss hitbox part damage truly drives wing mechanisms, central reactor and post-NOVA escape',()=>{
+ const g=new Game();g.start('campaign','normal',4);g.spawnBoss();
+ const partMax=g.boss.maxPart;
+ g.damagePart(0,partMax+2);
+ assert.deepEqual(g.worldAlive.wingBroken,[true,false]);
+ assert.equal(g.boss.parts[0],0);
+ g.damagePart(1,partMax+2);
+ assert.deepEqual(g.worldAlive.wingBroken,[true,true]);
+ assert.ok(g.events.some(e=>e.type==='worldcoreexpose'));
+ g.boss.hp=1;
+ assert.equal(g.nova(),true);
+ assert.equal(g.state,'transition');
+ assert.equal(g.worldAlive.bossDefeated,true);
+ assert.equal(g.worldAlive.escape,true);
+ assert.ok(g.events.some(e=>e.type==='worldbossfall'));
+});
