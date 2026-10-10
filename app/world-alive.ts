@@ -18,11 +18,11 @@ export const WORLD_ALIVE_BUDGET={
 export interface WorldAliveState{
  stage:number;approach:boolean;launches:[boolean,boolean];launched:number;
  baysOpen:[boolean,boolean];destroyed:[boolean,boolean];escaped:[boolean,boolean];
- bossEntry:boolean;bossPhase:number;bossDefeated:boolean;escape:boolean;lastCue:string;
+ bossEntry:boolean;bossPhase:number;wingBroken:[boolean,boolean];bossDefeated:boolean;escape:boolean;lastCue:string;
 }
 export function initialWorldAlive(stage=0):WorldAliveState{
  return {stage,approach:false,launches:[false,false],launched:0,baysOpen:[true,true],
- destroyed:[false,false],escaped:[false,false],bossEntry:false,bossPhase:0,
+ destroyed:[false,false],escaped:[false,false],bossEntry:false,bossPhase:0,wingBroken:[false,false],
  bossDefeated:false,escape:false,lastCue:''};
 }
 export function resetWorldAlive(g:Game){
@@ -93,6 +93,15 @@ export function updateWorldBoss(g:Game){
   s.bossPhase=g.boss.phase;
   cue(g,WORLD_ALIVE_STAGES[g.stage].boss+' / TRANSFORM','worldbossphase',g.boss.x,g.boss.y);
  }
+}
+/** Wing failure is driven by the *real* destructible boss part, not
+ * a timer; the background reactor physically exposes its corresponding side. */
+export function breakWorldBossWing(g:Game,index:number,x:number,y:number){
+ if(g.mode!=='campaign'||index<0||index>1||g.worldAlive.wingBroken[index])return;
+ g.worldAlive.wingBroken[index]=true;
+ cue(g,WORLD_ALIVE_STAGES[g.stage].boss+' / WING '+(index+1)+' DISCONNECTED','worldwingbreak',x,y);
+ if(g.worldAlive.wingBroken.every(Boolean))
+  cue(g,WORLD_ALIVE_STAGES[g.stage].boss+' / REACTOR EXPOSED','worldcoreexpose',0,y);
 }
 export function collapseWorldBoss(g:Game){
  if(g.mode!=='campaign')return;
