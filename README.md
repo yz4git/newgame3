@@ -1,3 +1,35 @@
+## NOVA STRIKE 3.7 — FULLY GEOMETRIC WORLD REBUILD (2026-10-10)
+
+The previous 3.6 pass physically reconstructed water, but there were **still
+photographic 2D-looking terrain materials painted across large cliff, ice-field,
+forest and spaceport surfaces**. 3.7 removes the real cause, not just sprites.
+
+- World Rebuild now constructs a **texture-free landscape/material palette**:
+  deck, plating, steel, basalt, ice, snow, moss, water, lava and tree foliage
+  use lit metallic/roughness materials with no `map`, `bumpMap` or `emissiveMap`
+  image. The original atlas/painterly palette is preserved in Classic.
+- Ice, jungle and lava banks are no longer broad extruded photo plates:
+  **nine-by-nine tessellated, height-varied relief fields** are created on both
+  sides of each scrolling scenery row, with geometry sidewalls down to the river
+  bed and per-vertex tinted physical land. The relief feeds the existing terrain
+  streaming and shares the real game camera's perspective and shadows.
+- Snow and moss caps that previously covered whole chunks as nearly planar
+  polygons are now individual three-dimensional ledges and stones.
+- Existing physical, scroll-driven waves and lava rifts stay volumetric, and
+  the 3D sky/trees introduced in 3.6 are unchanged.
+- Runtime diagnostics are deliberately grounded in the actual scene graph:
+  `getDiagnostics().background.physicalAudit` counts **image-textured meshes,
+  PlaneGeometry cards, Sprite billboards, real cliff relief batches and triangles**.
+- CI's six-stage iPhone-sized GPU visual pass now FAILS on any live World
+  Rebuild background mesh with an image map or any remaining billboard/card,
+  and checks that icy, wooded and volcanic sectors actually render
+  tessellated 3D relief (not just claim it).
+
+This concerns in-game background scenery, **not screen-space HUD labels or
+menus**; Classic mode and GPU-unavailable Canvas 2D compatibility retain
+their original deliberately 2D rendering. Enemy hitboxes and gameplay are
+unchanged. `npm run check && npm test && npm run build`.
+
 ## NOVA STRIKE 3.6 — REAL 3D BACKGROUND GEOMETRY (2026-10-10)
 
 This update addresses the **large 2D-looking surface images still visible behind
