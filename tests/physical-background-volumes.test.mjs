@@ -12,7 +12,7 @@ test('World Rebuild background waterways are side-walled volumetric 3D geometry 
  assert.match(s,/colors!\.setXYZ\(i,r,g,bl\)/);
  assert.match(s,/this\.geometry\.computeVertexNormals\(\)/);
  assert.match(s,/textureBackplate:!this\.rebuilt/);
- assert.match(s,/this\.rebuilt\?new T\.BoxGeometry/);
+ assert.match(s,/this\.rebuilt\s*\?new T\.BoxGeometry/);
  assert.match(s,/if\(!this\.rebuilt\)\{/);
  assert.doesNotMatch(s,/this\.rebuilt.*map:terrainMaps\.lava/);
 });
@@ -43,7 +43,7 @@ test('Space sky is a physical 3D distance field, not a static image background',
 });
 test('World Rebuild mode preserves Classic and does not change gameplay geometry',async()=>{
  const [surface,style,sim]=await Promise.all([source('living-surface'),source('visual-style'),source('sim')]);
- assert.match(surface,/this\.rebuilt=usesRebuiltGraphics\(\)/);
+ assert.match(surface,/private rebuilt=usesRebuiltGraphics\(\)/);
  assert.match(surface,/new T\.PlaneGeometry\(32,96,24,48\)/);
  assert.match(style,/return localStorage\.getItem\(KEY\)==='classic'\?'classic':'rebuilt'/);
  assert.ok(sim.includes('export class Game'));
