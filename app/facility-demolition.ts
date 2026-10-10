@@ -18,7 +18,7 @@ export interface MetalShard {
 const unit=(n:number)=>{const a=Math.sin(n*125.173+9.73)*41753.88;return a-Math.floor(a);};
 const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
 /** Limit additive light layers so a facility detonation never whitewashes the playfield. */
-export const FACILITY_GLARE_LIMITS={coreRadius:.95,coreOpacity:.42,haloOpacity:.07,blastRingOpacity:.46,clearRingOpacity:.24,innerRingOpacity:.20,canvasBloomOpacity:.32} as const;
+export const FACILITY_GLARE_LIMITS={coreRadius:.95,coreOpacity:.24,haloOpacity:.035,blastRingOpacity:.27,clearRingOpacity:.16,innerRingOpacity:.10,canvasBloomOpacity:.20} as const;
 
 /** Stable effects state, advanced by the same game clock as destruction and hitboxes. */
 export class FacilityDemolitionMotion {
@@ -82,19 +82,19 @@ export class FacilityDemolition3D {
   const haloShape=new T.CircleGeometry(1,36);
   const secondaryShape=new T.RingGeometry(.95,1.045,44);
   for(let i=0;i<12;i++){
-   const material=(color:number)=>new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthTest:false,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,side:T.DoubleSide});
+   const material=(color:number)=>new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthTest:true,depthWrite:false,blending:T.NormalBlending,toneMapped:true,side:T.DoubleSide});
    const ring=new T.Mesh(ringShape,material(0xffb87a));
    const core=new T.Mesh(coreShape,material(0xffedce));
    const halo=new T.Mesh(haloShape,material(0xffad4b));
    const second=new T.Mesh(secondaryShape,material(0xffe6ae));
    ring.visible=core.visible=halo.visible=second.visible=false;
-   ring.renderOrder=901;second.renderOrder=900;halo.renderOrder=899;core.renderOrder=902;
+   ring.renderOrder=1;second.renderOrder=1;halo.renderOrder=1;core.renderOrder=1;
    ring.frustumCulled=core.frustumCulled=halo.frustumCulled=second.frustumCulled=false;
    this.rings.push(ring);this.secondRings.push(second);this.cores.push(core);this.halos.push(halo);
    this.root.add(halo,second,ring,core);
   }
-  this.shards=new T.InstancedMesh(new T.TetrahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,depthTest:false,depthWrite:false,toneMapped:false}),112);
-  this.shards.count=0;this.shards.frustumCulled=false;this.shards.renderOrder=903;
+  this.shards=new T.InstancedMesh(new T.TetrahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,depthTest:true,depthWrite:false,toneMapped:true}),112);
+  this.shards.count=0;this.shards.frustumCulled=false;this.shards.renderOrder=1;
   this.shards.instanceMatrix.setUsage(T.DynamicDrawUsage);
   this.root.add(this.shards);
  }
