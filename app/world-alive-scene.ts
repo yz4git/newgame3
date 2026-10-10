@@ -53,6 +53,7 @@ export class WorldAliveScene {
  private clock=0;
  private intro=0;
  private bossVisible=false;
+ private centerExposed=false;
  private riftOpen=0;
  private worldMode='approach';
  constructor(){
@@ -288,6 +289,7 @@ export class WorldAliveScene {
   this.bossVisible=aliveBoss&&!reduced;
   v.root.visible=this.bossVisible;
   const defeated=world.bossDefeated;
+  this.centerExposed=world.wingBroken.every(Boolean);
   const b=g.boss;
   if(b&&this.bossVisible){
    const morph=ease(clamp(b.age/2.5,0,1)),broken=b.parts.filter(hp=>hp<=0).length;
@@ -348,7 +350,7 @@ export class WorldAliveScene {
   structureCount:this.structures.filter(s=>s.visible).length,
   hangars:this.bays.filter(b=>b.root.visible).length,openHangars:this.riftOpen,
   bossVault:this.bossVisible,reactorFaces:this.vault.cores.filter(c=>c.visible).length,
-  centerExposed:this.vault.covers.length===2&&this.vault.covers.every((_,i)=>this.vault.shields[i].position.x!==0&&this.vault.covers[i].rotation.y>.7||this.vault.covers[i].rotation.y<-.7),
+  centerExposed:this.centerExposed,
   fallingFragments:this.fragments.count,lastCue:this.lastCue,approach:this.intro,
   limits:{megastructures:2,hangars:2,bossArms:2,fragments:48,liveLights:0}};
  }
