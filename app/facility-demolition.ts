@@ -127,7 +127,7 @@ export class FacilityDemolition3D {
    const flicker=.95+.12*Math.sin(p.age*27);
    core.scale.setScalar(Math.min(FACILITY_GLARE_LIMITS.coreRadius,size*.24)*(.78+u*.22)*flicker);
    core.material.color.setHex(p.type==='fieldcritical'?0xffd99a:0xffb96f);
-   core.material.opacity=Math.max(0,1-u*2.4)*FACILITY_GLARE_LIMITS.coreOpacity*(p.type==='fieldburst'?.85:1);
+   core.material.opacity=Math.max(0,1-u*1.6)*FACILITY_GLARE_LIMITS.coreOpacity*(p.type==='fieldburst'?.85:1);
   });
   let n=0;
   for(const p of this.motion.shards){
