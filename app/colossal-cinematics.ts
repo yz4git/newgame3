@@ -97,7 +97,7 @@ export class ColossalCinematics {
     chunks.push(b);
    }
    for(let j=0;j<2;j++){
-    const ring=this.mesh(j?this.rim:this.plate,torusGeo,root,0,0,-.2-j*.9,1,1,1);rings.push(ring);
+    const ring=this.mesh(j?this.rim:this.plate,torusGeo,root,0,0,-.2-j*.9,1,1,1);ring.visible=false;rings.push(ring);
    }
    const core=this.mesh(this.dark,cylinderGeo,root,0,0,-1.8,1.0,2.6,1.0);
    root.visible=false;this.breakStage.add(root);
