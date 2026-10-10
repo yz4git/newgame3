@@ -4,6 +4,8 @@ import {fieldDamagePhase} from './battlefield.ts';
 import {fieldPresentation} from './field-clarity.ts';
 import {facilityModel,animateFacility,facilityDebrisModel} from './strategic-facility.ts';
 import {meshSprite} from './canvas-art.ts';
+import {bossModel} from './art.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 import {isTerrainActive} from './battlefield-terrain.ts';
 import {missionBeacons} from './mission-spectacle.ts';
 import {ENCOUNTERS,miniAngle,threatActive} from './encounter-design.ts';
@@ -28,6 +30,24 @@ export function encounterDiagnostics(g:Game){return {miniboss:!!g.encounter,node
 /** Fixed pools. Every pose and warning uses the same simulation clock as collision. */
 export class EncounterView {
  root=new T.Group();private mini=sprite(minibossMaps[0]);
+ private mini3D=Array.from({length:6},(_,stage)=>bossModel(stage));
+ private exhaust3D=Array.from({length:2},()=>new T.Mesh(new T.ConeGeometry(.37,1.4,8),new T.MeshBasicMaterial({color:0x378da4,transparent:true,opacity:.3,depthWrite:false,toneMapped:true})));
+ private node3D=Array.from({length:8},()=>this.buildNodeMesh());
+ private mission3D=Array.from({length:6},()=>new T.Mesh(new T.TorusGeometry(.75,.07,6,32),new T.MeshBasicMaterial({color:0x79bcc3,transparent:true,opacity:.30,depthWrite:false,toneMapped:true})));
+ private buildNodeMesh(){
+  // A reusable true 3D node, physically thick from all camera directions.
+  const g=new T.Group();
+  const metal=new T.MeshStandardMaterial({color:0x6d8196,metalness:.62,roughness:.42});
+  const armor=new T.MeshStandardMaterial({color:0x26394c,metalness:.40,roughness:.65});
+  const core=new T.MeshBasicMaterial({color:0x8cb6bd,toneMapped:true});
+  const hull=new T.Mesh(new T.DodecahedronGeometry(.95,0),metal);hull.scale.z=.68;g.add(hull);
+  const ring=new T.Mesh(new T.TorusGeometry(.78,.13,7,18),armor);ring.position.z=.38;g.add(ring);
+  for(const side of[-1,1]){
+   const fin=new T.Mesh(new T.ConeGeometry(.27,.95,5),metal);fin.position.set(side*.75,.0,.28);fin.rotation.z=side*Math.PI/2;g.add(fin);
+  }
+  const eye=new T.Mesh(new T.OctahedronGeometry(.30),core);eye.position.z=.87;g.add(eye);
+  return g;
+ }
  private worldFacilities=Array.from({length:12},(_,i)=>facilityModel(Math.floor(i/2),i%2));
  private nodes=Array.from({length:8},()=>({skin:sprite(nodeMaps[0]),back:new T.Mesh(plane,material(0x07121d)),bar:new T.Mesh(plane,material(0xaaffda)),critical:sprite(tacticalFxMaps[9]),backplate:new T.Mesh(new T.CircleGeometry(2.32,48),material(0x020c19,.76)),target:new T.Mesh(new T.RingGeometry(2.01,2.12,6),material(0xffd679,.90)),locator:new T.Mesh(new T.CircleGeometry(.19,3),material(0xffe3a7,.95)),fracture:new T.Mesh(plane,material(0xffb68c,.70))}));
  private terrainStage=-1;
@@ -38,15 +58,38 @@ export class EncounterView {
  private plumes=[sprite(livingMaps.plume),sprite(livingMaps.plume)];
  private shield=new T.Mesh(new T.RingGeometry(1.86,1.94,64),material(0xb9a3ff,.6));
  private status=encounterDiagnostics({nodes:[],threats:[],encounter:null,boss:null} as unknown as Game);
- constructor(){this.root.add(this.mini,this.shield,...this.plumes,...this.worldFacilities);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.backplate,n.target,n.locator,n.fracture);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
+ constructor(){this.root.add(this.mini,...this.mini3D,...this.node3D,...this.mission3D,...this.exhaust3D,this.shield,...this.plumes,...this.worldFacilities);for(const n of this.nodes)this.root.add(n.skin,n.back,n.bar,n.critical,n.backplate,n.target,n.locator,n.fracture);for(const t of this.terrain)this.root.add(t.skin,t.warning);for(const p of this.missionGlow)this.root.add(p);for(const b of this.beams)this.root.add(b.band,b.line,b.core);this.root.visible=false;}
  draw(g:Game){
   this.root.visible=g.state!=='title'&&g.state!=='result';this.status=encounterDiagnostics(g);
   for(const f of this.worldFacilities)f.visible=false;
-  const m=g.encounter;this.mini.visible=!!m&&!m.dead;
+  const m=g.encounter;const rebuilt=usesRebuiltGraphics();this.mini.visible=!!m&&!m.dead&&!rebuilt;
+  this.mini3D.forEach((o,i)=>{
+   o.visible=rebuilt&&!!m&&!m.dead&&m.stage===i;
+   if(o.visible&&m){o.position.set(m.x,m.y-.5,.55);o.rotation.z=miniAngle(m);o.rotation.y=Math.sin(m.age*.6)*.16;o.scale.setScalar(m.flash>0?.65:.60);}
+  });
   if(m){this.mini.material.map=minibossMaps[m.stage];this.mini.position.set(m.x,m.y-.5,2.6);this.mini.scale.setScalar(6.2);this.mini.material.rotation=miniAngle(m);this.mini.material.color.setScalar(m.flash>0?1.65:1);}
-  for(let i=0;i<this.plumes.length;i++){const p=this.plumes[i];p.visible=this.mini.visible;if(m){p.position.set(m.x+(i?1:-1)*1.3,m.y+2.15,2.55);p.scale.set(.56,1.8+Math.sin(m.age*19)*.15,1);p.material.rotation=Math.PI;p.material.opacity=.72;}}
+  for(let i=0;i<this.plumes.length;i++){
+   const p=this.plumes[i],thrust=this.exhaust3D[i];p.visible=this.mini.visible;
+   thrust.visible=rebuilt&&!!m&&!m.dead;
+   if(m){
+     p.position.set(m.x+(i?1:-1)*1.3,m.y+2.15,2.55);
+     p.scale.set(.56,1.8+Math.sin(m.age*19)*.15,1);p.material.rotation=Math.PI;p.material.opacity=.72;
+     thrust.position.set(m.x+(i?1:-1)*1.3,m.y+2.0,1.15);
+     thrust.rotation.z=Math.PI;thrust.scale.y=1.15+Math.sin(m.age*19+i)*.12;
+   }
+  }
   for(let i=0;i<this.nodes.length;i++){
-   const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=!!n&&n.attach!=='field';v.back.visible=v.bar.visible=!!n;v.critical.visible=!!n&&(n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)===2||n.attach==='mission');v.locator.visible=!!n&&n.attach==='field';v.target.visible=v.backplate.visible=false;v.fracture.visible=!!n&&n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)>0;if(!n)continue;
+   const v=this.nodes[i],n=g.nodes.filter(n=>!n.dead)[i];v.skin.visible=!!n&&n.attach!=='field'&&!rebuilt;v.back.visible=v.bar.visible=!!n;v.critical.visible=!!n&&!rebuilt&&(n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)===2||n.attach==='mission');v.locator.visible=!!n&&n.attach==='field';v.target.visible=v.backplate.visible=false;v.fracture.visible=!!n&&n.attach==='field'&&fieldDamagePhase(n.hp,n.maxHp)>0;
+   const nodeMesh=this.node3D[i];
+   nodeMesh.visible=rebuilt&&!!n&&n.attach!=='field';
+   if(n&&nodeMesh.visible){
+     nodeMesh.position.set(n.x,n.y-.5,.65);
+     nodeMesh.rotation.set(Math.sin(n.age*.9)*.1,Math.sin(n.age*.6)*.17,n.age*(n.stage%2?.24:-.28));
+     nodeMesh.scale.setScalar(n.attach==='mission'?1.6:1.17);
+     const shell=nodeMesh.children[0] as T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>;
+     shell.material.color.setHex(n.flash>0?0xe0dbcd:n.attach==='mission'?0x769caf:0x667d91);
+   }
+   if(!n)continue;
    v.skin.material.map=(n.attach==='field'||n.attach==='mission')&&battlefieldAtlasMap.image instanceof HTMLImageElement&&battlefieldAtlasMap.image.naturalWidth>0?battlefieldMaps[n.stage*2+n.index]:nodeMaps[n.stage];const phase=n.attach==='field'?fieldDamagePhase(n.hp,n.maxHp):0;v.skin.material.color.setHex(n.attach==='mission'?(n.index===1?0x9ceeff:0xffaa8d):phase===2?0xffaa80:phase===1?0xffe3b8:0xffffff).multiplyScalar(n.flash>0?1.65:1);v.skin.material.opacity=phase===2?.84:1;v.skin.material.rotation=(n.attach==='field'||n.attach==='mission')?Math.sin(n.age*.65)*.012:n.stage===0||n.stage===4?n.age*.35:Math.sin(n.age*1.4)*.025;v.skin.position.set(n.x,n.y-.5,2.6);v.skin.scale.set(n.attach==='mission'?3.85:n.attach==='field'?3.35:2.75,n.attach==='mission'?3.85:n.attach==='field'?3.35:2.75,1);if(v.critical.visible){v.critical.material.map=tacticalFxMaps[n.attach==='mission'?(n.index===1?3:4):9];v.critical.position.set(n.x,n.y+.14,2.68);v.critical.scale.setScalar(1.28+Math.sin(n.age*9)*.1);v.critical.material.opacity=.45+Math.sin(n.age*6)*.16;}
    const ratio=Math.max(0,n.hp/n.maxHp);
     const field=n.attach==='field'?fieldPresentation(n):null;
@@ -109,12 +152,12 @@ export class EncounterView {
   }
   const spectacle=missionBeacons(g);
   for(let i=0;i<this.missionGlow.length;i++){
-   const marker=this.missionGlow[i],part=spectacle?.pieces[i];marker.visible=!!part;if(!part||!spectacle)continue;
+   const marker=this.missionGlow[i],part=spectacle?.pieces[i],physical=this.mission3D[i];marker.visible=!!part&&!rebuilt;physical.visible=!!part&&rebuilt;if(!part||!spectacle)continue;
    marker.material.map=tacticalFxMaps[spectacle.style.fx];
    marker.material.color.setHex(spectacle.style.color);
    marker.material.opacity=part.alpha;
    marker.position.set(part.x,part.y,2.54);marker.scale.setScalar(part.scale*2.8);
-   marker.material.rotation=part.angle;
+   marker.material.rotation=part.angle;physical.position.set(part.x,part.y,-.25);physical.scale.setScalar(part.scale*1.4);physical.rotation.z=part.angle;physical.material.color.setHex(spectacle.style.color);physical.material.opacity=Math.min(.30,part.alpha*.30);
   }
   for(let i=0;i<this.beams.length;i++){
    const v=this.beams[i],t=g.threats.filter(t=>!t.dead)[i];v.band.visible=v.line.visible=!!t;v.core.visible=!!t&&threatActive(t);if(!t)continue;
