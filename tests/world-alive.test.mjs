@@ -73,7 +73,7 @@ test('campaign boss entry, phase change, structural collapse and escape are sync
  g.spawnBoss();
  assert.equal(g.worldAlive.bossEntry,true);
  assert.ok(g.events.some(e=>e.type==='worldbossentry'));
- g.boss!.phase=2;
+ g.boss.phase=2;
  updateWorldBoss(g);
  assert.equal(g.worldAlive.bossPhase,2);
  assert.ok(g.events.some(e=>e.type==='worldbossphase'));
