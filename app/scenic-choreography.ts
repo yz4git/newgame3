@@ -282,13 +282,16 @@ export class ScenicChoreography3D {
   this.ambientCount=count;
   const rails=!reduced&&!performance&&!mix.crowded&&mix.showAmbientStructures;
   let n=0;
-  if(rails)for(let i=0;i<48;i++){
+  // Sparse cross-diagonal conduit/cargo motion replaces the former 48
+  // identical, perfectly vertical rail stripes. Wide pauses make room for
+  // the moving 4.1 rail districts and keep enemy bullets easy to see.
+  if(rails)for(let i=0;i<22;i++){
    const side=i%2?1:-1,depth=Math.floor(i/2)%4;
-   const y=wrap(i*10.7-t*(2.3+depth*.75),103)-51.5;
-   const x=side*(8.7+depth*1.2);
-   dummy.position.set(x,y,-9-depth*2.5);
-   dummy.rotation.set(0,.09*side,side*.1*Math.sin(t*.14+i));
-   dummy.scale.set(.13,2.3+depth*.6,.36);
+   const y=wrap(i*15.8-t*(1.45+depth*.53),97)-48.5;
+   const x=side*(9.1+depth*1.15+.52*Math.sin(i*1.8+t*.08));
+   dummy.position.set(x,y,-10-depth*2.0);
+   dummy.rotation.set(0,.12*side,side*(i%3===0?.48:i%3===1?-.35:.22));
+   dummy.scale.set(.13,i%4===0?3.3:1.2+depth*.48,.36);
    dummy.updateMatrix();this.lines.setMatrixAt(n++,dummy.matrix);
   }
   this.lines.count=n;this.lines.instanceMatrix.needsUpdate=true;
