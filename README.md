@@ -1,3 +1,33 @@
+## NOVA STRIKE 3.4 — INVASION DIRECTOR (2026-10-10)
+
+A bolder, story-sized 3D camera and megastructure update, built over the
+existing 3.3 `Colossal Cinematics` and 3.2 `Depth Spectacle` pipelines.
+
+- **The first seconds are an invasion:** a heavily modelled dreadnought
+  approaches from simulated 3D distance, battleship-mounted guns swivel,
+  two main engine nacelles pulse and 48 instanced 3D structural beams create
+  a fast hangar/trench flythrough behind the player.
+- **Hyperstructure boss fights:** a new 16-panel orbiting armor machine,
+  four huge counter-rotating defense rings, eight mechanical pylons, and four
+  reactor columns surround the boss. The mechanism changes with boss phase
+  and rest/vulnerability state. The old boss iris is preserved underneath.
+- **Huge stage transition:** an additional 12 moving, 3D-depth portal coils
+  complement the original nine rings. The camera now banks up to 0.38 radians
+  only during non-interactive stage transitions, with a bounded 1.22x lens push.
+- **Battlefield demolition:** boss kills and collapsing field structures produce
+  deep, multi-plane geometric pressure frames and up to 80 moving armor slabs.
+  There are no bright full-screen explosion cards or new dynamic lights.
+- **Actual camera direction:** stage opening gets a cinematic dolly/zoom
+  (within 1.10x) and gameplay banking stays under 0.060 radians, keeping
+  crosshairs and touch-world projection synced. The original Classic visual
+  style never starts any of this.
+- **iPhone budget:** two pooled dreadnoughts, 48 instanced trench beams,
+  12 hyperrings, nine geometric rupture rings, 80 bounded physical shards;
+  reduced-motion suppresses new sequences, and PERFORMANCE mode reduces them.
+
+The director never changes enemy AI, hitboxes, firing, score or game RNG.
+Instrument via `getDiagnostics().invasion` and `getDiagnostics().cameraRig`.
+
 ## NOVA STRIKE 3.3 — COLOSSAL CINEMATICS (2026-10-10)
 
 The previous 3D particle/effect pass remains intact. The rebuilt graphics mode
