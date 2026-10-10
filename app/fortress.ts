@@ -134,8 +134,43 @@ export class FortressBackground {
   constructor(){this.setStage(0);}
   private setStage(stage:number){
     if(stage===this.stage)return;this.stage=stage;this.root.clear();for(const r of this.rows.values())this.disposeRow(r);this.rows.clear();for(const t of [...this.templates.values(),...this.objects,...this.far,...this.scenes])t.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.surface?.dispose();this.surface=undefined;for(const m of this.materials)m.dispose();for(const cloud of this.clouds)if(cloud instanceof T.Mesh)cloud.geometry.dispose();this.objects=[];this.far=[];this.clouds=[];this.scenes=[];this.templates.clear();
-    const env=STAGES[stage].environment,natural=(map:T.Texture,color:number,roughness=.9,bumpScale=.13)=>new T.MeshStandardMaterial({map,color,bumpMap:map,bumpScale,roughness,metalness:0});
-    const p:Palette={deck:surface(env==='ocean'?0x8399b2:0x9aa7b5),plate:surface(env==='ocean'||env==='ice'?0xc8d2d9:0xa6b2bc,env==='ocean'||env==='ice'),steel:surface(0x6e8194,true),dark:surface(0x384754),core:new T.MeshStandardMaterial({map:metalMap,bumpMap:metalMap,bumpScale:.085,color:0x285779,roughness:.25,metalness:.6,emissive:STAGES[stage].color,emissiveMap:metalMap,emissiveIntensity:usesRebuiltGraphics()?1.10:4}),lamp:glow(STAGES[stage].color,usesRebuiltGraphics()?.70:env==='jungle'?1.4:1.8),warm:glow(env==='lava'?0xff780d:0xff9b47,usesRebuiltGraphics()?.85:1.75),glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1}),rock:natural(terrainMaps.rock,env==='lava'?0x55515c:0x93949c),ice:natural(terrainMaps.ice,0x98dcff,.30,.18),snow:natural(terrainMaps.snow,0xcbdde5,.88,.075),moss:natural(terrainMaps.moss,0xb3b297,.86,.18),water:new T.MeshStandardMaterial({map:env==='ice'?terrainMaps.ice:terrainMaps.ocean,color:env==='jungle'?0x397969:env==='ice'?0x315477:0x619daf,roughness:.38,metalness:.25}),lava:new T.MeshStandardMaterial({map:terrainMaps.lava,color:0x9d4518,emissive:0xffac6e,emissiveMap:terrainMaps.lava,emissiveIntensity:usesRebuiltGraphics()?.65:1.25,roughness:.8}),foliage:new T.MeshStandardMaterial({map:terrainMaps.canopy,color:0xced5b1,roughness:1,transparent:true,alphaTest:.22,side:T.DoubleSide}),foam:new T.MeshBasicMaterial({color:0xceefff,transparent:true,opacity:.36,depthWrite:false}),rust:surface(env==='ice'?0xcb612a:0x794b30,true)};
+    const env=STAGES[stage].environment,physical=usesRebuiltGraphics();
+    // Classic retains its texture atlases. The World Rebuild background palette
+    // is *entirely texture-free* so none of the ground/rock/canopy/deck surfaces
+    // can accidentally turn into 2D photographic scenery again.
+    const architectural=(color:number,paint=false)=>physical
+      ?new T.MeshStandardMaterial({color,roughness:paint?.49:.79,metalness:paint?.48:.22})
+      :surface(color,paint);
+    const natural=(map:T.Texture,color:number,roughness=.9,bumpScale=.13)=>physical
+      ?new T.MeshStandardMaterial({color,roughness,metalness:0})
+      :new T.MeshStandardMaterial({map,color,bumpMap:map,bumpScale,roughness,metalness:0});
+    const p:Palette={
+      deck:architectural(env==='ocean'?0x8399b2:0x7a8795),
+      plate:architectural(env==='ocean'||env==='ice'?0xc8d2d9:0xa6b2bc,env==='ocean'||env==='ice'),
+      steel:architectural(0x6e8194,true),dark:architectural(0x384754),
+      core:physical
+        ?new T.MeshStandardMaterial({color:0x285779,roughness:.35,metalness:.6,emissive:STAGES[stage].color,emissiveIntensity:.65})
+        :new T.MeshStandardMaterial({map:metalMap,bumpMap:metalMap,bumpScale:.085,color:0x285779,roughness:.25,metalness:.6,emissive:STAGES[stage].color,emissiveMap:metalMap,emissiveIntensity:4}),
+      lamp:glow(STAGES[stage].color,physical?.70:env==='jungle'?1.4:1.8),
+      warm:glow(env==='lava'?0xff780d:0xff9b47,physical?.85:1.75),
+      glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1}),
+      rock:natural(terrainMaps.rock,env==='lava'?0x55515c:0x6d747a),
+      ice:natural(terrainMaps.ice,0x82bad4,.46,.18),
+      snow:natural(terrainMaps.snow,0xcbdde5,.9,.075),
+      moss:natural(terrainMaps.moss,0x557357,.94,.18),
+      water:physical
+        ?new T.MeshStandardMaterial({color:env==='jungle'?0x255e51:env==='ice'?0x315477:0x28647b,roughness:.42,metalness:.08})
+        :new T.MeshStandardMaterial({map:env==='ice'?terrainMaps.ice:terrainMaps.ocean,color:env==='jungle'?0x397969:env==='ice'?0x315477:0x619daf,roughness:.38,metalness:.25}),
+      lava:physical
+        ?new T.MeshStandardMaterial({color:0x432923,emissive:0x8d2d12,emissiveIntensity:.24,roughness:.91})
+        :new T.MeshStandardMaterial({map:terrainMaps.lava,color:0x9d4518,emissive:0xffac6e,emissiveMap:terrainMaps.lava,emissiveIntensity:1.25,roughness:.8}),
+      foliage:physical
+        ?new T.MeshStandardMaterial({color:0x456d44,roughness:.98})
+        :new T.MeshStandardMaterial({map:terrainMaps.canopy,color:0xced5b1,roughness:1,transparent:true,alphaTest:.22,side:T.DoubleSide}),
+      foam:new T.MeshBasicMaterial({color:0xceefff,transparent:true,opacity:.36,depthWrite:false}),
+      rust:architectural(env==='ice'?0xcb612a:0x794b30,true),
+      terrain:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.97,metalness:0,flatShading:true})
+    };
     this.palette=p;this.materials=Object.values(p);
     this.scenes=SCENES[stage].map(entry=>{const m=sceneModel(p,entry,stage);m.rotation.z=entry.angle;this.root.add(m);m.traverse(o=>{if(o instanceof T.Mesh&&o.name==='generated-landmark')this.materials.push(o.material as T.Material);});return m;});
     this.objects=LANDMARKS[stage].map(entry=>{const m=environmentLandmark(p,entry,stage)??landmarkModel(p,entry,stage);m.scale.set(entry.scale,entry.scale,1);m.position.x=entry.x;m.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});this.root.add(m);return m;});
