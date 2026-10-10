@@ -2,12 +2,13 @@ import * as T from 'three/webgpu';
 import {block,hull,batch} from './art.ts';
 import {noise,type Landmark} from './bg-map.ts';
 import {STAGES} from './stages.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 
 export interface EnvironmentPalette {
   deck:T.MeshStandardMaterial;plate:T.MeshStandardMaterial;steel:T.MeshStandardMaterial;dark:T.MeshStandardMaterial;core:T.MeshStandardMaterial;
   lamp:T.Material;warm:T.Material;glass:T.MeshPhysicalMaterial;
   rock:T.MeshStandardMaterial;ice:T.MeshStandardMaterial;snow:T.MeshStandardMaterial;moss:T.MeshStandardMaterial;
-  water:T.MeshStandardMaterial;lava:T.MeshStandardMaterial;foliage:T.MeshStandardMaterial;foam:T.MeshBasicMaterial;rust:T.MeshStandardMaterial;
+  water:T.MeshStandardMaterial;lava:T.MeshStandardMaterial;foliage:T.MeshStandardMaterial;foam:T.MeshBasicMaterial;rust:T.MeshStandardMaterial;terrain:T.MeshStandardMaterial;
 }
 
 const TAU=Math.PI*2;
@@ -47,14 +48,78 @@ function crystal(g:T.Group,p:EnvironmentPalette,x:number,y:number,z:number,heigh
   const m=new T.Mesh(new T.ConeGeometry(.35+noise(seed,7)*.25,height,5).rotateX(Math.PI/2),p.ice);m.position.set(x,y,z);m.rotation.set(-.50,.12,noise(seed,3));g.add(m);
   ring(g,p.lamp,x,y,z-height/2,.4,.025,12);
 }
+/**
+ * Tessellated REAL 3D cliff terrain. Earlier versions extruded one enormous
+ * textured polygon along each bank: although technically a mesh, it looked
+ * exactly like a 2D backdrop from this camera. The 9x9 relief lattice adds
+ * meaningful height and faceted shadow changes along both axes. Side skirts
+ * expose physical thickness. The 3D terrain material has NO image texture.
+ */
+function cliffRelief(g:T.Group,p:EnvironmentPalette,side:number,v:number,stage:number,edge:number){
+  const env=STAGES[stage].environment,columns=9,rows=9,positions:number[]=[],colors:number[]=[],indices:number[]=[];
+  const topCoords:{x:number;y:number;z:number}[]=[];
+  const n=(row:number,col:number,seed:number)=>noise(v*53+row*11,stage*43+col*7,seed);
+  const baseColor=new T.Color(env==='ice'?0x789ab1:env==='jungle'?0x435b42:env==='lava'?0x413d40:0x66747f);
+  const variation=env==='ice'?.27:env==='jungle'?.25:.31;
+  function vert(x:number,y:number,z:number,c:T.Color){
+    const index=positions.length/3;positions.push(x,y,z);colors.push(c.r,c.g,c.b);return index;
+  }
+  for(let j=0;j<rows;j++){
+    const y=-4.18+j*8.36/(rows-1);
+    const innerEdge=edge+n(j,0,77)*1.45;
+    for(let i=0;i<columns;i++){
+      const u=i/(columns-1),x=side*(innerEdge+(14-innerEdge)*u);
+      const folded=Math.sin((u*.85+j*.16+v*.39)*Math.PI*2)*.19;
+      const z=-2.77+n(j,i,88)*.53+folded+u*.49+
+        (env==='ice'?Math.pow(u,2)*.22:env==='jungle'?n(j,i,31)*.18:0);
+      const tint=.69+n(j,i,45)*variation+
+        (env==='ice'?u*.13:env==='jungle'?(1-u)*.11:0);
+      topCoords.push({x,y,z});vert(x,y,z,baseColor.clone().multiplyScalar(tint));
+    }
+  }
+  for(let j=0;j<rows-1;j++)for(let i=0;i<columns-1;i++){
+    const a=j*columns+i,b=a+1,c=a+columns,d=c+1;
+    // Reversed bank winding for the opposite side, guaranteeing upward normals.
+    if(side>0)indices.push(a,b,c,b,d,c);
+    else indices.push(a,c,b,b,c,d);
+  }
+  // Cliff walls drop beneath the water, giving the land actual volume.
+  for(const edgeColumn of[0,columns-1]){
+    for(let j=0;j<rows-1;j++){
+      const pa=topCoords[j*columns+edgeColumn],pb=topCoords[(j+1)*columns+edgeColumn];
+      const shade=baseColor.clone().multiplyScalar(edgeColumn===0?.40:.29);
+      const a=vert(pa.x,pa.y,pa.z,shade),b=vert(pb.x,pb.y,pb.z,shade);
+      const c=vert(pa.x,pa.y,-8.2,shade),d=vert(pb.x,pb.y,-8.2,shade);
+      if(side>0)indices.push(a,c,b,b,c,d);
+      else indices.push(a,b,c,b,d,c);
+    }
+  }
+  const geometry=new T.BufferGeometry();
+  geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('color',new T.Float32BufferAttribute(colors,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  const mesh=new T.Mesh(geometry,p.terrain);
+  mesh.name='world-rebuild-physical-relief-cliff';
+  mesh.receiveShadow=true;g.add(mesh);
+}
 function cliff(g:T.Group,p:EnvironmentPalette,side:number,v:number,stage:number){
   const env=STAGES[stage].environment,edge=(env==='ice'?4.45:5.25)+(v%3)*.52;
   const points:number[][]=[[side*14,-4.18],[side*14,4.18]];
   for(let i=0;i<7;i++)points.push([side*(edge+noise(v,i,stage+62)*1.45),4.18-i*8.36/6]);
   const base=env==='ice'?p.ice:env==='jungle'?p.moss:p.rock;
-  hull(g,points,4.8,base,-7.4);
-  if(env!=='lava'){
-    const cap=points.map(([x,y],i)=>[x+(env==='ice'&&i>=2?side*1.55:0),y]);hull(g,cap,.37,env==='ice'?p.snow:p.moss,-2.55);
+  if(usesRebuiltGraphics()){
+    cliffRelief(g,p,side,v,stage,edge);
+    // Three-dimensional snow ledges / moss overhangs instead of a broad
+    // snow or foliage picture painted on a horizontal terrace.
+    if(env==='ice'||env==='jungle')for(let j=0;j<4;j++){
+      const x=side*(edge+1.2+j*.55),y=-3.6+j*2.2;
+      rock(g,env==='ice'?p.snow:p.moss,x,y,-2.13,.6+j*.14,.5,.25,v*14+j);
+    }
+  }else{
+    hull(g,points,4.8,base,-7.4);
+    if(env!=='lava'){
+      const cap=points.map(([x,y],i)=>[x+(env==='ice'&&i>=2?side*1.55:0),y]);hull(g,cap,.37,env==='ice'?p.snow:p.moss,-2.55);
+    }
   }
   for(let i=0;i<7;i++){
     const x=side*(edge+.6+noise(v,i,16)*2.4),y=-3.8+i*1.25;
