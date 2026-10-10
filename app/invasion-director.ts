@@ -313,6 +313,6 @@ export class InvasionDirector {
  diagnostics(){return {features:INVASION_FEATURES.length,stage:this.stage,cue:this.currentCue.name,
   cueStrength:this.currentCue.strength,meshInstances:this.counted,openingStrength:this.flyoverStrength,
   dreadnoughts:this.battleships.filter(s=>s.root.visible).length,
-  bossStructure:this.bossCore.visible,travelRings:this.gate.count,ruptures:this.detonations.length,
+  bossStructure:this.bossCore.visible,legacyBossBands:this.bossBands.filter(r=>this.bossCore.visible&&r.visible).length,travelRings:this.gate.count,ruptures:this.detonations.length,
   armorFragments:this.platelets.count,budgets:LIMIT};}
 }
