@@ -235,7 +235,7 @@ export class FortressBackground {
       const materials=Array.isArray(object.material)?object.material:[object.material];
       if(materials.some(mat=>('map' in mat)&&!!mat.map))audit.textureMappedMeshes++;
       if(object.geometry instanceof T.PlaneGeometry)audit.flatImageCards++;
-      if(object.name==='world-rebuild-physical-relief-cliff'){
+      if(object.material===this.palette.terrain){
         audit.terrainReliefMeshes++;
         audit.terrainTriangles+=object.geometry.index?object.geometry.index.count/3:object.geometry.getAttribute('position').count/3;
       }
