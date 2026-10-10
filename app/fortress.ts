@@ -130,7 +130,7 @@ function landmarkModel(p:Palette,entry:Landmark,stage:number){
 }
 export class FortressBackground {
   root=new T.Group();private stage=-1;private templates=new Map<number,T.Group>();private palette!:Palette;private scenes:T.Group[]=[];private rows=new Map<number,T.Group>();private materials:T.Material[]=[];private objects:T.Group[]=[];
-  private far:T.Group[]=[];private clouds:T.Sprite[]=[];private surface?:LivingSurface;distance=0;
+  private far:T.Group[]=[];private clouds:(T.Sprite|T.Mesh<T.IcosahedronGeometry,T.MeshBasicMaterial>)[]=[];private surface?:LivingSurface;distance=0;
   constructor(){this.setStage(0);}
   private setStage(stage:number){
     if(stage===this.stage)return;this.stage=stage;this.root.clear();for(const r of this.rows.values())this.disposeRow(r);this.rows.clear();for(const t of [...this.templates.values(),...this.objects,...this.far,...this.scenes])t.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.surface?.dispose();this.surface=undefined;for(const m of this.materials)m.dispose();this.objects=[];this.far=[];this.clouds=[];this.scenes=[];this.templates.clear();
@@ -149,8 +149,18 @@ export class FortressBackground {
       const m=batch(g);m.position.set(x,0,-18);this.root.add(m);this.far.push(m);
     }
     for(let i=0;i<4;i++){
-      const mat=new T.SpriteMaterial({map:livingMaps.cloud,color:STAGES[stage].haze,transparent:true,opacity:i<2?.12:.10,depthWrite:false});this.materials.push(mat);
-      const cloud=new T.Sprite(mat);cloud.position.z=i<2?3:-12;cloud.scale.set(30,26,1);this.root.add(cloud);this.clouds.push(cloud);
+      if(usesRebuiltGraphics()){
+        // Soft-edged, shallow 3D cloud banks remain *behind* all combat actors.
+        // Do not use large camera-facing quads across the bullet corridor.
+        const mat=new T.MeshBasicMaterial({color:STAGES[stage].haze,transparent:true,opacity:.035,depthWrite:false,side:T.FrontSide});
+        const cloud=new T.Mesh(new T.IcosahedronGeometry(1,1),mat);
+        cloud.name='volumetric-cloud-bank';cloud.position.z=-14-i*1.7;
+        cloud.scale.set(9.5,6.2,1.8);this.materials.push(mat);
+        this.root.add(cloud);this.clouds.push(cloud);
+      }else{
+        const mat=new T.SpriteMaterial({map:livingMaps.cloud,color:STAGES[stage].haze,transparent:true,opacity:i<2?.12:.10,depthWrite:false});this.materials.push(mat);
+        const cloud=new T.Sprite(mat);cloud.position.z=i<2?3:-12;cloud.scale.set(30,26,1);this.root.add(cloud);this.clouds.push(cloud);
+      }
     }
   }
   draw(g:Game,performance=false,reduced=false){
@@ -164,7 +174,15 @@ export class FortressBackground {
     this.scenes.forEach((m,i)=>{const e=SCENES[g.stage][i];m.position.set(e.x,e.distance-this.distance,ocean&&e.kind==='artwork'?Math.sin(t*.65)*.12:0);m.rotation.z=e.angle+(ocean&&e.kind==='artwork'?Math.sin(t*.45)*.009:0);m.visible=sceneVisible(e,this.distance);if(i===0&&m.visible&&usesRebuiltGraphics())animateWorldSetpiece(m,t,reduced||performance);});
     this.surface?.draw(worldClock(g),this.distance,performance,reduced);
     this.far.forEach((m,i)=>{m.position.y=((i*13-this.distance*.30)%91+91)%91-45;});
-    this.clouds.forEach((m,i)=>{const p=cloudPose(i,t,this.distance);m.position.set(p.x,p.y,i<2?3:-12);m.material.rotation=p.angle;m.material.opacity=p.opacity;});
+    this.clouds.forEach((m,i)=>{
+      const p=cloudPose(i,t,this.distance);
+      if(m instanceof T.Sprite){m.position.set(p.x,p.y,i<2?3:-12);m.material.rotation=p.angle;m.material.opacity=p.opacity;}
+      else{
+        m.position.set((i%2?1:-1)*(10.6+Math.sin(t*.16+i)*1.0),p.y,-14-i*1.7);
+        m.rotation.z=p.angle*.25;m.rotation.y=Math.sin(t*.09+i)*.16;
+        m.material.opacity=(reduced?.006:.025)*Math.max(0,Math.min(1,p.opacity/.15));
+      }
+    });
   }
   private disposeRow(group:T.Group){group.traverse(o=>{if(o instanceof T.Mesh&&o.userData.rowGeometry)o.geometry.dispose();});}
   getTemplate(stage:number,variant:number){this.setStage(stage);let m=this.templates.get(variant);if(!m){m=STAGES[stage].environment==='fortress'?fortressChip(this.palette,stage,variant):environmentChip(this.palette,stage,variant);this.templates.set(variant,m);}return m;}
