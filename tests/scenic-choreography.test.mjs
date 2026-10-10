@@ -44,5 +44,5 @@ test('Facility failure, boss and missions physically reconfigure background equi
  assert.match(src,/this\.shutters\[j\]\.rotation\.y=side\*opening\*\.52/);
  assert.match(src,/this\.facade\[j\]/);
  assert.match(src,/this\.reaction\.visible=engaged/);
- assert.match(src,/this\.accents=new T\.MeshBasicMaterial\(\{color:0x5a8994,transparent:true,opacity:\.26,depthWrite:false,toneMapped:true\}\)/);
+ assert.match(src,/private accents=new T\.MeshBasicMaterial\(\{color:0x5a8994,transparent:true,opacity:\.26,depthWrite:false,toneMapped:true\}\)/);
 });
