@@ -1,6 +1,7 @@
 import type {Game} from './sim.ts';
 import type {CombatNode} from './encounter-design.ts';
 import {STAGES} from './stages.ts';
+import {reactWorldFacility} from './world-alive.ts';
 import {terrainSpawn,updateTerrain,type TerrainPiece,type TerrainRoute} from './battlefield-terrain.ts';
 
 /** Two fixed strategic encounters per world. Clearing changes the fight, fleeing raises stakes. */
@@ -45,6 +46,7 @@ function escapeNode(g:Game,n:CombatNode){
  n.dead=true;g.clearSource(n.id);
  const op=FIELD_OPERATIONS[g.stage][n.index];
  const b=g.battlefield;b.outcomes[n.index]='escaped';b.escaped++;b.stageEscaped++;b.alert=Math.max(b.alert,10);
+ reactWorldFacility(g,n.index,'escaped');
  // Escaped controller summons two faster reinforcements but pays +25% during the alert.
  for(const side of [-1,1])g.spawn(g.stage===1||g.stage===2?'corvette':g.stage===4?'sentinel':'interceptor',side*6.3,18+(side+1)*1.8);
  if(g.stage===2||g.stage===5)g.addThreat(n.x,n.y,g.player.x,-18,.48,n.id,2,1.25);
@@ -133,6 +135,7 @@ export function destroyBattlefieldNode(g:Game,n:CombatNode){
  const reactions=g.kills-before,st=g.battlefield;
  st.reactions+=reactions;st.mostReactions=Math.max(st.mostReactions,reactions);
  st.outcomes[n.index]='destroyed';st.destroyed++;st.stageDestroyed++;st.suppression=Math.max(st.suppression,reactor?5:9);st.alert=0;
+ reactWorldFacility(g,n.index,'destroyed');
  st.collapses.push({stage:g.stage,index:n.index,x:n.x,y:n.y,age:0,life:3.3,burst:0});
  if(st.collapses.length>3)st.collapses.shift();
  g.emit('fieldcollapse',{x:n.x,y:n.y,size:reactor?5.4:4.6,color:reactor?0xffb05d:0x78e9ff,text:STAGE_COLLAPSE_TITLES[g.stage]});
