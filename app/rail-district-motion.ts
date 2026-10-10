@@ -124,7 +124,7 @@ export class RailDistrictMotion3D {
   }else if(kind==='pipe-manifold'){
    panel(root,this.edges,0,0,-1.2,4.4,6.8,1.20);
    for(let j=0;j<4;j++){
-    const tube=buildPart(root,DRUM,j*.85-1.26,.1*(j%2),.28,.38,6.4-j*.38,.38);
+    const tube=buildPart(root,DRUM,this.panels,j*.85-1.26,.1*(j%2),.28,.38,6.4-j*.38,.38);
     // Keep all cylinders real and physically separate.
     tube.rotation.z=(j-1.5)*.10;
    }
@@ -201,7 +201,7 @@ export class RailDistrictMotion3D {
   this.activeModules=0;this.movingModules=0;this.currentGeometryCount=0;
   this.leftModules=0;this.rightModules=0;this.activeVariants=[];
   for(const initial of [...this.modules]){
-   const segment=first+initial.slot+Math.floor((initial.side+1)/2)*-1;
+   const segment=first+initial.slot+(initial.side>0?1:0);
    const m=this.replace(initial,segment);
    const y=segment*RAIL_DISTRICT_LIMITS.spacing-distance;
    m.root.position.set(m.side*(8.7+noise(segment,m.side,37)*1.0),y,-8.35-(m.slot%2)*1.1);
