@@ -205,7 +205,7 @@ export class RailDistrictMotion3D {
    const m=this.replace(initial,segment);
    const y=segment*RAIL_DISTRICT_LIMITS.spacing-distance;
    m.root.position.set(m.side*(8.7+noise(segment,m.side,37)*1.0),y,-8.35-(m.slot%2)*1.1);
-   const visible=Math.abs(y)<34 && !reduced &&
+   const visible=Math.abs(y)<34 && (!reduced||m.slot===1) &&
      (!performance||m.slot===1) && (!mix.crowded||m.slot===1) &&
      !(g.state==='transition'&&m.slot!==1);
    m.root.visible=visible;
