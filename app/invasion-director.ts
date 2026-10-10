@@ -239,6 +239,10 @@ export class InvasionDirector {
    }
    for(let i=0;i<this.bossBands.length;i++){
     const ring=this.bossBands[i],r=R*(1.06+i*.32);
+    // 4.0's stage-authored boss vault replaces these oversized dark rings;
+    // they visually crossed the upper HUD and concealed the exposed reactor.
+    ring.visible=g.mode!=='campaign';
+    if(!ring.visible)continue;
     ring.rotation.set(.20+i*.18,Math.sin(clock*.16+i)*.32,clock*(i%2?-.23:.22));
     ring.scale.set(r,r*(.88+i*.035),1);
    }
