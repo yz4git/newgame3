@@ -1,3 +1,56 @@
+## NOVA STRIKE 4.0 — WORLD ALIVE / COLOSSAL BOSS CAMPAIGN (2026-10-11)
+
+World Rebuild's fully physical six-stage levels are **now part of the
+campaign**, not just passive scenery. This major revision adds two coupled,
+testable subsystems:
+
+- **Actual enemy hangars in the world.** Each level has two real 3D launch
+  bays with deep mechanical doors. At two authored moments in the stage the
+  campaign may spawn a small formation of existing enemy types directly
+  from the matching left/right entrance. This is handled by the real Game
+  simulation (`app/world-alive.ts`), not decorative background-only craft.
+  All six stages have different assault, bay, fortress, boss and escape names
+  and different enemy types.
+- **Destroy a facility, close its hangar.** Existing strategic objectives now
+  have permanent visual and tactical consequences. Destroying the linked
+  installation retracts/breaks the physical launch mechanisms and cancels
+  its pending bonus enemies. Let it escape and the defense remains active.
+  The prior bullet cancellation, cover, boss-weakening and high-score rewards
+  are preserved. Extra sorties are limited to 2 and 3 ships respectively,
+  disabled when enemies or hostile fire are already dense, and NEVER added
+  to Caravan or Boss Rush.
+- **Six stage-authored moving megastructures:** asteroid mining strongholds,
+  floating carrier docks, interior orbital station gantries, giant glacial
+  defenses, mechanical ancient temples and articulated furnace walls.
+  Everything is real lit geometry with side and interior thickness at
+  world-space Z below the enemy/projectile gameplay layer.
+- **3D boss cradle that changes with combat:** stage-specific architecture
+  moves forward when the real boss appears, its lateral armor retracts,
+  and each of the boss's two *actual* destructible wing parts opens the
+  corresponding 3D reactor protector. Phase updates alter the underlying
+  vault choreography. Existing boss balance/hitboxes remain authoritative.
+- **Real collapse/escape:** killing a boss opens a stage-specific 3D
+  demolition sequence; up to 48 bounded physical armored fragments travel
+  into depth with gravity. Giant sidewalls peel outward during the stage
+  escape, instead of flashing flat white quads over bullets.
+- **Mobile accessibility and clarity:** the central firing lane is open;
+  boss structures and huge girders are background geometry, never new
+  invisible collision. No new point lights, bloom floods or screen-wide
+  billboards. Reduced-motion and PERFORMANCE settings keep bounded detail,
+  and the previous 3.8 FX priority director remains active.
+- **Observable and tested:** `game.snapshot().worldAlive` exposes gate
+  state, launched real enemies, boss phases and escapes;
+  `view.getDiagnostics().worldAliveScene` exposes actual rendered stage
+  geometry, hangars, boss faces and debris counts. Node-outcome and spawn
+  mechanics have unit tests in `tests/world-alive.test.mjs`. The iPhone-size
+  GPU visual pipeline additionally plays and photographs real hangar launch,
+  node-driven shutdown, boss armor loss and full NOVA victory/escape.
+
+Classic 2.9.3 graphics and the Canvas 2D emergency compatibility path
+remain available. Unlike the earlier scenic 3D passes, World Alive adds
+real enemy-deployment consequences through the game's deterministic stage
+timeline, while leaving core shooting, input and collision intact.
+
 ## NOVA STRIKE 3.9 — SCENIC MOTION: SIX LIVING 3D BACKGROUNDS (2026-10-10)
 
 World Rebuild now contains a purpose-built background animation layer,
