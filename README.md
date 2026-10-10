@@ -1,3 +1,37 @@
+## NOVA STRIKE 3.6 — REAL 3D BACKGROUND GEOMETRY (2026-10-10)
+
+This update addresses the **large 2D-looking surface images still visible behind
+the actual 3D objects** in 3.5 World Rebuild. The earlier pass removed
+billboards, but the ocean/ice/lava/jungle channels still showed huge scrolling
+flat-textured surfaces. The fix changes those surfaces themselves:
+
+- **All four flowing environments** now use a continuously animated,
+  **side-walled BoxGeometry solid 3D heightfield (36×68 subdivisions)** with
+  entirely runtime-defined vertex colors and normals. World Rebuild does not
+  bind the original ocean, river, ice or magma image to this geometry.
+- Stage-specific volumetric shading: ocean has sculpted cyan-black wave crests,
+  glacial rivers blue ice swells, jungle water dark green flow, and lava uses
+  colored hot veins between cooled, dark crusts — **without animated texture
+  scroll or additive white-out**.
+- 36 shallow protruding geometric boulders/ice chunks and 64 modeled flow
+  ridges stream in world coordinates on each surface (mobile PERFORMANCE
+  caps: 14 + 24). Streaks and chunks avoid the main center fight lane.
+- **Jungle tree canopies** were still actual `PlaneGeometry` leaf pictures:
+  they are now thick joined 3D foliage volumes with real cylindrical trunks.
+- **Asteroid sky** was a giant 2D nebula image wrapped over a sphere. It is
+  now an untextured 3D sky shell with 48 differently placed, physically
+  shaded nebular dust/rock meshes at staggered depths.
+- The true 3D GPU path is clearly differentiated from the Canvas 2D
+  emergency fallback in the title screen. If WebGL/WebGPU isn't available,
+  users now see “CANVAS 2D COMPATIBILITY” instead of a false 3D label.
+
+The **Classic mode keeps its original flowing texture and caustic layers**.
+The Canvas renderer is deliberately a 2D compatibility mode for devices
+with no usable GPU context; it is not falsely claimed to become 3D.
+No enemy behavior, hitboxes, score, or game simulation changes.
+Tests: `tests/physical-background-volumes.test.mjs`; visual reviews:
+`.github/workflows/visual-review.yml`.
+
 ## NOVA STRIKE 3.5 — WORLD REBUILD TRUE 3D + CLARITY (2026-10-10)
 
 This pass changes the actual WebGL/WebGPU scene, not the optional Canvas fallback:
