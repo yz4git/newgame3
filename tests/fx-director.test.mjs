@@ -19,7 +19,7 @@ test('Cinematic cue priorities are explicit, nonrandom and bounded',()=>{
 });
 test('Bullet density automatically reduces scenery, but never disables visual warnings',()=>{
  const director=new FxDirector(),g=game();
- g.bullets=Array.from({length:FX_MIX_LIMITS.bulletCrowd},()=>({})) as typeof g.bullets;
+ g.bullets=Array.from({length:FX_MIX_LIMITS.bulletCrowd},()=>({}));
  const p=director.plan(g);assert.equal(p.crowded,true);
  assert.equal(p.showFlybys,false);assert.equal(p.showAmbientStructures,false);
  assert.equal(p.density,FX_MIX_LIMITS.quietDensity);
