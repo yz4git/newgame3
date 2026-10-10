@@ -205,9 +205,45 @@ for(let stage=0;stage<6;stage++){
   const skinCount=enemies.reduce((a,m)=>a+(m.getObjectByName('skin')?1:0),0);
   return {worldScene:scene,enemy3D:enemies.length,enemyBillboards:skinCount,
     style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background,
-    scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene};
+    scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene,rail:view.getDiagnostics().railDistricts};
  });
 }
+// 4.1 compare an actual varied sector with moving elevators and rotary rigs.
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.start('campaign','normal',2,'striker');
+ g.time=46;g.visualTime=46;g.invulnerable=900;
+ g.battlefield.seen=[true,true];g.encounterSeen={stage:true,mini:true};
+ g.sectorMission.started=true;g.nodes=[];g.enemies=[];g.bullets=[];
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v41-rail-fortress-irregular-chapters',220);
+results.railBefore=await rich.page.evaluate(()=>{
+ const view=window.__nova.view,rail=view.railDistricts;
+ const pods=[],rotors=[];
+ rail.root.traverse(o=>{if(o.name==='lateral-cargo-shuttle')pods.push(o.position.x+o.position.y);
+ if(o.name==='physical-moving-turbine')rotors.push(o.rotation.z);});
+ return {diagnostics:view.getDiagnostics().railDistricts,pods,rotors};
+});
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.visualTime+=2.3;view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v41-rail-fortress-animated-cross-motion',220);
+results.railAfter=await rich.page.evaluate(()=>{
+ const view=window.__nova.view,rail=view.railDistricts;
+ const pods=[],rotors=[];
+ rail.root.traverse(o=>{if(o.name==='lateral-cargo-shuttle')pods.push(o.position.x+o.position.y);
+ if(o.name==='physical-moving-turbine')rotors.push(o.rotation.z);});
+ return {diagnostics:view.getDiagnostics().railDistricts,pods,rotors};
+});
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ view.event({type:'worldbreach',x:-6,y:9});
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v41-breached-side-rail-shutters',170);
+results.railBreach=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().railDistricts);
 // 4.0 real campaign + physical scene proof. The stage's actual Game.update
 // triggers a launch from the left background dock; destroying the linked
 // field node closes that bay and prevents future reinforcements.
@@ -336,6 +372,10 @@ if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw n
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
+if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.rail?.stage===Number(stage)&&x.rail.modules>=2&&x.rail.left>=1&&x.rail.right>=1&&x.rail.geometryParts<=126&&x.rail.architecture.includes('nonrepeating')))throw new Error('4.1 real 3D rail chapters must vary visibly on both sides of all six stages: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.rail)));
+if(!results.railBefore?.diagnostics?.types.length||results.railBefore.diagnostics.types.length<2)throw new Error('4.1 railway silhouette variety missing in the actual fortress playfield: '+JSON.stringify(results.railBefore));
+if(!results.railAfter?.rotors?.some((n,i)=>Math.abs(n-results.railBefore.rotors[i])>.1))throw new Error('4.1 independently animated 3D rail rotors are not moving');
+if(results.railBreach?.activeCue!=='facility')throw new Error('4.1 destroyed 3D rail modules must react to the actual facility breach');
 if(!Object.values(results.worldRebuild).every(x=>x.worldScene&&x.enemy3D>=2&&x.enemyBillboards===0&&x.style==='rebuilt'))throw new Error('3D world and physical enemy meshes not rendered consistently: '+JSON.stringify(results.worldRebuild));
 if(!Object.values(results.worldRebuild).every(x=>x.background?.physicalAudit?.textureMappedMeshes===0&&x.background.physicalAudit.flatImageCards===0&&x.background.physicalAudit.sprites===0))throw new Error('2D image/textured photo backdrop still present in REAL World Rebuild scene: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.background?.physicalAudit)));
 if(![3,4,5].every(stage=>results.worldRebuild[stage]?.background?.physicalAudit?.terrainReliefMeshes>0&&results.worldRebuild[stage].background.physicalAudit.terrainTriangles>200))throw new Error('Ice, jungle and lava banks require actual tessellated 3D relief instead of flat painted cliffs');
