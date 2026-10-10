@@ -44,7 +44,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-visual]').forEach(button=>{
     location.replace(next.href);
   });
 });
-el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — INVASION DIRECTOR 3.4';
+el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — WORLD REBUILD 3.5 / TRUE 3D';
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
