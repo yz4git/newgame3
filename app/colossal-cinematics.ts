@@ -281,6 +281,8 @@ export class ColossalCinematics {
     rotor.rotation.z=t*(j%2?-.16:.19)+j*.34;
    }
   }
+  // 3.4 invasion director owns the opening encounter; fleet patrol resumes later.
+  this.flight.visible=!reduced&&!boss&&g.time>11&&g.state==='playing';
   // Capital ships execute a foreground side pass and a deep center-lane departure.
   for(let i=0;i<this.carriers.length;i++){
    const craft=this.carriers[i];
@@ -299,7 +301,7 @@ export class ColossalCinematics {
    }
   }
   const boss=g.boss&&!g.boss.dead?g.boss:null;
-  this.irisRoot.visible=!!boss&&!reduced;
+  this.irisRoot.visible=false; // 3.4 boss megastructure replaces the duplicate 3.3 rings
   if(boss&&this.irisRoot.visible){
    const age=clamp(boss.age/2.5,0,1);
    const size=5.7+smooth(age)*1.8;
@@ -319,7 +321,7 @@ export class ColossalCinematics {
     ring.scale.setScalar(size*(1+i*.33));
    }
   }
-  this.warpStage.visible=moving&&!reduced;
+  this.warpStage.visible=false; // prevent 7 legacy hoops overlapping 12 new warp rings
   if(this.warpStage.visible){
    for(let i=0;i<this.gateRings.length;i++){
     const ring=this.gateRings[i],brace=this.gateBraces[i];
