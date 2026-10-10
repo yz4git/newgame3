@@ -44,7 +44,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-visual]').forEach(button=>{
     location.replace(next.href);
   });
 });
-el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — PHYSICAL WORLD 3.6';
+el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — FULLY GEOMETRIC WORLD 3.7';
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
