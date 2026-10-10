@@ -221,6 +221,16 @@ function events(){
       el('field-target-flash').classList.remove('on');void el('field-target-flash').offsetWidth;el('field-target-flash').classList.add('on');
     }
     else if(e.type==='fieldrisk')showMessage('FACILITY ESCAPED / 破壊失敗','増援が出現・ボス兵装が強化！',1.7,true);
+    else if(e.type==='worldapproach')toast('WORLD ALIVE / '+(e.text||'巨大施設に接近'));
+    else if(e.type==='worldlaunch')showMessage('HANGAR LAUNCH / 敵機発進',e.text||'背景施設から敵編隊が出撃',1.25,true);
+    else if(e.type==='worldbaydisabled')toast('HANGAR SEALED / 出撃阻止・追加敵なし');
+    else if(e.type==='worldbayhold')toast('HANGAR HOLD / 戦場混雑・出撃待機');
+    else if(e.type==='worldbreach')toast('WORLD GATE DOWN / 格納庫停止');
+    else if(e.type==='worldalarm')toast('WORLD ALARM / 防衛施設が活動を継続');
+    else if(e.type==='worldbossentry')toast('BOSS VAULT OPEN / 巨大機構展開');
+    else if(e.type==='worldbossphase')toast('BOSS STRUCTURE / 装甲形態変化');
+    else if(e.type==='worldbossfall')toast('STRUCTURE BREAK / 中枢崩壊');
+    else if(e.type==='worldescape')toast('ESCAPE CORRIDOR / 脱出');
     else if(e.type==='fieldwarning'){showMessage('◆ DESTROY TARGET','大型設備の発光炉心を狙って撃て！',1.15);}
     else if(e.type==='fieldfracture')toast('装甲破損！ 炉心を狙え');
     else if(e.type==='fieldcritical')toast('赤い炉心が露出！ あと少し');
