@@ -151,7 +151,7 @@ export class InvasionDirector {
   if(e.type==='bosskill'||e.type==='fieldcollapse'||e.type==='fieldclear'){
    if(this.detonations.length>=LIMIT.ruptures)this.detonations.shift();
    this.detonations.push({age:0,life:e.type==='bosskill'?2.2:1.6,x:e.x??0,y:e.y??0,stage:this.stage});
-   const n=e.type==='bosskill'?LIMIT.bossDebris:LIMIT.fieldDebris;
+   const n=e.type==='bosskill'?LIMIT.bossDebris:0; // facility shards belong to FacilityDemolition3D
    for(let i=0;i<n;i++){
     if(this.shards.length>=LIMIT.debris)this.shards.shift();
     const k=++this.serial,a=hash(k+9)*TAU,v=1.5+hash(k+19)*6.4;
