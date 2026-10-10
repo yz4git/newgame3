@@ -27,7 +27,21 @@ export function rock(g:T.Group,mat:T.Material,x:number,y:number,z:number,sx:numb
   geo.computeVertexNormals();const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.rotation.z=noise(seed,3)*TAU;g.add(m);return m;
 }
 function canopy(g:T.Group,p:EnvironmentPalette,x:number,y:number,z:number,size:number,seed:number){
-  const m=new T.Mesh(new T.PlaneGeometry(size,size),p.foliage);m.position.set(x,y,z);m.rotation.z=noise(seed,7)*TAU;g.add(m);
+  // Crown and trunk are all real 3D volumes. A single alpha-textured 2D leaf
+  // card used to cover the river in the top-down World Rebuild camera.
+  const root=new T.Group();root.position.set(x,y,z);root.rotation.z=noise(seed,7)*TAU;
+  const trunk=new T.Mesh(new T.CylinderGeometry(size*.07,size*.11,size*.55,7),p.rock);
+  trunk.rotation.x=Math.PI/2;trunk.position.z=-size*.12;root.add(trunk);
+  const crown=new T.Mesh(new T.IcosahedronGeometry(1,1),p.moss);
+  crown.position.z=size*.13;
+  crown.scale.set(size*.48,size*.44,size*.35);root.add(crown);
+  for(let i=0;i<3;i++){
+    const a=i*TAU/3+noise(seed,i,53)*.45;
+    const tuft=new T.Mesh(new T.IcosahedronGeometry(1,0),p.moss);
+    tuft.position.set(Math.cos(a)*size*.29,Math.sin(a)*size*.25,size*.15+noise(seed,i,28)*.14);
+    tuft.scale.set(size*.24,size*.23,size*.23);root.add(tuft);
+  }
+  g.add(root);
 }
 function crystal(g:T.Group,p:EnvironmentPalette,x:number,y:number,z:number,height:number,seed:number){
   const m=new T.Mesh(new T.ConeGeometry(.35+noise(seed,7)*.25,height,5).rotateX(Math.PI/2),p.ice);m.position.set(x,y,z);m.rotation.set(-.50,.12,noise(seed,3));g.add(m);
