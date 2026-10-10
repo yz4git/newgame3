@@ -224,7 +224,7 @@ function events(){
     else if(e.type==='worldapproach')toast('WORLD ALIVE / '+(e.text||'巨大施設に接近'));
     else if(e.type==='worldlaunch')showMessage('HANGAR LAUNCH / 敵機発進',e.text||'背景施設から敵編隊が出撃',1.25,true);
     else if(e.type==='worldbaydisabled')toast('HANGAR SEALED / 出撃阻止・追加敵なし');
-    else if(e.type==='worldbayhold')toast('HANGAR HOLD / 戦場混雑・出撃待機');
+    else if(e.type==='worldbayhold')toast('HANGAR STAND DOWN / 混戦のため出撃見送り');
     else if(e.type==='worldbreach')toast('WORLD GATE DOWN / 格納庫停止');
     else if(e.type==='worldalarm')toast('WORLD ALARM / 防衛施設が活動を継続');
     else if(e.type==='worldbossentry')toast('BOSS VAULT OPEN / 巨大機構展開');
