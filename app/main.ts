@@ -44,7 +44,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-visual]').forEach(button=>{
     location.replace(next.href);
   });
 });
-el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — WORLD REBUILD 3.5 / TRUE 3D';
+el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — PHYSICAL WORLD 3.6';
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
@@ -264,6 +264,9 @@ async function boot(){
       const next=document.createElement('canvas');next.id='game';next.setAttribute('aria-label','NOVA STRIKE ゲーム画面');canvas.replaceWith(next);canvas=next;
       view=new CanvasView(canvas);await view.init();view.draw(game,0,16.67);
     }
+    // Do not label the Canvas 2D emergency renderer as 'TRUE 3D'. It is a
+    // compatibility path and cannot render the rebuilt physical world.
+    if(view instanceof CanvasView)el('graphics-version').textContent='N/S — CANVAS 2D COMPATIBILITY';
     bindCanvas();ready=true;el('boot').hidden=true;screens();
     new ResizeObserver(()=>view.resize()).observe(el('frame'));
     window.addEventListener('pageshow',e=>{if(e.persisted){clearInput();lastTime=performance.now();accumulator=0;}});
