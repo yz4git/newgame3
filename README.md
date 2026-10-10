@@ -1,3 +1,40 @@
+## NOVA STRIKE 3.5 — WORLD REBUILD TRUE 3D + CLARITY (2026-10-10)
+
+This pass changes the actual WebGL/WebGPU scene, not the optional Canvas fallback:
+
+- **3D aircraft and bosses:** World Rebuild retains physical ship/boss models. Engine
+  exhaust, gunfire emitters, lock charge, and armor damage markings now use cone,
+  icosahedron, and dodecahedron meshes instead of flat translucent sprites.
+- **Real minibosses and mission actors:** The encounter renderer now shows modeled
+  3D boss hulls, rotating plated 3D non-field nodes, 3D engine cones, and rotating
+  3D objective hoops instead of sprite-atlas stand-ins.
+- **Real 3D background:** World Rebuild scene landmarks were already geometry.
+  This pass replaces its residual asteroid sky sheet with an inward-facing 3D
+  sky shell; converts soft cloud billboards to volumetric low-poly meshes; changes
+  stage fog, water spray, wake accents, waterfalls, airborne escorts, foliage and
+  weather billboards into depth-bearing geometry; and renders auxiliary atmosphere
+  using subdued 3D spatial volumes.
+- **3D effects:** Hit plumes, ghost afterimages, breakup debris, shock rings,
+  laser-trail volumes, player thrust cones and explosion/smoke flashes now have
+  genuinely 3D geometry in rebuilt mode. Water and lava foam cards become
+  three-dimensional tubular ripples.
+- **Less obstruction:** Flash core 0.42 -> 0.24 opacity, geometric facility ring
+  0.46 -> 0.27, halo 0.07 -> 0.035; facility effects honor depth testing.
+  New 3D geometry avoids additive fullscreen flashes. Rebuilt-only bloom
+  intensity 0.52 -> 0.31, bright background reactor lamps dim, bullet glows
+  contract, and camera shake is 38% of its previous magnitude.
+- **Sequential spectacles:** 3.4's 16-panel boss vault and 12-layer warp now
+  replace the overlapping 3.3 boss/warp rings; capital ship patrol flybys resume
+  after the 3.4 opening intercept to keep the screen readable.
+- **Scope:** No combat physics, AI, collision boxes, game RNG, save data, or
+  Classic mode's original sprite presentation are changed.
+
+Design constraint: A physical wave surface remains a continuously displaced,
+lit tessellated mesh; only in-world billboards are removed in rebuilt mode.
+Gameplay HUD, reticles and threat indicators remain purposeful 2D screen-space
+information for readability. Reduced-motion and mobile performance modes stay
+supported. Build: `npm run check && npm test && npm run build`.
+
 ## NOVA STRIKE 3.4 — INVASION DIRECTOR (2026-10-10)
 
 A bolder, story-sized 3D camera and megastructure update, built over the
