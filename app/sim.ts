@@ -7,6 +7,7 @@ import {STAGES} from './stages.ts';
 import {updateBossPattern,bossCoreDamage} from './boss-patterns.ts';
 import {selectBossForm,BOSS_FORM_NAMES,type BossForm} from './boss-evolution.ts';
 import {updateEncounters} from './encounters.ts';
+import {initialWorldAlive,resetWorldAlive,updateWorldAlive,enterWorldBoss,updateWorldBoss,collapseWorldBoss,advanceWorldEscape,type WorldAliveState} from './world-alive.ts';
 import {initialBattlefield,nextBattlefieldStage,updateBattlefield,damageBattlefieldNode,type BattlefieldState} from './battlefield.ts';
 import {SHIPS,type ShipClass} from './ship-config.ts';
 import {initialSectorMission,resetSectorMission,updateSectorMission,completeSectorMission,failSectorMission,type SectorMission} from './sector-missions.ts';
@@ -144,6 +145,7 @@ export class Game {
   player={x:0,y:-10.5,vx:0,vy:0,focus:false};
   enemies: Enemy[]=[]; bullets: Bullet[]=[]; pickups: Pickup[]=[]; boss: Boss | null=null;
   encounter:Miniboss|null=null;nodes:CombatNode[]=[];threats:Threat[]=[];encounterSeen={stage:false,mini:false};
+  worldAlive:WorldAliveState=initialWorldAlive();
   events: GameEvent[]=[]; private schedule: Wave[]=[]; private waveIndex=0; private uid=0;
   private seed=2026; private groups=new Map<number,{total:number;kills:number;escaped:boolean}>();
   private volley=0; private lastExtend=0;
@@ -162,7 +164,7 @@ export class Game {
     this.enemies=[]; this.bullets=[]; this.pickups=[]; this.events=[]; this.boss=null;this.encounter=null;this.nodes=[];this.threats=[];this.encounterSeen={stage:false,mini:false};
     this.groups.clear(); this.waveIndex=0; this.uid=0; this.seed=2026; this.volley=0;
     this.lastExtend=0; this.won=false;this.failureReason=null; this.shotTimer=0; this.schedule=waves(this.stage,mode);
-    this.state='playing'; this.emit('stage',{text:mode==='caravan'?'120 SECOND CARAVAN':STAGES[this.stage].name});
+    resetWorldAlive(this);this.state='playing'; this.emit('stage',{text:mode==='caravan'?'120 SECOND CARAVAN':STAGES[this.stage].name});
   }
   pause() { if(this.state==='playing'||this.state==='transition'){this.resumeState=this.state;this.state='paused';} }
   resume() { if(this.state==='paused')this.state=this.resumeState; }
@@ -351,6 +353,7 @@ export class Game {
       maxPart:(100+this.stage*45)*branch,shoot:1.5,attack:0,cycle:-1,warning:0,beam:0,beamX:0,dead:false,flash:0,phase:1,rest:false,spread:0,recoil:0,patternTime:0,guard:0,heat:0,form};
     if(form!=='standard')this.emit('bossform',{x:0,y:9,size:6.2,color:form==='shattered'?0x83ffda:0xff9762,text:BOSS_FORM_NAMES[form]});
     this.emit('warning',{text:'WARNING / '+STAGES[this.stage].boss});
+    enterWorldBoss(this);
   }
   private updateBoss(dt:number){updateBossPattern(this,dt);}
   attackName(){const b=this.boss;if(!b)return '';const suffix=b.form==='shattered'?' / EXPOSED':b.form==='overcharged'?' / OVERCHARGE':'';return b.rest?'CORE EXPOSED / DAMAGE ×1.6':BOSS_ATTACKS[this.stage][b.attack]+(b.guard?' / CORE ARMOR':this.stage===5?' / '+Math.round(b.heat*100)+'%':'')+suffix;}
@@ -397,6 +400,7 @@ export class Game {
     this.emit('score',{x:b.x,y:b.y-3,text:'TIME BONUS +'+timeBonus*this.multiplier});
     this.encounter=null;this.nodes=[];this.threats=[];
     this.emit('bosskill',{x:b.x,y:b.y,size:5.5,text:'TARGET DESTROYED',source:b.id,kind:'boss'});
+    collapseWorldBoss(this);
     for(const e of this.enemies)e.dead=true;for(const shot of this.bullets)shot.dead=true;
     if(this.mode==='caravan'){
       this.boss=null;
@@ -410,7 +414,7 @@ export class Game {
       );
       return;
     }
-    this.state='transition';this.transitionTime=3.5;
+    this.state='transition';this.transitionTime=3.5;advanceWorldEscape(this);
   }
   private nextStage() {
     if(this.stage>=STAGES.length-1){this.finish(true);return;}
@@ -418,7 +422,7 @@ export class Game {
     nextBattlefieldStage(this);resetSectorMission(this);
     this.groups.clear();this.waveIndex=0;this.schedule=waves(this.stage,this.mode);this.locks=[];
     this.hull=Math.min(4,this.hull+stageRecovery(this.hull,this.difficulty));this.bombs=Math.min(3,this.bombs+1);
-    this.invulnerable=2.5;this.state='playing';this.emit('stage',{text:STAGES[this.stage].name});
+    resetWorldAlive(this);this.invulnerable=2.5;this.state='playing';this.emit('stage',{text:STAGES[this.stage].name});
   }
   finish(won: boolean,reason:'hull'|'timeout'='hull') {this.won=won;this.failureReason=won?null:reason;this.state='result';this.emit('finish',{text:won?'MISSION COMPLETE':'SIGNAL LOST'});}
   update(dt: number,input: Input) {
@@ -445,6 +449,7 @@ export class Game {
     this.updateLocks(dt);this.shotTimer-=dt;if(this.shotTimer<=0)this.fire();
     while(this.waveIndex<this.schedule.length&&this.schedule[this.waveIndex].at<=this.time)this.wave(this.schedule[this.waveIndex++]);
     const bossTime=this.mode==='caravan'?96:STAGES[this.stage].duration;
+    updateWorldAlive(this);
     if(this.time>=bossTime&&!this.boss&&this.mode==='campaign')this.spawnBoss();
     if(this.mode==='caravan'&&this.time>=96&&this.time<96+dt*1.1&&!this.boss)this.spawnBoss();
     if(this.mode==='bossrush'&&this.time>=1.5&&!this.boss)this.spawnBoss();
@@ -491,7 +496,7 @@ export class Game {
       if(!e.ground&&Math.hypot(e.x-p.x,e.y-p.y)<e.radius*.8+.23)this.hitPlayer();
       if(e.y<-19){e.dead=true;const group=this.groups.get(e.group);if(group)group.escaped=true;}
     }
-    if(this.state!=='playing')return;updateEncounters(this,dt);updateBattlefield(this,dt);updateSectorMission(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);if(this.state!=='playing')return;
+    if(this.state!=='playing')return;updateEncounters(this,dt);updateBattlefield(this,dt);updateSectorMission(this,dt);if(this.state!=='playing')return;this.updateBoss(dt);updateWorldBoss(this);if(this.state!=='playing')return;
     for(const b of this.bullets){
       if(b.dead)continue;b.age+=dt;b.px=b.x;b.py=b.y;
       if(b.homing&&!b.enemy){
@@ -565,7 +570,7 @@ export class Game {
   }
   snapshot() { return {state:this.state,stage:this.stage,time:this.time,totalTime:this.totalTime,score:this.score,
     hull:this.hull,power:this.power,bombs:this.bombs,energy:this.energy,weapon:this.weapon,kills:this.kills,
-    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},sectorMission:{...this.sectorMission},shipClass:this.shipClass,
+    bullets:this.bullets.length,enemies:this.enemies.length,chain:this.chain,multiplier:this.multiplier,locks:this.locks,lockKills:this.lockKills,resonances:this.resonances,cancelled:this.cancelled,medalStreak:this.medalStreak,battlefield:{...this.battlefield},sectorMission:{...this.sectorMission},worldAlive:{...this.worldAlive},shipClass:this.shipClass,
     boss:this.boss?{hp:this.boss.hp,parts:this.boss.parts,attack:this.boss.attack,phase:this.boss.phase,rest:this.boss.rest,form:this.boss.form}:null,
     encounter:this.encounter?{name:ENCOUNTERS[this.stage].mini,hp:this.encounter.hp,maxHp:this.encounter.maxHp,age:this.encounter.age,attack:this.encounter.attack}:null,stageEvent:{...this.encounterSeen,nodes:this.nodes.length,threats:this.threats.length},
     player:{...this.player},won:this.won,failureReason:this.failureReason}; }
