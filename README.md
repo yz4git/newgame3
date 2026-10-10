@@ -1,3 +1,40 @@
+## NOVA STRIKE 3.8 — FX DIRECTOR: REBUILT VISUAL PRIORITIES (2026-10-10)
+
+**An actual new renderer orchestration layer, not simply more particles.**
+
+- `app/fx-director.ts` owns priority and visibility across the formerly
+  unrelated 3.1, 3.2, 3.3 and 3.4 3D spectacle engines.
+  The lifecycle is `ambient → combat → facility → nova → boss →
+  boss-finish → warp` with explicit event priority, duration and caps.
+  Gameplay signals and player bullet visibility always take precedence.
+- Heavy bullets (38+) or numerous enemies (17+) automatically suppress
+  nonessential roaming megastructures and reduce parallax particles.
+  During boss encounters, the 3.4 hyperstructure owns the boss arena.
+  During warp, the 3.4 portal architecture is the only active tunnel.
+- **Duplicate giant rings and debris are eliminated:** 3.1 no longer creates
+  extra facility/boss/NOVA rings, 3.2 no longer raises its overlapping boss
+  iris, 3.3 no longer adds another capital flyby, and 3.4 no longer sprays
+  redundant facility shards. The dedicated 3D facility shockwaves still
+  provide readable essential break feedback.
+- New `app/mechanical-setpiece-fx.ts` uses pooled instanced real meshes
+  for **reactor exposure, telescoping inner pistons, shearing armor panels
+  and multi-stage boss breakups**. Up to 3 simultaneous beats with no
+  fullscreen flashes, extra point lights, sprite atlas or game RNG.
+  iPhone PERFORMANCE/bullet-pressure modes halve the mechanical detail.
+- Boost and camera clarity: ship animation rig is the sole engine flame;
+  cinematic roll is limited to **0.028 rad** during active combat (warp may
+  rise to 0.30 rad only during noninteractive transition); gameplay zoom
+  stays within **1.045×**. Ordinary destruction sparks are capped at 36
+  in the new renderer, while Classic retains its legacy particle counts.
+- In-engine diagnostics `getDiagnostics().fxMix` and
+  `getDiagnostics().mechanical` expose cue, stage, instance caps and
+  active structural chapters.
+
+The 3.7 fully geometric, texture-free World Rebuild stage scenery is kept,
+as is Classic 2.9.3. No game simulation, collision, scoring or save changes.
+Automated tests: `tests/fx-director.test.mjs`; CI builds and runs actual
+iPhone-sized GPU visual screenshots.
+
 ## NOVA STRIKE 3.7 — FULLY GEOMETRIC WORLD REBUILD (2026-10-10)
 
 The previous 3.6 pass physically reconstructed water, but there were **still
