@@ -39,3 +39,13 @@ test('GPU visual review audits actual render scene, not file names or declared 3
  assert.match(s,/terrainReliefMeshes>0/);
  assert.match(s,/terrainTriangles>200/);
 });
+
+test('World Rebuild orbital-fortress corridor uses raised 3D deck plates, not a giant image floor',async()=>{
+ const s=await read('fortress');
+ assert.match(s,/Main station corridor previously relied on a huge photographic floor map/);
+ assert.match(s,/if\(usesRebuiltGraphics\(\)\)\{\s*\/\/ Main station corridor/);
+ assert.match(s,/block\(g,p\.dark,xx,yy,-5\.14,w,1\.85,\.085\)/);
+ assert.match(s,/block\(g,\(v\+row\+col\)%5===0\?p\.plate:p\.deck/);
+ assert.match(s,/block\(g,p\.rust,xx\+side\*\(w\*\.46\),yy\+end\*\.72/);
+ assert.match(s,/Longitudinal cable conduits and cross-members/);
+});
