@@ -222,7 +222,7 @@ export class ScenicChoreography3D {
  draw(g:Game,dt:number,mix:FxMix,reduced=false,performance=false){
   this.setStage(g.stage);
   const clock=g.visualTime;
-  this.root.visible=g.state!=='result'&&g.state!=='paused';
+  this.root.visible=g.state!=='result';
   if(!this.root.visible)return;
   const active=g.state==='playing'||g.state==='transition',boss=!!g.boss&&!g.boss.dead;
   const density=clamp(mix.density,0,1),t=clock;
@@ -242,7 +242,7 @@ export class ScenicChoreography3D {
    rig.rotor.rotation.z=t*(g.stage===5?.88:.38)*(rig.index===0?1:-1);
    rig.rotor.rotation.y=Math.sin(t*.23+rig.index)*.17;
    rig.ram.position.y=-3+Math.sin(t*(g.stage===5?2.2:.75)+rig.index)*.75;
-   rig.signal.material.opacity=.15+.10*strength;
+   (rig.signal.material as T.MeshBasicMaterial).opacity=.15+.10*strength;
   }
   // Cargo in the far field: never the low-altitude combat ships and never
   // reused weapon silhouettes. During bullet crowding keep the air clear.
@@ -288,13 +288,13 @@ export class ScenicChoreography3D {
   // withdraw and walls' side-mounted metal indicators brighten only modestly.
   const engaged=!reduced&&(!!this.cue&&strength>0||boss&&mix.showBossArchitecture);
   this.reaction.visible=engaged;
-  const opening=engaged?(boss?.85:1.0)*Math.max(strength,boss?.60:0):0;
+  const opening=engaged?(boss ? .85 : 1.0)*Math.max(strength,boss ? .60 : 0):0;
   for(let j=0;j<this.facade.length;j++){
    const f=this.facade[j],side=j?1:-1;
    f.position.set(side*10.7,this.cue?clamp(this.cue.y,-5,14):boss?g.boss!.y:7,-11.6);
    this.shutters[j].position.x=side*(.65+opening*1.4);
    this.shutters[j].rotation.y=side*opening*.52;
-   this.warning[j].material.opacity=.12+.15*opening;
+   (this.warning[j].material as T.MeshBasicMaterial).opacity=.12+.15*opening;
   }
   this.backdropCount=engaged?2:0;
  }
