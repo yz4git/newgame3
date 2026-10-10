@@ -282,7 +282,7 @@ export class ColossalCinematics {
    }
   }
   // 3.4 invasion director owns the opening encounter; fleet patrol resumes later.
-  this.flight.visible=!reduced&&!boss&&g.time>11&&g.state==='playing';
+  this.flight.visible=!reduced&&(!g.boss||g.boss.dead)&&g.time>11&&g.state==='playing';
   // Capital ships execute a foreground side pass and a deep center-lane departure.
   for(let i=0;i<this.carriers.length;i++){
    const craft=this.carriers[i];
