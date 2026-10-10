@@ -1,3 +1,30 @@
+## NOVA STRIKE 3.3 — COLOSSAL CINEMATICS (2026-10-10)
+
+The previous 3D particle/effect pass remains intact. The rebuilt graphics mode
+now includes **20 more authored, world-scale visual systems**:
+
+- Six unique physical mega-setpieces: orbital asteroid fortress, naval supercarrier
+  dock, rotating space station, jagged glacial wall, awakened ruined temple,
+  and articulated pressure furnace. Each has separate mechanical volumes and
+  metallic color grading rather than flat cutout pictures.
+- Three gigantic capital vessels execute time-offset 3D flyovers with hangars,
+  engine nacelles, armoured wings and actual geometric thrust exhaust.
+- Boss arrival creates a large mechanical 3D iris and nested mobile guard rings
+  physically behind the battle. Its orientation and openings respond to combat state.
+- Stage transitions pass through seven massive rotating hoop-and-rib structures
+  located at progressive **3D depth**, rather than screen-wide white flashes.
+- Field target collapse tears apart nine mechanical sections and hurls up to
+  54 capped rigid metal fragments through world space.
+- Limited cinematic camera banking, boss-entry lens push-in and NOVA pressure
+  recovery are bounded to 0.045 rad and 1.047 zoom to keep bullets and touch
+  targeting legible. With reduced-motion enabled, the new camera work stops.
+
+New massive objects are decorative only: no collision, spawn changes or new
+combat randomness. PERFORMANCE mode hides some background flyovers.
+The classic original 2.9.3 style is preserved, and all camera effects remain
+exclusive to **rebuilt**. Diagnostics: `getDiagnostics().colossal` and
+`getDiagnostics().cameraRig`. Tests: `npm run check && npm test && npm run build`.
+
 ## NOVA STRIKE 3.2 — Depth Spectacle (2026-10-10)
 
 The rebuilt 3D presentation now adds 16 independent, event-linked world-space
