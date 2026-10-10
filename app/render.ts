@@ -27,7 +27,7 @@ const dummy=new T.Object3D();
 const skinOffset=new T.Vector3(0,-.50625,1.62),inverseRotation=new T.Quaternion(),faceRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.atan(12.5/40)),rollRotation=new T.Quaternion();
 
 interface Particle {x:number;y:number;z:number;vx:number;vy:number;vz:number;life:number;max:number;size:number;color:T.Color;}
-interface Flare {sprite:T.Sprite;age:number;life:number;size:number;smoke:boolean;}
+interface Flare {sprite:T.Sprite|T.Mesh<T.IcosahedronGeometry,T.MeshBasicMaterial>;age:number;life:number;size:number;smoke:boolean;}
 interface Wreck {model:T.Group;age:number;life:number;side:number;boss:boolean;}
 export class View {
   scene=new T.Scene();camera=new T.OrthographicCamera(-12,12,64/3,-64/3,.1,110);
@@ -40,7 +40,7 @@ export class View {
   private stars:T.InstancedMesh;private starData:Float32Array;
   private diamonds:T.InstancedMesh;private diamondRims:T.InstancedMesh;private shots:T.InstancedMesh;private shotColor=new T.Color();private particles:Particle[]=[];private sparkMesh:T.InstancedMesh;
   private shotRims:T.InstancedMesh;private shotCores:T.InstancedMesh;private shotGlows:T.InstancedMesh;private trails:T.InstancedMesh;private shadows:T.InstancedMesh;
-  private markers:T.InstancedMesh;private aimLines:T.InstancedMesh;private flames:T.Sprite[]=[];private flares:Flare[]=[];
+  private markers:T.InstancedMesh;private aimLines:T.InstancedMesh;private flames:(T.Sprite|T.Mesh<T.ConeGeometry,T.MeshBasicMaterial>)[]=[];private flares:Flare[]=[];
   private fireMap=effectTexture('fire');private smokeMap=smokeMap;
   private lockMarkers=new Map<number,T.Group>();
   private pickups=new Map<number,T.Group>();private ring:T.Mesh;private indicator:T.Group;
@@ -72,12 +72,18 @@ export class View {
     this.diamonds=new T.InstancedMesh(boxGeometry,bulletMat,740);this.diamonds.setColorAt(0,new T.Color());this.diamonds.frustumCulled=false;this.scene.add(this.diamonds);this.diamondRims=new T.InstancedMesh(boxGeometry,new T.MeshBasicMaterial({color:0x10071c}),740);this.diamondRims.frustumCulled=false;this.scene.add(this.diamondRims);
     this.shotRims=new T.InstancedMesh(shotGeometry,new T.MeshBasicMaterial({color:0x030b17}),740);this.shotRims.frustumCulled=false;this.scene.add(this.shotRims);
     this.shotCores=new T.InstancedMesh(shotGeometry,new T.MeshBasicMaterial({color:0xfffbef,toneMapped:false}),740);this.shotCores.frustumCulled=false;this.scene.add(this.shotCores);
-    this.shotGlows=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:this.spriteTexture,transparent:true,opacity:.74,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),740);this.shotGlows.setColorAt(0,new T.Color());this.shotGlows.frustumCulled=false;this.scene.add(this.shotGlows);
-    this.trails=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:this.spriteTexture,color:0x76ffd4,transparent:true,opacity:.62,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),1800);this.trails.frustumCulled=false;this.scene.add(this.trails);
+    this.shotGlows=new T.InstancedMesh(usesRebuiltGraphics()?new T.SphereGeometry(.5,6,4):new T.PlaneGeometry(1,1),new T.MeshBasicMaterial(usesRebuiltGraphics()?{color:0xffffff,transparent:true,opacity:.20,depthWrite:false,toneMapped:true}:{map:this.spriteTexture,transparent:true,opacity:.74,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),740);this.shotGlows.setColorAt(0,new T.Color());this.shotGlows.frustumCulled=false;this.scene.add(this.shotGlows);
+    this.trails=new T.InstancedMesh(usesRebuiltGraphics()?new T.CylinderGeometry(.33,.25,1,6):new T.PlaneGeometry(1,1),new T.MeshBasicMaterial(usesRebuiltGraphics()?{color:0x478e90,transparent:true,opacity:.26,depthWrite:false,toneMapped:true}:{map:this.spriteTexture,color:0x76ffd4,transparent:true,opacity:.62,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),1800);this.trails.frustumCulled=false;this.scene.add(this.trails);
     this.shadows=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:effectTexture('shadow'),transparent:true,depthWrite:false}),100);this.shadows.frustumCulled=false;this.scene.add(this.shadows);
     this.markers=new T.InstancedMesh(new T.RingGeometry(.45,.53,24),new T.MeshBasicMaterial({color:0xff9876,transparent:true,opacity:.85,toneMapped:false,depthWrite:false}),60);this.markers.frustumCulled=false;this.scene.add(this.markers);
     this.aimLines=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({color:0xff808b,transparent:true,opacity:.28,toneMapped:false,depthWrite:false}),60);this.aimLines.frustumCulled=false;this.scene.add(this.aimLines);
-    for(let i=0;i<2;i++){const flame=new T.Sprite(new T.SpriteMaterial({map:this.spriteTexture,color:new T.Color(0x249cff).multiplyScalar(2.8),transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));this.flames.push(flame);this.scene.add(flame);}
+    for(let i=0;i<2;i++){
+      const flame=usesRebuiltGraphics()
+        ?new T.Mesh(new T.ConeGeometry(.32,1.0,7),new T.MeshBasicMaterial({color:0x2c8ca9,transparent:true,opacity:.38,depthWrite:false,toneMapped:true}))
+        :new T.Sprite(new T.SpriteMaterial({map:this.spriteTexture,color:new T.Color(0x249cff).multiplyScalar(2.8),transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));
+      if(flame instanceof T.Mesh)flame.rotation.z=Math.PI;
+      this.flames.push(flame);this.scene.add(flame);
+    }
     this.sparkMesh=new T.InstancedMesh(boxGeometry,new T.MeshBasicMaterial({color:0xffffff,toneMapped:false,transparent:true,opacity:.95}),1600);
     this.sparkMesh.setColorAt(0,new T.Color(0xffffff));this.sparkMesh.instanceColor!.setUsage(T.DynamicDrawUsage);
     this.sparkMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);this.sparkMesh.frustumCulled=false;this.scene.add(this.sparkMesh);
@@ -135,7 +141,14 @@ export class View {
     const theme=STAGES[stage];
     if(theme.environment==='fortress')this.atmosphere.add(planetModel());
     if(theme.environment==='asteroids'){
-      const sky=new T.Mesh(new T.PlaneGeometry(46,76),new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0xd6d9e8,toneMapped:false}));sky.position.set(0,0,-36);this.atmosphere.add(sky);
+      if(usesRebuiltGraphics()){
+        // Inside-facing THREE-DIMENSIONAL sky volume; never a one-card nebula backdrop.
+        const sky=new T.Mesh(new T.SphereGeometry(82,24,12),
+          new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0x4a5069,side:T.BackSide,transparent:true,opacity:.34,depthWrite:false,toneMapped:true}));
+        sky.name='deep-3d-nebula-sky';sky.position.set(0,0,-19);this.atmosphere.add(sky);
+      }else{
+        const sky=new T.Mesh(new T.PlaneGeometry(46,76),new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0xd6d9e8,toneMapped:false}));sky.position.set(0,0,-36);this.atmosphere.add(sky);
+      }
     }
     this.key.color.setHex(theme.sun);this.key.intensity=theme.light;
     this.stars.visible=theme.environment==='asteroids'||theme.environment==='fortress';
@@ -178,8 +191,11 @@ export class View {
       if(e.type!=='nova'&&e.type!=='resonance'&&e.type!=='fieldfracture'&&e.type!=='fieldcritical'&&e.type!=='fieldhit'&&e.type!=='fieldwarning'&&e.type!=='fieldclear'){
         for(const smoke of[false,true]){
           if(this.flares.length>=48)break;
-          const sprite=new T.Sprite(new T.SpriteMaterial({map:smoke?this.smokeMap:explosionFrames[0],transparent:true,blending:T.NormalBlending,depthWrite:false,toneMapped:false}));
-          sprite.position.set(x,y,smoke?.6:1.65);this.scene.add(sprite);this.flares.push({sprite,age:smoke?-.08:0,life:smoke?1.6:.88,size:size*(smoke?3.8:3.4),smoke});
+          const sprite=usesRebuiltGraphics()
+            ?new T.Mesh(new T.IcosahedronGeometry(1,1),new T.MeshBasicMaterial({color:smoke?0x656663:0x9b7156,transparent:true,opacity:smoke?.065:.20,depthWrite:false,toneMapped:true}))
+            :new T.Sprite(new T.SpriteMaterial({map:smoke?this.smokeMap:explosionFrames[0],transparent:true,blending:T.NormalBlending,depthWrite:false,toneMapped:false}));
+          sprite.position.set(x,y,smoke?-.25:1.65);this.scene.add(sprite);
+          this.flares.push({sprite,age:smoke?-.08:0,life:smoke?1.6:.88,size:size*(usesRebuiltGraphics()?(smoke?1.3:.85):(smoke?3.8:3.4)),smoke});
         }
       }
     }
@@ -295,7 +311,7 @@ export class View {
       const rad=bullet.enemy?(bullet.shape==='missile'?.16:bullet.shape==='diamond'?0:.21):bullet.weapon==='laser'?.08:.105;
       dummy.scale.set(rad,bullet.enemy?(bullet.shape==='missile'?.58:bullet.shape==='diamond'?.23:.36):bullet.weapon==='laser'?1.15:.60,.10);dummy.updateMatrix();this.shots.setMatrixAt(n,dummy.matrix);
       this.shotColor.setHex(bullet.enemy?bullet.color:bullet.weapon==='homing'?0xaaffee:bullet.weapon==='laser'?0xa68aff:0x35afff).multiplyScalar(bullet.enemy?2.4:3.0);this.shots.setColorAt(n,this.shotColor);
-      dummy.position.z=1.23;dummy.scale.set(bullet.enemy?1.18:.64,bullet.enemy?1.85:2.4,1);dummy.updateMatrix();this.shotGlows.setMatrixAt(n,dummy.matrix);this.shotGlows.setColorAt(n++,this.shotColor);
+      dummy.position.z=1.23;dummy.scale.set(usesRebuiltGraphics()?(bullet.enemy?.55:.33):(bullet.enemy?1.18:.64),usesRebuiltGraphics()?(bullet.enemy?.8:.70):(bullet.enemy?1.85:2.4),usesRebuiltGraphics()?.22:1);dummy.updateMatrix();this.shotGlows.setMatrixAt(n,dummy.matrix);this.shotGlows.setColorAt(n++,this.shotColor);
       if(bullet.enemy){
         dummy.position.z=1.27;dummy.scale.set(bullet.shape==='diamond'?0:bullet.shape==='missile'?.22:.27,bullet.shape==='missile'?.64:bullet.shape==='diamond'?.27:.42,.1);dummy.updateMatrix();this.shotRims.setMatrixAt(rimCount++,dummy.matrix);
         dummy.position.z=1.44;dummy.scale.set(.105,.135,.07);dummy.updateMatrix();this.shotCores.setMatrixAt(coreCount++,dummy.matrix);
@@ -315,13 +331,20 @@ export class View {
       dummy.position.set(part.x,part.y,part.z);dummy.rotation.set(0,0,Math.atan2(part.vy,part.vx));const fade=part.life/part.max;
       dummy.scale.set(part.size*fade,part.size*fade*(Math.hypot(part.vx,part.vy)>8?2:1),part.size*.6*fade);dummy.updateMatrix();this.sparkMesh.setMatrixAt(n,dummy.matrix);this.sparkMesh.setColorAt(n,part.color);n++;
     }this.particles=this.particles.filter(p=>p.life>0);this.sparkMesh.count=n;this.sparkMesh.instanceMatrix.needsUpdate=true;if(this.sparkMesh.instanceColor)this.sparkMesh.instanceColor.needsUpdate=true;
-    for(const f of this.flares){f.age+=dt;const t=Math.max(0,f.age/f.life);f.sprite.visible=f.age>=0;f.sprite.scale.setScalar(f.size*(f.smoke?.45+t*.7:.20+Math.sin(Math.min(1,t)*Math.PI/2)*.75));f.sprite.material.opacity=Math.max(0,(1-t)*(f.smoke?.75:1));if(!f.smoke)f.sprite.material.map=explosionFrames[Math.min(3,Math.floor(t*4))];else f.sprite.material.rotation+=dt*.12;}
+    for(const f of this.flares){
+      f.age+=dt;const t=Math.max(0,f.age/f.life);
+      f.sprite.visible=f.age>=0;
+      f.sprite.scale.setScalar(f.size*(f.smoke?.45+t*.7:.20+Math.sin(Math.min(1,t)*Math.PI/2)*.75));
+      f.sprite.material.opacity=Math.max(0,(1-t)*(f.sprite instanceof T.Sprite?(f.smoke?.75:1):(f.smoke?.08:.18)));
+      if(f.sprite instanceof T.Sprite){if(!f.smoke)f.sprite.material.map=explosionFrames[Math.min(3,Math.floor(t*4))];else f.sprite.material.rotation+=dt*.12;}
+      else f.sprite.rotation.set(t*1.4,t*.8,t*.55);
+    }
     this.flares=this.flares.filter(f=>{if(f.age<f.life)return true;this.scene.remove(f.sprite);f.sprite.material.dispose();return false;});
-    const blast=this.flares.find(f=>!f.smoke&&f.age>=0&&f.age<.35);this.blastLight.intensity=blast?45*(1-blast.age/.35):0;if(blast)this.blastLight.position.copy(blast.sprite.position).add(new T.Vector3(0,0,2.8));
+    const blast=this.flares.find(f=>!f.smoke&&f.age>=0&&f.age<.35);this.blastLight.intensity=blast?(usesRebuiltGraphics()?5:45)*(1-blast.age/.35):0;if(blast)this.blastLight.position.copy(blast.sprite.position).add(new T.Vector3(0,0,2.8));
     const ringMat=this.ring.material as T.MeshBasicMaterial;
     ringMat.opacity=Math.max(0,ringMat.opacity-dt*1.6);this.ring.visible=ringMat.opacity>0;this.ring.scale.addScalar(dt*32);
     this.shake=Math.max(0,this.shake-dt*3);const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(dt>0||reduce){this.camera.position.x=reduce?0:(Math.random()-.5)*this.shake*.55;this.camera.position.y=-12.5+(reduce?0:(Math.random()-.5)*this.shake*.35);}
+    if(dt>0||reduce){const strength=usesRebuiltGraphics()?.38:1;this.camera.position.x=reduce?0:(Math.random()-.5)*this.shake*.55*strength;this.camera.position.y=-12.5+(reduce?0:(Math.random()-.5)*this.shake*.35*strength);}
     // Physics-free cinematic lens: shallow banking, arrival push-ins and a measured
     // depth-pressure kick. Player/bullets stay in the same world-space coordinate system.
     if(this.colossal&&dt>0)this.cinematicKick=Math.max(0,this.cinematicKick-dt*1.7);
