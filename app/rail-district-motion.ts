@@ -72,8 +72,11 @@ export class RailDistrictMotion3D {
  }
  private typeFor(stage:number,segment:number,side:number):Kind{
   // Deterministic asymmetric runs: left and right do not mirror one another.
-  const zone=Math.floor(segment/4),category=Math.floor(noise(segment,stage*13+side,zone+51)*7);
-  return TYPES[(category+stage+Math.abs(segment)%3)%7];
+  // Different sides always differ, even when facing the same sector.
+  // Using 5*segment + a 3-step right-hand offset also separates adjacent
+  // left/right sectors. Stage shifts preserve six independent art rhythms.
+  const index=((segment*5+stage*3+(side>0?3:0))%7+7)%7;
+  return TYPES[index];
  }
  private makeModule(stage:number,kind:Kind,side:number,slot:number,segment:number):Module{
   const root=new T.Group(),rotor=new T.Group(),pod=new T.Group(),door=new T.Group(),arm=new T.Group();
@@ -205,9 +208,14 @@ export class RailDistrictMotion3D {
    const m=this.replace(initial,segment);
    const y=segment*RAIL_DISTRICT_LIMITS.spacing-distance;
    m.root.position.set(m.side*(8.7+noise(segment,m.side,37)*1.0),y,-8.35-(m.slot%2)*1.1);
-   const visible=Math.abs(y)<34 && (!reduced||m.slot===1) &&
-     (!performance||m.slot===1) && (!mix.crowded||m.slot===1) &&
-     !(g.state==='transition'&&m.slot!==1);
+   // Quiet modes choose the section nearest the camera, rather than a
+   // fixed array slot: that slot could be 35m away at the scroll boundary.
+   // At least one recognizable physical chapter therefore survives on EACH
+   // side throughout the campaign.
+   const middle=Math.max(0,Math.min(2,
+     Math.round(distance/RAIL_DISTRICT_LIMITS.spacing-first-(m.side>0?1:0))));
+   const quiet=reduced||performance||mix.crowded||g.state==='transition';
+   const visible=Math.abs(y)<34 && (!quiet||m.slot===middle);
    m.root.visible=visible;
    if(!visible)continue;
    this.activeModules++;this.currentGeometryCount+=m.meshes;
