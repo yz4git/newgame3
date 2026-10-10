@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
+import type {FxMix} from './fx-director.ts';
 import {COLOSSAL_BUDGET as B,COLOSSAL_FEATURES} from './colossal-spec.ts';
 
 const clamp=(x:number,a:number,b:number)=>Math.max(a,Math.min(b,x));
@@ -263,7 +264,7 @@ export class ColossalCinematics {
    this.bossArrivalAge=0;
   }
  }
- draw(g:Game,dt:number,reduced=false,performance=false){
+ draw(g:Game,dt:number,reduced=false,performance=false,mix?:FxMix){
   const active=g.state==='playing'||g.state==='transition';
   this.root.visible=active||g.state==='title';
   if(!this.root.visible)return;
@@ -272,7 +273,7 @@ export class ColossalCinematics {
   const t=this.t,speed=1+(g.stage===1?.2:0),moving=g.state==='transition';
   for(let i=0;i<this.monoliths.length;i++){
    const piece=this.monoliths[i],side=i?1:-1;
-   piece.visible=!reduced&&(!performance||i===0);
+   piece.visible=!reduced&&(!performance||i===0)&&(mix?.showAmbientStructures??true);
    piece.position.set(side*(13.1+(i%2)*1.0),mod(25+i*51-t*3.9*speed,118)-59,-8.6-i*2);
    piece.rotation.set(.10*side,Math.sin(t*.1+i)*.1,side*(.025+Math.sin(t*.26+i)*.045));
    piece.scale.setScalar(i?1.05:1.17);
@@ -282,7 +283,7 @@ export class ColossalCinematics {
    }
   }
   // 3.4 invasion director owns the opening encounter; fleet patrol resumes later.
-  this.flight.visible=!reduced&&(!g.boss||g.boss.dead)&&g.time>11&&g.state==='playing';
+  this.flight.visible=!reduced&&(!g.boss||g.boss.dead)&&g.time>11&&g.state==='playing'&&!mix; // 3.4 invasion fleet is the sole active flyby owner
   // Capital ships execute a foreground side pass and a deep center-lane departure.
   for(let i=0;i<this.carriers.length;i++){
    const craft=this.carriers[i];
