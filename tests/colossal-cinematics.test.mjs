@@ -29,7 +29,8 @@ test('Only rebuilt graphics instantiate the new pass and camera remains subtle',
  assert.match(src,/private colossal=usesRebuiltGraphics\(\)\?new ColossalCinematics\(\):null/);
  assert.match(src,/this\.colossal\?\.event\(e\)/);
  assert.match(src,/this\.colossal\?\.draw\(game,dt/);
- assert.match(src,/depthSpectacle:this\.depthSpectacle\?\.diagnostics\(\)\?\?null,colossal:this\.colossal\?\.diagnostics\(\)/);
+ assert.match(src,/depthSpectacle:this\.depthSpectacle\?\.diagnostics\(\)\?\?null,fxMix:this\.fxDirector\.diagnostics\(\)/);
+ assert.match(src,/mechanical:this\.mechanical\?\.diagnostics\(\)\?\?null,colossal:this\.colossal\?\.diagnostics\(\)/);
  assert.match(src,/this\.camera\.up\.set\(-Math\.sin\(this\.cameraRoll\)/);
  assert.match(src,/this\.camera\.updateProjectionMatrix\(\)/);
 });
