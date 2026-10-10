@@ -215,6 +215,7 @@ await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
  g.start('campaign','normal',1,'striker');
  g.time=14;g.enemies=[];g.bullets=[];g.nodes=[];g.invulnerable=900;g.shotTimer=900;
+ g.waveIndex=999;g.schedule=[];g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];g.sectorMission.started=true;
  view.draw(g,.016,16.7);
 });
 await scene(rich.page,'v39-3d-background-harbor-freight',450);
