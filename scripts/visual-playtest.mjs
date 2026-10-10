@@ -243,11 +243,21 @@ results.worldAliveBreach=await rich.page.evaluate(()=>({
 await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
  g.spawnBoss();g.boss.y=9;g.boss.age=5;g.boss.phase=2;
- g.boss.parts[0]=0;
+ g.damagePart(0,g.boss.maxPart+1);
  view.draw(g,.016,16.7);
 });
 await scene(rich.page,'v40-boss-vault-weakpoint-break',220);
 results.worldAliveBoss=await rich.page.evaluate(()=>({
+ game:window.__nova.game.snapshot().worldAlive,
+ scene:window.__nova.view.getDiagnostics().worldAliveScene
+}));
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.damagePart(1,g.boss.maxPart+1);
+ view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v40-reactor-exposed-after-two-real-wing-breaks',170);
+results.worldAliveCore=await rich.page.evaluate(()=>({
  game:window.__nova.game.snapshot().worldAlive,
  scene:window.__nova.view.getDiagnostics().worldAliveScene
 }));
@@ -334,7 +344,8 @@ if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWal
 if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount>=1&&r.worldAlive.hangars===2))throw new Error('4.0 requires real stage-aligned 3D megastructures and game enemy hangars in all six worlds: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
 if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==2)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
 if(results.worldAliveBreach?.game?.baysOpen?.[1]!==false||results.worldAliveBreach?.game?.destroyed?.[1]!==true)throw new Error('4.0 strategic facility blast failed to close the physical right-side hangar: '+JSON.stringify(results.worldAliveBreach));
-if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1)throw new Error('4.0 reactor armour destruction failed to update the boss 3D vault: '+JSON.stringify(results.worldAliveBoss));
+if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1||results.worldAliveBoss.game.wingBroken[0]!==true)throw new Error('4.0 real wing damage failed to update the boss 3D vault: '+JSON.stringify(results.worldAliveBoss));
+if(!results.worldAliveCore?.game?.wingBroken.every(Boolean)||!results.worldAliveCore.scene.centerExposed)throw new Error('4.0 actual wing-break damage must physically open the central 3D reactor: '+JSON.stringify(results.worldAliveCore));
 if(results.worldAliveEscape?.state!=='transition'||results.worldAliveEscape?.game?.escape!==true)throw new Error('4.0 actual NOVA boss defeat did not collapse base and start the escape: '+JSON.stringify(results.worldAliveEscape));
 if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
 if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
