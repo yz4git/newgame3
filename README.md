@@ -1,3 +1,40 @@
+## NOVA STRIKE 3.9 — SCENIC MOTION: SIX LIVING 3D BACKGROUNDS (2026-10-10)
+
+World Rebuild now contains a purpose-built background animation layer,
+`app/scenic-choreography.ts`, over the 3.8 priority-based FX director:
+
+- **Six truly distinct moving backgrounds:** asteroid mining clamps and docking
+  antennae; naval cranes and loading-turbine gantries; rotating orbital
+  communication arrays; crystal wind turbines and anti-ice combs; moving jungle
+  relic antennae and solar-clock orreries; and foundry pressure cages, heat
+  pistons and mechanical transfer booms.
+- **Distant physical 3D air traffic:** three time-offset cargo/escort craft with
+  actual wings, nacelles and rotors, in deep world space behind player/enemy
+  collision planes. They transit on staggered routes *only* when fire is light
+  enough to keep combat hazards unmistakable.
+- **More depth and ambience:** 84 capped, physically shaped and stage-tinted
+  ice flecks / rock dust / spores / ash motes; up to 48 steel conduit pieces
+  stream at four depth-dependent speeds. No flat image billboards or additive
+  screen flashes.
+- **The level responds to gameplay:** field criticals/collapses, missions,
+  boss entrance and boss defeat make *physical* side-mounted base wall
+  shutters shift, turn and withdraw. Low-luminance metal indicators intensify
+  briefly — never a burst of white light obscuring hostile bullets.
+- **Clarity first:** the central firing lane stays open. One muted side
+  silhouette can remain in combat; other transport / cable scenery hides
+  automatically on hostile-bullet saturation. Reduced-motion and PERFORMANCE
+  modes limit animation and instance counts. No new point lights.
+- **Compatibility and diagnostics:** the scenic director runs only in rebuilt
+  GPU 3D. Original Classic and Canvas fallback stay as before; collision,
+  aim, enemy scripting, score and saved progress are unchanged.
+  `view.getDiagnostics().scenic` reports stage, traffic, particle counts,
+  moving structures and active environmental event.
+
+Unit tests: `tests/scenic-choreography.test.mjs`. The iPhone-resolution
+Playwright GPU review now captures an uncrowded cargo-flyby stage and a
+facility-triggered reactive-dock scene, and checks active 3D geometry in
+all six stages.
+
 ## NOVA STRIKE 3.8 — FX DIRECTOR: REBUILT VISUAL PRIORITIES (2026-10-10)
 
 **An actual new renderer orchestration layer, not simply more particles.**
