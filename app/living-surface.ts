@@ -18,7 +18,7 @@ export class LivingSurface {
       const material=new T.MeshBasicMaterial({map:lightMap,color:env==='lava'?0xff7e2b:env==='jungle'?0x8dd3bb:0xa0e7ff,transparent:true,opacity:env==='lava'?.035:env==='ice'?.05:env==='jungle'?.07:.085,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
       const m=new T.Mesh(this.geometry,material);m.position.z=this.base.position.z+.035+i*.012;m.name='refracted-light-'+i;this.lights.push(m);this.root.add(m);
     }
-    this.crests=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:livingMaps.foam,transparent:true,opacity:1,blending:T.AdditiveBlending,depthWrite:false,color:0xbce9ed,toneMapped:false}),18);this.crests.setColorAt(0,new T.Color());this.crests.frustumCulled=false;this.crests.instanceMatrix.setUsage(T.DynamicDrawUsage);this.crests.instanceColor!.setUsage(T.DynamicDrawUsage);this.crests.name='wave-crests';this.root.add(this.crests);
+    this.crests=new T.InstancedMesh(new T.TorusGeometry(.70,.060,6,24),new T.MeshBasicMaterial({color:0x8cbdbe,transparent:true,opacity:.27,depthWrite:false,toneMapped:true}),18);this.crests.setColorAt(0,new T.Color());this.crests.frustumCulled=false;this.crests.instanceMatrix.setUsage(T.DynamicDrawUsage);this.crests.instanceColor!.setUsage(T.DynamicDrawUsage);this.crests.name='wave-crests';this.root.add(this.crests);
   }
   draw(t:number,distance:number,performance=false,reduced=false){
     this.time=t;this.distance=distance;const flow=surfaceFlow(this.stage,t,distance),env=STAGES[this.stage].environment;
