@@ -144,8 +144,22 @@ export class View {
       if(usesRebuiltGraphics()){
         // Inside-facing THREE-DIMENSIONAL sky volume; never a one-card nebula backdrop.
         const sky=new T.Mesh(new T.SphereGeometry(82,24,12),
-          new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0x4a5069,side:T.BackSide,transparent:true,opacity:.34,depthWrite:false,toneMapped:true}));
+          new T.MeshBasicMaterial({color:0x0c1426,side:T.BackSide,depthWrite:false,toneMapped:true}));
         sky.name='deep-3d-nebula-sky';sky.position.set(0,0,-19);this.atmosphere.add(sky);
+        // Real depth-layered nebular dust/asteroid formations rather than a
+        // panoramic 2D nebula picture stretched over the background sphere.
+        const dust=new T.InstancedMesh(new T.IcosahedronGeometry(1,1),
+          new T.MeshStandardMaterial({color:0x45556e,metalness:.08,roughness:.91,transparent:true,opacity:.14,depthWrite:false}),48);
+        dust.name='3d-nebular-distance-clouds';dust.frustumCulled=false;
+        const instance=new T.Object3D();
+        for(let i=0;i<48;i++){
+          const a=i*2.39996,r=9+(i%9)*3.3;
+          instance.position.set(Math.sin(a)*r,((i*17)%91)-45,-18-(i%6)*7.2);
+          instance.rotation.set(i*.3,i*.13,a);
+          const size=1.5+(i%5)*.90;instance.scale.set(size,size*.67,size*1.48);
+          instance.updateMatrix();dust.setMatrixAt(i,instance.matrix);
+        }
+        dust.instanceMatrix.needsUpdate=true;this.atmosphere.add(dust);
       }else{
         const sky=new T.Mesh(new T.PlaneGeometry(46,76),new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0xd6d9e8,toneMapped:false}));sky.position.set(0,0,-36);this.atmosphere.add(sky);
       }
