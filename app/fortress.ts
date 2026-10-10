@@ -53,6 +53,36 @@ export function fortressChip(p:Palette,stage:number,v:number){
   // A central causeway with access floors, bolted rails and exposed utility ledges.
   const floor=block(g,p.deck,shift,0,-5.35,8.5,8,.32);floor.geometry=floor.geometry.clone();
   const uv=floor.geometry.getAttribute('uv');for(let i=0;i<uv.count;i++){let u=uv.getX(i),vv=uv.getY(i);if(v%2){const t=u;u=vv;vv=t;}if(v&2)u=1-u;if(v&4)vv=1-vv;uv.setXY(i,u*.68+noise(v,stage,14)*.30,vv*.68+noise(v,stage,22)*.30);}
+  if(usesRebuiltGraphics()){
+    // Main station corridor previously relied on a huge photographic floor map.
+    // Form a repeating but varied physical substructure instead: twelve raised
+    // steel panels, shadowed expansion channels and real mechanical rivets.
+    for(let row=0;row<4;row++){
+      const yy=-3.0+row*2.0;
+      for(let col=0;col<3;col++){
+        const xx=shift+(col-1)*2.66,w=2.51+(noise(v,row*3+col,31)-.5)*.12;
+        block(g,p.dark,xx,yy,-5.14,w,1.85,.085);
+        block(g,(v+row+col)%5===0?p.plate:p.deck,xx,yy,-5.065,w-.12,1.71,.12);
+        for(const side of[-1,1])for(const end of[-1,1]){
+          block(g,p.rust,xx+side*(w*.46),yy+end*.72,-4.990,.085,.095,.08);
+        }
+      }
+    }
+    for(const side of[-1,1]){
+      block(g,p.steel,shift+side*3.83,0,-4.98,.095,7.90,.12);
+      for(let i=0;i<4;i++){
+        const y=-3.15+i*2.08;
+        block(g,p.dark,shift+side*3.49,y,-4.99,.36,.21,.14);
+        block(g,p.plate,shift+side*3.49,y,-4.87,.25,.12,.085);
+      }
+    }
+    // Longitudinal cable conduits and cross-members cast small but genuine
+    // parallax shadows; nothing is painted onto the floor's flat UVs.
+    for(let row=0;row<4;row++){
+      const y=-3.92+row*2.06;
+      block(g,p.steel,shift,y,-5.00,8.1,.092,.095);
+    }
+  }
   for(const s of[-1,1]){
     block(g,p.dark,shift+s*4.30,0,-5.05,.40,8,.52);block(g,p.steel,shift+s*4.42,0,-4.80,.14,8,.13);
     for(let i=0;i<4;i++){block(g,p.warm,shift+s*4.11,-3+i*2,-4.97,.035,.27,.025);block(g,p.plate,shift+s*3.90,-3+i*2,-5.11,.35,.33,.12);}
