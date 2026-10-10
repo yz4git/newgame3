@@ -233,7 +233,7 @@ export class ScenicChoreography3D {
   // Large articulated landmarks carry the stage identity; they live at the
   // margins and never overlap the gameplay corridor at z>=0.
   for(const rig of this.machines){
-   const show=!reduced&&!performance&&(mix.showAmbientStructures||!active);
+   const show=!reduced&&(!performance||rig.index===0)&&(mix.showAmbientStructures||rig.index===0||!active); // quiet one side silhouette remains during combat
    rig.root.visible=show;
    const phase=wrap(rig.index*47+21-t*(g.stage===2?2.5:3.6),109);
    rig.root.position.set(rig.side*(12.2+rig.index*.7),phase-54,-10-rig.index*3);
