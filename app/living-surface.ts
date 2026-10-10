@@ -19,7 +19,7 @@ export class LivingSurface {
   :new T.PlaneGeometry(32,96,24,48);
  private originalZ:Float32Array|null=null;
  private base:T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>;
- private lights:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>[]=[];
+ private lights:T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>[]=[];
  private crests:T.InstancedMesh;
  private volumes:T.InstancedMesh|null=null;
  private streaks:T.InstancedMesh|null=null;
@@ -56,7 +56,7 @@ export class LivingSurface {
     color:env==='lava'?0xff7e2b:env==='jungle'?0x8dd3bb:0xa0e7ff,
     transparent:true,opacity:env==='lava'?.035:env==='ice'?.05:env==='jungle'?.07:.085,
     blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
-   const m=new T.Mesh(new T.PlaneGeometry(32,96,24,48),material);
+   const m=new T.Mesh(this.geometry,material);
    m.position.z=this.base.position.z+.035+i*.012;
    m.name='refracted-light-'+i;this.lights.push(m);this.root.add(m);
   }
@@ -175,7 +175,7 @@ export class LivingSurface {
  };}
  dispose(){
   this.geometry.dispose();this.base.material.dispose();
-  this.lights.forEach(m=>{m.geometry.dispose();m.material.dispose();});
+  this.lights.forEach(m=>m.material.dispose());
   this.crests.geometry.dispose();(this.crests.material as T.Material).dispose();
   if(this.volumes){this.volumes.geometry.dispose();(this.volumes.material as T.Material).dispose();}
   if(this.streaks){this.streaks.geometry.dispose();(this.streaks.material as T.Material).dispose();}
