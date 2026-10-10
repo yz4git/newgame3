@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
+import type {FxMix} from './fx-director.ts';
 import {INVASION_BUDGET as LIMIT,INVASION_FEATURES} from './invasion-spec.ts';
 
 const TAU=Math.PI*2;
@@ -163,7 +164,7 @@ export class InvasionDirector {
    }
   }
  }
- draw(g:Game,dt:number,reduced=false,performance=false){
+ draw(g:Game,dt:number,reduced=false,performance=false,mix?:FxMix){
   const title=g.state==='title',active=g.state==='playing'||g.state==='transition';
   this.root.visible=title||active;
   if(!this.root.visible)return;
@@ -177,7 +178,7 @@ export class InvasionDirector {
   const transition=g.state==='transition';
   // Opening 0-5 s: the camera dives beneath a shipyard with overhead gantry arches.
   const dive=opening?Math.sin(Math.PI*clamp(g.time/8,0,1))**2:0;
-  this.dock.visible=!reduced&&(opening||title);
+  this.dock.visible=!reduced&&(opening||title)&&(!mix||!mix.crowded);
   let count=0;
   if(this.dock.visible){
    const n=performance?LIMIT.trenchBeams/2:LIMIT.trenchBeams;
@@ -208,7 +209,7 @@ export class InvasionDirector {
    const d=this.battleships[i],u=mod(clock*.12+i*.47,.94)/.94;
    const intro=opening&&i===0;
    const entry=clamp(g.time/4.1,0,1);
-   d.root.visible=!reduced&&(cinematic||i===0)&&(!boss||intro);
+   d.root.visible=!reduced&&(cinematic||i===0)&&(!boss||intro)&&(intro||mix?.showFlybys!==false);
    if(!d.root.visible)continue;
    const scale=intro?
     .35+ease(entry)*1.17:
@@ -223,6 +224,7 @@ export class InvasionDirector {
   }
   // A full mechanical sphere opens behind the boss as its phase changes.
   this.bossCore.visible=boss&&!reduced;
+  if(mix&&!mix.showBossArchitecture)this.bossCore.visible=false;
   if(boss&&this.bossCore.visible){
    const b=g.boss!,u=ease(clamp(b.age/2.0,0,1)),ang=clock*(b.phase>=2?.18:.075);
    this.bossCore.position.set(b.x,b.y,-8+u*4);
@@ -253,6 +255,7 @@ export class InvasionDirector {
   }
   // True depth-staged "hyperspace" coils during the otherwise non-interactive transition.
   this.travel.visible=transition&&!reduced;
+  if(mix&&!mix.showWarpArchitecture)this.travel.visible=false;
   count=0;
   if(this.travel.visible){
    for(let i=0;i<LIMIT.hyperRings;i++){
@@ -276,7 +279,7 @@ export class InvasionDirector {
   this.shards=this.shards.filter(x=>x.age<x.life);
   let nw=0;
   for(const burst of this.detonations){
-   if(nw>=LIMIT.ruptureRings||reduced)break;
+   if(nw>=LIMIT.ruptureRings||reduced||!!mix)break; // one owner for large shock rings
    const u=clamp(burst.age/burst.life,0,1);
    // Three nested steel shockframes, not a bloom disk; scale toward depth.
    for(let j=0;j<3&&nw<LIMIT.ruptureRings;j++){
