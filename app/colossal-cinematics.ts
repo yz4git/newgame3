@@ -364,7 +364,7 @@ export class ColossalCinematics {
   this.impacts=this.impacts.filter(p=>p.age<p.life);
   let n=0;
   for(const p of this.impacts){
-   if(n>=B.fragments||reduced)break;
+   if(n>=B.fragments||reduced||!!mix)break; // mechanically staged structural panels replace duplicated metallic confetti
    const life=clamp(1-p.age/p.life,0,1);
    temp.position.set(p.x,p.y,p.z);
    temp.rotation.set(p.age*p.spin,p.age*p.spin*.72,p.age*p.spin*.5);
