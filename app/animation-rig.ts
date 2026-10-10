@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import {block} from './art.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 import {armourMap,livingMaps,finishMaps} from './visual-assets.ts';
 import {bossWingAngle,bossScars,scarPositions} from './boss-finish.ts';
 import {bossMorph} from './boss-evolution.ts';
@@ -8,7 +9,18 @@ import {skinWarp,type ShipPose} from './motion.ts';
 import type {Kind} from './sim.ts';
 
 const lightMap=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d')!,g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'#fff');g.addColorStop(.25,'#ffffffc0');g.addColorStop(1,'#ffffff00');x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c);})();
-function light(g:T.Group,name:string,x:number,y:number,color:number){const m=new T.Sprite(new T.SpriteMaterial({map:lightMap,color,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));m.name=name;m.position.set(x,y-.640625,2.05);m.scale.set(.32,.50,1);m.userData.animated=true;m.userData.baseX=x;m.userData.baseY=y;g.add(m);return m;}
+type RigLight=T.Sprite|T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>;
+function light(g:T.Group,name:string,x:number,y:number,color:number):RigLight{
+  const physical=usesRebuiltGraphics();
+  const geometry=name.startsWith('engine')||name.startsWith('boss-muzzle')||name.startsWith('muzzle')
+    ?new T.ConeGeometry(.28,.95,8):new T.IcosahedronGeometry(.35,1);
+  const m:RigLight=physical
+    ?new T.Mesh(geometry,new T.MeshBasicMaterial({color,transparent:true,opacity:.5,depthWrite:false,toneMapped:true}))
+    :new T.Sprite(new T.SpriteMaterial({map:lightMap,color,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));
+  if(!physical)geometry.dispose();
+  m.name=name;m.position.set(x,y-.640625,2.05);m.scale.set(.32,.50,physical?.32:1);
+  m.userData.animated=true;m.userData.baseX=x;m.userData.baseY=y;g.add(m);return m;
+}
 function panel(g:T.Group,name:string,x:number,y:number,w:number,h:number,color=0x8898a5){const m=block(g,new T.MeshStandardMaterial({map:armourMap,color,metalness:.55,roughness:.3}),x,y-.625,2.0,w,h,.07);m.name=name;m.userData.animated=true;m.userData.baseX=x;m.userData.baseY=y;return m;}
 /** Articulated hardware stays inside the existing combat silhouette. */
 export function addShipRig(g:T.Group,kind:Kind|'player'){
@@ -18,7 +30,7 @@ export function addShipRig(g:T.Group,kind:Kind|'player'){
   const back=large?2.20:kind==='bomber'?1.37:kind==='sentinel'?.20:player?-1.68:kind==='drone'||kind==='dart'?.78:1.05;
   const front=ground?-1.27:large?-2.15:kind==='lancer'?-2.16:kind==='bomber'?-1.0:player?.90:kind==='drone'||kind==='dart'?-.7:-1.05;
   const color=player||kind==='carrier'?0x63dfff:kind==='weaver'||kind==='lancer'||kind==='sentinel'?0xff8cc8:0xffa950;
-  if(!ground)for(const s of[-1,1]){const e=light(rig,'engine'+(s<0?0:1),s*x,back,color);e.material.map=livingMaps.plume;e.center.set(.5,.95);}
+  if(!ground)for(const s of[-1,1]){const e=light(rig,'engine'+(s<0?0:1),s*x,back,color);if(e instanceof T.Sprite){e.material.map=livingMaps.plume;e.center.set(.5,.95);}}
   if(kind!=='carrier'&&kind!=='relic')for(const s of[-1,1]){const m=light(rig,'muzzle'+(s<0?0:1),s*x,front,player?0x99eaff:0xffdca0);if(ground)m.position.set(s*x,front,.82);}
   if(player||large||kind==='fighter'||kind==='lancer'||kind==='interceptor')for(const s of[-1,1])panel(rig,'flap'+(s<0?0:1),s*(large?1.48:player?.74:.78),player?-.76:.40,large?.23:.15,large?.78:.45,player?0xb3cfdb:0xa38782);
   if(kind==='carrier')for(const s of[-1,1])panel(rig,'door'+(s<0?0:1),s*.23,-.1,.42,.98,0x526c87);
@@ -35,7 +47,12 @@ export function addBossRig(g:T.Group,color:number){
   // Armor spines reuse the established metal textures and are never re-created per frame.
   for(let i=0;i<4;i++){const side=i<2?-1:1;const fin=panel(rig,'form-spine'+i,side*(.87+(i%2)*.34),.98-(i%2)*1.45,.24,1.18,color);fin.visible=false;fin.position.z=2.14;}
   const core=light(rig,'core-light',0,-.85,color);core.position.y=-.85;core.position.z=1.8;
-  scarPositions.forEach(([x,y,size],i)=>{const scar=new T.Sprite(new T.SpriteMaterial({map:finishMaps.scorch,transparent:true,depthWrite:false,toneMapped:false,opacity:0}));scar.name='scar'+i;scar.position.set(x,y,1.78);scar.scale.setScalar(size);rig.add(scar);});
+  scarPositions.forEach(([x,y,size],i)=>{
+    const scar=usesRebuiltGraphics()
+      ?new T.Mesh(new T.DodecahedronGeometry(1,0),new T.MeshBasicMaterial({color:0x362c28,transparent:true,opacity:0,depthWrite:false}))
+      :new T.Sprite(new T.SpriteMaterial({map:finishMaps.scorch,transparent:true,depthWrite:false,toneMapped:false,opacity:0}));
+    scar.name='scar'+i;scar.position.set(x,y,1.78);scar.scale.setScalar(usesRebuiltGraphics()?size*.48:size);scar.userData.animated=true;rig.add(scar);
+  });
   for(let i=0;i<2;i++){const wing=g.getObjectByName('wing'+i) as T.Group;for(const s of[-1,1]){const m=light(wing,'boss-muzzle'+i+(s<0?0:1),(i===0?-3:3)+s*.25,-1.54,color);m.position.y=-1.54;m.position.z=g.userData.texturedBoss?1.95:1.10;}}
   g.add(rig);return g;
 }
@@ -47,24 +64,29 @@ export function animateShip(g:T.Group,pose:ShipPose,t:number,kind:Kind|'player')
   const n=nodes(g),pulse=.9+Math.sin(t*36)*.1;
   const skin=n.get('skin');if(skin instanceof T.Mesh&&skin.userData.deformSkin&&kind!=='player'){const v=skin.geometry.getAttribute('position'),uv=skin.geometry.getAttribute('uv');for(let i=0;i<v.count;i++){const [x,y]=skinWarp(kind,uv.getX(i)-.5,uv.getY(i)-.5,t,pose.flex);v.setXYZ(i,x*skin.userData.skinWidth,y*skin.userData.skinHeight,0);}v.needsUpdate=true;}
   for(let i=0;i<2;i++){
-    const engine=n.get('engine'+i) as T.Sprite|undefined;if(engine){engine.scale.set(.48*pose.thrust,1.65*pose.thrust*pulse,1);engine.material.opacity=.72;engine.material.rotation=pose.roll+(kind==='player'?0:Math.PI);}
-    const muzzle=n.get('muzzle'+i) as T.Sprite|undefined;if(muzzle){muzzle.visible=pose.recoil>.04;muzzle.scale.set(.20+pose.recoil*.23,.30+pose.recoil*.6,1);muzzle.material.opacity=pose.recoil*.85;if(kind==='tank'){const x=muzzle.userData.baseX,y=muzzle.userData.baseY;muzzle.position.x=x*Math.cos(pose.turret)-y*Math.sin(pose.turret);muzzle.position.y=x*Math.sin(pose.turret)+y*Math.cos(pose.turret)+pose.recoil*.18;}}
+    const engine=n.get('engine'+i) as RigLight|undefined;if(engine){
+      engine.scale.set(.48*pose.thrust,1.65*pose.thrust*pulse,engine instanceof T.Sprite?1:.46);
+      engine.material.opacity=engine instanceof T.Sprite?.72:.43;
+      if(engine instanceof T.Sprite)engine.material.rotation=pose.roll+(kind==='player'?0:Math.PI);
+      else engine.rotation.z=pose.roll+(kind==='player'?Math.PI:0);
+    }
+    const muzzle=n.get('muzzle'+i) as RigLight|undefined;if(muzzle){muzzle.visible=pose.recoil>.04;muzzle.scale.set(.20+pose.recoil*.23,.30+pose.recoil*.6,muzzle instanceof T.Sprite?1:.5);muzzle.material.opacity=pose.recoil*.65;if(kind==='tank'){const x=muzzle.userData.baseX,y=muzzle.userData.baseY;muzzle.position.x=x*Math.cos(pose.turret)-y*Math.sin(pose.turret);muzzle.position.y=x*Math.sin(pose.turret)+y*Math.cos(pose.turret)+pose.recoil*.18;}}
     const flap=n.get('flap'+i);if(flap){flap.rotation.y=(i===0?-1:1)*(pose.flex*.46+pose.bank*.5);flap.position.x=flap.userData.baseX+(i===0?-1:1)*pose.flex*.08;}
     const door=n.get('door'+i);if(door)door.position.x=door.userData.baseX+(i===0?-1:1)*pose.flex*.30;
   }
   const turret=n.get('turret');if(turret){turret.rotation.z=pose.turret;turret.position.y=pose.recoil*.18;}
-  const charge=n.get('charge') as T.Sprite|undefined;if(charge){charge.material.opacity=pose.charge*.45+(kind==='relic'?.2:.035);charge.scale.setScalar(.75+pose.charge*.70);}
+  const charge=n.get('charge') as RigLight|undefined;if(charge){charge.material.opacity=pose.charge*.35+(kind==='relic'?.16:.02);charge.scale.setScalar(.65+pose.charge*.6);}
   const spin=n.get('spin-rig');if(spin)spin.rotation.z=pose.rotor;
 }
 export function animateBoss(g:T.Group,pose:ReturnType<typeof import('./motion.ts').bossPose>,b:Boss){
   const n=nodes(g),morph=bossMorph(b);
-  for(let i=0;i<3;i++){const skin=n.get('boss-skin'+i) as T.Sprite|undefined;if(skin){skin.material.color.setHex(b.form==='standard'?0xffffff:morph.color).multiplyScalar(b.flash>0?1.6:morph.armor);skin.material.rotation=i===0?0:bossWingAngle(g.userData.stage??0,i===1?-1:1,b.age,pose.deploy);}const scar=n.get('scar'+i) as T.Sprite|undefined;if(scar)scar.material.opacity=bossScars(b);}
+  for(let i=0;i<3;i++){const skin=n.get('boss-skin'+i) as T.Sprite|undefined;if(skin){skin.material.color.setHex(b.form==='standard'?0xffffff:morph.color).multiplyScalar(b.flash>0?1.6:morph.armor);skin.material.rotation=i===0?0:bossWingAngle(g.userData.stage??0,i===1?-1:1,b.age,pose.deploy);}const scar=n.get('scar'+i) as RigLight|undefined;if(scar)scar.material.opacity=bossScars(b)*.68;}
   for(let i=0;i<4;i++){const p=n.get('petal'+i);if(!p)continue;const a=i*Math.PI/2;p.position.x=Math.cos(a)*(.45+pose.open*.52+morph.petalDelta);p.position.y=-.85+Math.sin(a)*(.45+pose.open*.52+morph.petalDelta);p.rotation.y=pose.open*.75;}
-  const core=n.get('core-light') as T.Sprite;if(core){core.material.color.setHex(b.form==='standard'?g.userData.bossStageColor??0xffffff:morph.color);core.material.opacity=Math.min(1,(.22+pose.open*.5+pose.charge*.25)*morph.glow);core.scale.setScalar(1.25+pose.open*.85+Math.sin(b.age*8)*.05+morph.halo*.15);}
+  const core=n.get('core-light') as RigLight;if(core){core.material.color.setHex(b.form==='standard'?g.userData.bossStageColor??0xffffff:morph.color);core.material.opacity=Math.min(1,(.22+pose.open*.5+pose.charge*.25)*morph.glow);core.scale.setScalar(1.25+pose.open*.85+Math.sin(b.age*8)*.05+morph.halo*.15);}
   for(let i=0;i<4;i++){const fin=n.get('form-spine'+i) as T.Mesh|undefined;if(fin){const side=i<2?-1:1;fin.visible=b.form!=='standard';fin.position.x=side*(.87+(i%2)*.34+Math.abs(morph.wingDelta)*1.2);fin.rotation.z=side*(b.form==='overcharged'?.30:-.27)+Math.sin(b.age*1.6+i)*.035;(fin.material as T.MeshStandardMaterial).color.setHex(morph.color);}}
   for(let i=0;i<2;i++){
     const wing=n.get('wing'+i);if(wing){wing.visible=b.parts[i]>0;wing.position.x=(i===0?-1:1)*(b.spread+(1-pose.deploy)*1.2+morph.wingDelta);wing.position.y=-b.spread*.65;wing.rotation.y=(i===0?-1:1)*(1-pose.deploy)*.7+Math.sin(b.age*1.5)*.035;}
-    for(let j=0;j<2;j++){const m=n.get('boss-muzzle'+i+j) as T.Sprite|undefined;if(m){m.visible=pose.recoil>.02;m.material.opacity=pose.recoil;m.scale.set(.65,1.0+pose.recoil,1);}}
+    for(let j=0;j<2;j++){const m=n.get('boss-muzzle'+i+j) as RigLight|undefined;if(m){m.visible=pose.recoil>.02;m.material.opacity=pose.recoil;m.scale.set(.65,1.0+pose.recoil,1);}}
   }
   const rotor=n.get('rotor');if(rotor)rotor.rotation.z=pose.rotor;
 }
