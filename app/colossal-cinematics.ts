@@ -352,11 +352,10 @@ export class ColossalCinematics {
     b.rotation.set(u*(j%2?2.2:-1.3),u*(j%3?1.1:-1.2),a+u*(j%2?1.5:-1.8));
     b.scale.set(.75*(1-u*.35),.95*(1-u*.43),1.3*(1-u*.6));
    }
-   for(let j=0;j<c.rings.length;j++){
-    const ring=c.rings[j];
-    ring.scale.setScalar(1.2+u*(4.5+j*2.5));
-    ring.rotation.set(u*.8,Math.sin(t*.2+j)*.25,t*.17+j);
-   }
+   // Legacy opaque meter-wide toroids grew to screen-filling foreground circles.
+   // The 3.4 3D rupture frames plus 3.5 depth-tested facility waves already
+   // supply the blast; keep the tumbling reactor pieces but suppress these duplicates.
+   for(const ring of c.rings)ring.visible=false;
   }
   if(dt>0){
    for(const p of this.impacts){p.age+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vz-=4.6*dt;}
