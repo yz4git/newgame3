@@ -62,13 +62,13 @@ export class MechanicalSetpieceFX {
   this.steel.color.setHex(warm[g.stage]??0x7b8394);
   this.inner.color.setHex(g.stage===5?0xba7044:0x789eaf);
   let np=0,nr=0,nc=0;
-  const sequence=performance?this.beats.slice(-1):this.beats;
+  const sequence=performance||mix.crowded?this.beats.slice(-1):this.beats;
   for(const b of sequence){
    const u=clamp(b.age/b.life,0,1),isBoss=b.chapter.startsWith('boss');
    const split=b.chapter==='fracture'?.22:b.chapter==='boss-morph'?.48:1;
    const unfold=clamp(u*2.8,0,1),fall=clamp((u-.36)/.64,0,1);
    const size=b.scale*(isBoss?1.5:1.0);
-   const plates=performance?6:12;
+   const plates=performance||mix.crowded?6:12;
    for(let j=0;j<plates&&np<36;j++){
     const a=j*TAU/plates+(isBoss?.13:0),r=(isBoss?2.15:1.35)*size;
     const lift=(unfold*split)*(1.15+j%3*.26)*size;
@@ -80,7 +80,7 @@ export class MechanicalSetpieceFX {
     this.dummy.scale.set(size*.45*fade,size*(.96-j%3*.11)*fade,size*.28);
     this.dummy.updateMatrix();this.panel.setMatrixAt(np++,this.dummy.matrix);
    }
-   for(let j=0;j<8&&nr<24;j++){
+   for(let j=0;j<(performance||mix.crowded?4:8)&&nr<24;j++){
     const a=j*TAU/8;
     const p=(.85+unfold*.75)*size;
     this.dummy.position.set(b.x+Math.cos(a)*p,b.y+Math.sin(a)*p,-2.5-fall);
