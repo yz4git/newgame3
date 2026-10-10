@@ -105,7 +105,7 @@ export class View {
       if(!renderer.backend.constructor.name.includes('WebGPU'))throw new Error('No WebGPU adapter');
       this.engine='WebGPU';
       const scenePass=pass(this.scene,this.camera),output=scenePass.getTextureNode('output');
-      this.pipeline=new T.RenderPipeline(renderer,output.add(bloom(output,.52,.38,1.15)));
+      this.pipeline=new T.RenderPipeline(renderer,output.add(bloom(output,usesRebuiltGraphics()?.31:.52,.43,usesRebuiltGraphics()?.90:1.15)));
       modern=true;
     }catch(error){
       console.warn('Modern renderer fallback',error);
@@ -114,9 +114,9 @@ export class View {
     if(!modern){
       const GL=await import('three');const renderer=new GL.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});this.renderer=renderer;this.engine='WebGL 2';this.pipeline=null;
       const [{EffectComposer},{RenderPass},{UnrealBloomPass},{OutputPass}]=await Promise.all([import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/RenderPass.js'),import('three/addons/postprocessing/UnrealBloomPass.js'),import('three/addons/postprocessing/OutputPass.js')]);
-      this.composer=new EffectComposer(renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.composer.addPass(new UnrealBloomPass(new T.Vector2(390,694),.52,.38,1.15));this.composer.addPass(new OutputPass());
+      this.composer=new EffectComposer(renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.composer.addPass(new UnrealBloomPass(new T.Vector2(390,694),usesRebuiltGraphics()?.31:.52,.43,usesRebuiltGraphics()?.90:1.15));this.composer.addPass(new OutputPass());
     }
-    this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.90;
+    this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=usesRebuiltGraphics()?.84:.90;
     this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFShadowMap;
     this.pixelRatio=Math.min(window.devicePixelRatio||1,1.65);this.renderer.setPixelRatio(this.pixelRatio);
     this.resize();this.quality=this.pixelRatio>=1.4?'HIGH':'BALANCED';
@@ -310,7 +310,7 @@ export class View {
       dummy.position.set(bullet.x,bullet.y,1.32);dummy.rotation.set(0,0,Math.atan2(bullet.vy,bullet.vx)-Math.PI/2);
       const rad=bullet.enemy?(bullet.shape==='missile'?.16:bullet.shape==='diamond'?0:.21):bullet.weapon==='laser'?.08:.105;
       dummy.scale.set(rad,bullet.enemy?(bullet.shape==='missile'?.58:bullet.shape==='diamond'?.23:.36):bullet.weapon==='laser'?1.15:.60,.10);dummy.updateMatrix();this.shots.setMatrixAt(n,dummy.matrix);
-      this.shotColor.setHex(bullet.enemy?bullet.color:bullet.weapon==='homing'?0xaaffee:bullet.weapon==='laser'?0xa68aff:0x35afff).multiplyScalar(bullet.enemy?2.4:3.0);this.shots.setColorAt(n,this.shotColor);
+      this.shotColor.setHex(bullet.enemy?bullet.color:bullet.weapon==='homing'?0xaaffee:bullet.weapon==='laser'?0xa68aff:0x35afff).multiplyScalar(usesRebuiltGraphics()?(bullet.enemy?1.55:1.85):(bullet.enemy?2.4:3.0));this.shots.setColorAt(n,this.shotColor);
       dummy.position.z=1.23;dummy.scale.set(usesRebuiltGraphics()?(bullet.enemy?.55:.33):(bullet.enemy?1.18:.64),usesRebuiltGraphics()?(bullet.enemy?.8:.70):(bullet.enemy?1.85:2.4),usesRebuiltGraphics()?.22:1);dummy.updateMatrix();this.shotGlows.setMatrixAt(n,dummy.matrix);this.shotGlows.setColorAt(n++,this.shotColor);
       if(bullet.enemy){
         dummy.position.z=1.27;dummy.scale.set(bullet.shape==='diamond'?0:bullet.shape==='missile'?.22:.27,bullet.shape==='missile'?.64:bullet.shape==='diamond'?.27:.42,.1);dummy.updateMatrix();this.shotRims.setMatrixAt(rimCount++,dummy.matrix);
