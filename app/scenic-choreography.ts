@@ -246,14 +246,22 @@ export class ScenicChoreography3D {
   }
   // Cargo in the far field: never the low-altitude combat ships and never
   // reused weapon silhouettes. During bullet crowding keep the air clear.
-  const patrol=active&&mix.showFlybys&&!boss&&!reduced&&!performance;
-  this.patrolCount=patrol?3:0;
+  // One tiny peripheral freight vessel stays visible in crowded combat:
+  // unlike theatrical flybys it never traverses the center. Full three-ship
+  // traffic appears only once the FX director says the sky is clear.
+  const patrol=active&&!boss&&!reduced&&mix.moment==='combat';
+  this.patrolCount=patrol?(mix.showFlybys&&!performance?3:1):0;
   this.traffic.visible=patrol;
   if(patrol)for(const freight of this.freighters){
+   freight.root.visible=freight.index<this.patrolCount;
+   if(!freight.root.visible)continue;
    const u=wrap(t*.055+freight.index*.34,1);
-   freight.root.position.set(freight.side*(9.5+u*3.2),40-u*82,-12-freight.index*2.7);
+   const distant=freight.index===0&&!mix.showFlybys;
+   const x=distant?9.9+Math.sin(t*.25)*.35:freight.side*(9.5+u*3.2);
+   const y=distant?7+Math.sin(t*.45)*10:40-u*82;
+   freight.root.position.set(x,y,-13-freight.index*2.7);
    freight.root.rotation.set(.22*Math.sin(t*.30+freight.index),.3*freight.side,freight.side*(.11+u*.17));
-   freight.root.scale.setScalar(.38+Math.sin(u*Math.PI)*.35);
+   freight.root.scale.setScalar(distant?.38:.38+Math.sin(u*Math.PI)*.35);
    freight.rotor.rotation.z=t*(1.8+freight.index*.14);
   }
   const worldDensity=reduced?0:performance?.18:density;
