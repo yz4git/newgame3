@@ -229,6 +229,8 @@ function events(){
     else if(e.type==='worldalarm')toast('WORLD ALARM / 防衛施設が活動を継続');
     else if(e.type==='worldbossentry')toast('BOSS VAULT OPEN / 巨大機構展開');
     else if(e.type==='worldbossphase')toast('BOSS STRUCTURE / 装甲形態変化');
+    else if(e.type==='worldwingbreak')toast('BOSS WING DISCONNECTED / 実体装甲破壊');
+    else if(e.type==='worldcoreexpose')toast('WORLD REACTOR EXPOSED / 中枢炉心露出');
     else if(e.type==='worldbossfall')toast('STRUCTURE BREAK / 中枢崩壊');
     else if(e.type==='worldescape')toast('ESCAPE CORRIDOR / 脱出');
     else if(e.type==='fieldwarning'){showMessage('◆ DESTROY TARGET','大型設備の発光炉心を狙って撃て！',1.15);}
