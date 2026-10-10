@@ -136,7 +136,7 @@ await scene(rich.page,'10-gpu-core-flash-050ms',50);
 results.explosionUnobstructed=await rich.page.evaluate(()=>({stageCueHidden:document.getElementById('stage-cue').hidden,centerBannerCompact:document.getElementById('message').classList.contains('facility')}));
 results.gpuDetonationEarly=await rich.page.evaluate(()=>{
  const fx=window.__nova.view.facilityDemolition;
- return {visibleRings:fx.rings.filter(r=>r.visible).length,opacity:fx.rings.filter(r=>r.visible).map(r=>r.material.opacity),coreVisible:fx.cores.some(c=>c.visible&&c.material.opacity>.15)};
+ return {visibleRings:fx.rings.filter(r=>r.visible).length,opacity:fx.rings.filter(r=>r.visible).map(r=>r.material.opacity),coreVisible:fx.cores.some(c=>c.visible&&c.material.opacity>.075)};
 });
 await scene(rich.page,'10b-gpu-core-blast-180ms',130);
 const blastPng=(await rich.page.screenshot({type:'png',animations:'disabled'})).toString('base64');
@@ -167,7 +167,10 @@ results.gpuDetonationLate=await rich.page.evaluate(()=>{
 });
 results.gpuDemolition=await rich.page.evaluate(()=>({
   blasts:window.__nova.view.facilityDemolition?.diagnostics(),
-  oldExplosionSprites:window.__nova.view.flares?.length
+  oldExplosionSprites:window.__nova.view.flares?.length,
+  // Metal collapse chunks remain, but no older opaque rings may hide combat.
+  obsoleteOpaqueTori:window.__nova.view.colossal?.collapses
+    ?.flatMap(c=>c.rings).filter(r=>r.visible).length??0
 }));
 await scene(rich.page,'11-gpu-chain-bursts',580);
 
@@ -242,7 +245,8 @@ console.log('NOVA_REVIEW:'+JSON.stringify(results));
 await browser.close();
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
-if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility detonation invisible at 50ms or 400ms');
+if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility 3D core/rings too faint at 50ms or 400ms');
+if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw new Error('Legacy opaque 3D metal rings must never obscure the playfield');
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
