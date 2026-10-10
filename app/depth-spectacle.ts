@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
+import type {FxMix} from './fx-director.ts';
 import {CINEMATIC_STAGE_COLORS} from './cinematics-spec.ts';
 import {DEPTH_SPECTACLE_BUDGET as CAP,DEPTH_SPECTACLE_FEATURES} from './depth-spectacle-spec.ts';
 
@@ -96,6 +97,8 @@ export class DepthSpectacle {
    this.novaAge=0;this.novaSize=size;
    for(let i=0;i<3;i++)this.addPulse(x,y,1+i*.5,1.3+i*.7,0xb1d6df,'nova',1.1+i*.16);
   }
+  // Large structure failure and boss finishes belong to the event setpiece, not another ring generator.
+  if(['fieldcritical','fieldburst','fieldcollapse','fieldclear','bosskill','bosstransform','phase','nova'].includes(e.type))return;
   if(['explode','part','midkill','bosskill','bosstransform','phase','resonance','fieldcritical','fieldburst','fieldcollapse','fieldclear'].includes(e.type)){
    const structural=e.type.startsWith('field'),boss=e.type==='bosskill'||e.type==='bosstransform';
    const z=structural?-.12:1.35,color=structural?0xd3b292:boss?0xb3d3e5:e.color??0xcb9b80;
@@ -110,13 +113,13 @@ export class DepthSpectacle {
    }
   }
  }
- draw(g:Game,dt:number,reduced=false,performance=false){
+ draw(g:Game,dt:number,reduced=false,performance=false,mix?:FxMix){
   const active=g.state==='playing'||g.state==='transition';
   this.root.visible=active;
   if(!active){this.total=0;return;}
   this.stage=g.stage;
   const t=g.visualTime,stageColor=CINEMATIC_STAGE_COLORS[g.stage]??CINEMATIC_STAGE_COLORS[0];
-  const limit=(max:number)=>reduced?0:performance?Math.ceil(max*.47):max;
+  const limit=(max:number)=>reduced?0:performance?Math.ceil(max*.32):Math.ceil(max*(mix?.crowded?.45:mix?.density??1));
   let n=0;
   for(const b of g.bullets){
    if(b.dead||n>=limit(CAP.tracers))break;
@@ -215,7 +218,7 @@ export class DepthSpectacle {
   this.pilotGhosts.count=n;this.pilotGhosts.instanceMatrix.needsUpdate=true;
 
   n=0;
-  for(let i=0;i<limit(CAP.driftFrames);i++){
+  for(let i=0;i<(mix&&!mix.showAmbientStructures?0:limit(CAP.driftFrames));i++){
    const side=i%2?-1:1,z=-7.2+(i%4)*1.05;
    dummy.position.set(side*(11.9+(i%3)*1.08),((i*16.7-t*(3.9+g.stage*.18))%104+104)%104-52,z);
    dummy.rotation.set(.11*side,.15*side,side*(.10+Math.sin(t*.32+i)*.07));
@@ -226,7 +229,7 @@ export class DepthSpectacle {
 
   const boss=g.boss&&!g.boss.dead?g.boss:null;
   n=0;
-  if(boss&&!reduced&&!performance){
+  if(boss&&!reduced&&!performance&&mix===undefined){ // owned by InvasionDirector when orchestrated
    const phase=clamp(boss.phase,0,4),radius=3.45+.25*Math.sin(t*1.5),charge=boss.warning>0||boss.beam>0;
    for(let i=0;i<CAP.iris;i++){
     const angle=(i/CAP.iris)*Math.PI*2+t*(charge?.15:.06)*(i%2?1:-1);
@@ -288,7 +291,7 @@ export class DepthSpectacle {
    this.novaShell.position.set(player.x,player.y,.8);
    this.novaShell.scale.setScalar(1.2+u*clamp(this.novaSize*.82,5,13));
    this.novaShell.rotation.set(t*.4,t*.33,t*.25);
-   this.novaShell.material.opacity=.34*(1-u)*(1-u);
+   this.novaShell.material.opacity=.18*(1-u)*(1-u);
   }
   this.total=this.tracer.count+this.warningRails.count+this.activeBeams.count+this.lockGyros.count+this.pickupOrbits.count+this.enemyVortices.count+this.pilotGhosts.count+this.driftFrames.count+this.iris.count+this.pulses.count+this.dust.count;
  }
