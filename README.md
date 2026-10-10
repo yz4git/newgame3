@@ -1,3 +1,19 @@
+## NOVA STRIKE 3.2 — Depth Spectacle (2026-10-10)
+
+The rebuilt 3D presentation now adds 16 independent, event-linked world-space
+cues, without changing the Classic 2.9.3 option or the combat simulation:
+velocity-aligned physical bullet streaks, charge-up guide rails and active
+laser cylinders, lock-on gyroscopes, salvage orbits, enemy wing vortices,
+bank-sensitive fin afterimages, side corridor architecture, segmented boss
+iris/shield corona, muzzle and precision graze ripples, hull damage shielding,
+NOVA expanding 3D shell, and structural demolition debris/contact waves.
+
+The additions use capped instanced geometry and short-lived pooled events,
+avoid fullscreen flash textures and extra lights, obey reduced-motion and
+performance modes, and expose draw counts under `getDiagnostics().depthSpectacle`.
+To see the changes, use the **rebuilt** visual style; Classic remains unchanged.
+Build and publish: `npm run check && npm test && npm run build`.
+
 # NOVA STRIKE 3.1
 
 ### 3.1 — WORLD-SPACE CINEMATICS
