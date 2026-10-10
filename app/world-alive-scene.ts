@@ -19,7 +19,7 @@ interface Bay {
  side:number;index:number;
 }
 interface BossVault {
- root:T.Group;arms:T.Group[];cores:T.Mesh[];shields:T.Group[];
+ root:T.Group;arms:T.Group[];cores:T.Mesh[];shields:T.Group[];center:T.Group;reactor:T.Mesh;covers:T.Mesh[];
 }
 interface Rupture {
  x:number;y:number;z:number;age:number;life:number;speedX:number;speedY:number;speedZ:number;size:number;spin:number;
@@ -62,7 +62,7 @@ export class WorldAliveScene {
   this.bossLayer.name='boss-hangar-and-structural-breakup';
   this.fractureLayer.name='world-space-industrial-debris';
   this.root.add(this.main,this.bayLayer,this.bossLayer,this.fractureLayer);
-  this.vault={root:new T.Group(),arms:[],cores:[],shields:[]};
+  this.vault={root:new T.Group(),arms:[],cores:[],shields:[],center:new T.Group(),reactor:new T.Mesh(octa,this.coreMat),covers:[]};
   this.bossLayer.add(this.vault.root);
   const shards=new T.InstancedMesh(octa,this.panelMat,48);
   shards.name='falling-station-and-armor-geometry';shards.instanceMatrix.setUsage(T.DynamicDrawUsage);
@@ -176,7 +176,18 @@ export class WorldAliveScene {
  }
  private buildVault(stage:number){
   const v=this.vault;
-  v.root.clear();v.arms=[];v.cores=[];v.shields=[];
+  v.root.clear();v.arms=[];v.cores=[];v.shields=[];v.covers=[];
+  v.center=new T.Group();v.center.position.set(0,-1.35,-5.0);v.root.add(v.center);
+  this.tube(v.center,this.innerMat,0,0,-.6,2.8,4.2,2.8);
+  v.reactor=this.part(v.center,octa,this.coreMat,0,0,.9,1.5,1.8,1.2);
+  for(const side of[-1,1]){
+   const armor=this.wall(v.center,this.panelMat,side*1.0,0,1.7,1.1,3.1,.52);
+   v.covers.push(armor);
+  }
+  for(let i=0;i<4;i++){
+   const fin=this.wall(v.center,this.archMat,0,0,.35,.35,5.2,.35);
+   fin.rotation.z=i*Math.PI/4;
+  }
   v.root.name='reactive-'+WORLD_ALIVE_STAGES[stage].boss+'-dock';
   const sideTint=this.archMat;
   for(const side of[-1,1]){
@@ -220,10 +231,10 @@ export class WorldAliveScene {
   if(e.type==='stage'){this.lastCue='';return;}
   if(!e.type.startsWith('world')&&!['fieldburst','bosstransform'].includes(e.type))return;
   this.lastCue=e.type;
-  if(['worldbreach','worldbossfall','worldescape','fieldburst'].includes(e.type)){
+  if(['worldbreach','worldbossfall','worldescape','worldwingbreak','worldcoreexpose','fieldburst'].includes(e.type)){
    // Each rupture sheds real metal away from the projectile plane. The
    // positions and velocities derive from a deterministic counter, not RNG.
-   const count=e.type==='worldbossfall'?24:e.type==='worldescape'?12:9;
+   const count=e.type==='worldbossfall'?24:e.type==='worldescape'?12:e.type==='worldcoreexpose'?16:9;
    for(let j=0;j<count;j++){
     if(this.splinters.length>=48)this.splinters.shift();
     const n=++this.lastRupture,ang=TAU*hash(n+3),speed=1.8+hash(n+7)*4.2;
@@ -280,11 +291,20 @@ export class WorldAliveScene {
   const b=g.boss;
   if(b&&this.bossVisible){
    const morph=ease(clamp(b.age/2.5,0,1)),broken=b.parts.filter(hp=>hp<=0).length;
+   const phaseExpansion=(b.phase-1)*.22;
+   v.center.rotation.z=t*(b.phase>=3?.23:.10);
+   v.reactor.rotation.set(t*.22,t*.31,t*.48);
+   v.reactor.scale.setScalar(broken===2?1.5:broken===1?1.06:.70);
+   for(let k=0;k<2;k++){
+    const armor=v.covers[k],side=k===0?-1:1;
+    armor.position.x=side*(1.0+(b.parts[k]<=0?1.45:phaseExpansion));
+    armor.rotation.y=side*(b.parts[k]<=0?.88:phaseExpansion);
+   }
    v.root.position.set(b.x,b.y,-3.6);
    for(let i=0;i<v.arms.length;i++){
     const side=i===0?-1:1,a=v.arms[i],s=v.shields[i];
-    a.position.x=side*(9.9-morph*1.2+broken*.34);
-    a.rotation.z=side*(.06+morph*.08+broken*.04);
+    a.position.x=side*(9.9-morph*1.2+broken*.34+phaseExpansion*.65);
+    a.rotation.z=side*(.06+morph*.08+broken*.04+phaseExpansion*.10);
     s.position.x=-side*(.7+(b.parts[i]<=0?1.8:Math.sin(t*.7+i)*.20));
     s.rotation.y=side*(b.parts[i]<=0?.75:.12);
     v.cores[i].visible=b.parts[i]>0;
@@ -328,6 +348,7 @@ export class WorldAliveScene {
   structureCount:this.structures.filter(s=>s.visible).length,
   hangars:this.bays.filter(b=>b.root.visible).length,openHangars:this.riftOpen,
   bossVault:this.bossVisible,reactorFaces:this.vault.cores.filter(c=>c.visible).length,
+  centerExposed:this.vault.covers.length===2&&this.vault.covers.every((_,i)=>this.vault.shields[i].position.x!==0&&this.vault.covers[i].rotation.y>.7||this.vault.covers[i].rotation.y<-.7),
   fallingFragments:this.fragments.count,lastCue:this.lastCue,approach:this.intro,
   limits:{megastructures:2,hangars:2,bossArms:2,fragments:48,liveLights:0}};
  }
