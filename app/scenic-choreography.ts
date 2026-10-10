@@ -235,8 +235,8 @@ export class ScenicChoreography3D {
   for(const rig of this.machines){
    const show=!reduced&&(!performance||rig.index===0)&&(mix.showAmbientStructures||rig.index===0||!active); // quiet one side silhouette remains during combat
    rig.root.visible=show;
-   const phase=wrap(rig.index*47+21-t*(g.stage===2?2.5:3.6),109);
-   rig.root.position.set(rig.side*(12.2+rig.index*.7),phase-54,-10-rig.index*3);
+   const phase=wrap(rig.index*31+10-t*(g.stage===2?2.5:3.6),48);
+   rig.root.position.set(rig.side*(10.9+rig.index*.7),phase-24,-10-rig.index*3);
    rig.root.rotation.set(.15*rig.side,Math.sin(t*.17+rig.index)*.11,rig.side*.08);
    rig.hinge.rotation.z=rig.side*(Math.sin(t*(g.stage===5?.85:.38)+rig.index)*.34+.12*strength);
    rig.rotor.rotation.z=t*(g.stage===5?.88:.38)*(rig.index===0?1:-1);
