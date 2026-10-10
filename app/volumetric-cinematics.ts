@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
+import type {FxMix} from './fx-director.ts';
 import {CINEMATIC_BUDGETS as LIMIT,CINEMATIC_ENV_MOTION as SPEED,CINEMATIC_STAGE_COLORS as COLORS} from './cinematics-spec.ts';
 
 const dummy=new T.Object3D();
@@ -134,7 +135,8 @@ export class VolumetricCinematics {
   this.eventsProcessed++;
   const size=clamp(e.size??1.1,.4,13),important=['bosskill','nova','fieldcollapse','bosstransform'].includes(e.type);
   const color=e.type==='nova'?0x70cbef:e.type.startsWith('field')?0xe5a66e:e.color??0xffad74;
-  const ringCount=e.type==='bosskill'?3:e.type==='nova'?3:important?2:1;
+  // The 3D setpiece director owns major detonations; these are only small hit ripples.
+  const ringCount=['fieldcollapse','fieldclear','fieldcritical','fieldburst','bosskill','nova','bossform','bosstransform','phase'].includes(e.type)?0:1;
   for(let i=0;i<ringCount;i++){
    let ring=this.rings.find(r=>r.age>=r.life);
    if(!ring)ring=this.rings.reduce((a,b)=>a.age/a.life>b.age/b.life?a:b);
@@ -142,7 +144,7 @@ export class VolumetricCinematics {
    Object.assign(ring,{x:e.x??0,y:e.y??0,z:z+i*.32,radius:clamp(size*.20,.7,2.2),grow:clamp(size*.65,1.4,6.2),age:-i*.12,life:important?1.4:0.85});
    ring.mesh.material.color.setHex(i===0?color:i===1?0x8bc4de:0xe7bd96);
   }
-  const debris=e.type==='fieldcollapse'?27:e.type==='bosskill'?44:e.type==='explode'?9:e.type==='part'?9:e.type==='bosstransform'?15:e.type==='resonance'?12:0;
+  const debris=e.type==='explode'?5:e.type==='part'?5:e.type==='resonance'?6:0;
   for(let i=0;i<debris;i++){
    const k=++this.serial,a=seed(k+2)*Math.PI*2,v=(1.8+seed(k+31)*5)*(important?1.15:1);
    if(this.shardPool.length>=LIMIT.shards)this.shardPool.shift();
@@ -167,7 +169,7 @@ export class VolumetricCinematics {
   (this.missileSpirals.material as T.MeshBasicMaterial).color.setHex(stage===5?0xffbf8c:0xffa67e);
   for(const jet of this.exhaust){jet.material.color.setHex(stage===5?0xffb174:0x83d4ed);}
  }
- draw(g:Game,dt:number,reduced=false,performance=false){
+ draw(g:Game,dt:number,reduced=false,performance=false,mix?:FxMix){
   this.setStage(g.stage);
   this.eventsProcessed=0;
   const title=g.state==='title',active=g.state==='playing'||g.state==='transition';
@@ -175,7 +177,7 @@ export class VolumetricCinematics {
   if(!this.root.visible)return;
   this.clock=g.visualTime;
   this.mobileMode=performance;const stage=g.stage,t=this.clock,speed=SPEED[stage];
-  const density=reduced?15:performance?28:LIMIT.atmosphere;
+  const density=reduced?8:Math.min(LIMIT.atmosphere,Math.floor((performance?28:LIMIT.atmosphere)*(mix?.density??1)));
   for(let i=0;i<density;i++){
    const z=-1.8-seed(i+137)*11.5,x=(seed(i+11)*2-1)*17;
    const y=mod(seed(i+47)*89-t*(3+seed(i+75)*3)*speed,89)-44;
@@ -185,7 +187,7 @@ export class VolumetricCinematics {
    dummy.scale.set(scale,scale*(1.5+seed(i+87)*2.8),scale);
    dummy.updateMatrix();this.motes.setMatrixAt(i,dummy.matrix);
   }this.motes.count=density;this.motes.instanceMatrix.needsUpdate=true;
-  const flybyCount=reduced?4:performance?7:LIMIT.nearFlybys;
+  const flybyCount=mix&&!mix.showFlybys?0:reduced?0:performance?4:Math.min(7,LIMIT.nearFlybys);
   for(let i=0;i<flybyCount;i++){
    const side=i%2?-1:1,z=-6.6+seed(i+55)*5.5;
    const y=mod(i*13.7+17-t*speed*(3.5+seed(i+15)*2),104)-52;
@@ -198,7 +200,7 @@ export class VolumetricCinematics {
   }this.flybys.count=flybyCount;this.flybys.instanceMatrix.needsUpdate=true;if(this.flybys.instanceColor)this.flybys.instanceColor.needsUpdate=true;
   for(let i=0;i<this.gantries.length;i++){
    const group=this.gantries[i],side=i%2?-1:1;
-   group.visible=!reduced&&!performance&&stage!==4;
+   group.visible=!reduced&&!performance&&stage!==4&&(mix?.showAmbientStructures??true);
    group.position.set(side*(12.4+(i%2)*.6),mod(i*31+12-t*3.8*speed,110)-55,-3.7-(i%3)*.35);
    group.rotation.z=side*(.08+Math.sin(t*.13+i)*.025);
    const rim=group.userData.rim as T.Mesh;rim.rotation.z=t*.43+i;
@@ -206,19 +208,19 @@ export class VolumetricCinematics {
   }
   for(let i=0;i<this.rotors.length;i++){
    const m=this.rotors[i],side=i%2?-1:1;
-   m.visible=!performance&&!reduced&&stage!==4;
+   m.visible=!performance&&!reduced&&stage!==4&&(mix?.showAmbientStructures??true);
    m.position.set(side*(11.4+seed(i+7)*1.2),mod(i*33+8-t*4.4,112)-56,-3.1);
    m.rotation.set(Math.sin(t*.4+i)*.26,Math.cos(t*.31+i)*.4,t*.28*(side)+i);
    m.scale.setScalar(.78+(i%2)*.35);
   }
   for(let i=0;i<this.sweeps.length;i++){
    const m=this.sweeps[i],side=i%2?-1:1;
-   m.visible=!reduced&&!performance&&stage!==0;
+   m.visible=!reduced&&!performance&&stage!==0&&(mix?.showAmbientStructures??true);
    m.position.set(side*(10.5+seed(i+29)*2),mod(i*27+15-t*3.8,105)-52,-4.5);
    m.rotation.z=side*(.4+Math.sin(t*.47+i)*.36);
    m.material.opacity=.036+.018*(.5+.5*Math.sin(t*.82+i));
   }
-  const lightCount=reduced?9:performance?15:32;
+  const lightCount=reduced?4:performance?7:Math.min(16,Math.ceil(32*(mix?.density??1)));
   for(let i=0;i<lightCount;i++){
    const side=i%2?-1:1,z=-2.9+seed(i+83)*1.1;
    dummy.position.set(side*(9.25+seed(i+94)*4.3),mod(i*11-t*(3.7+seed(i+42)),90)-45,z);
@@ -252,7 +254,7 @@ export class VolumetricCinematics {
   this.missileSpirals.count=reduced?0:performance?Math.min(missiles,20):missiles;
   this.missileSpirals.instanceMatrix.needsUpdate=true;
   // Stage changes become a receding 3D tunnel instead of a white screen flash.
-  const warp=g.state==='transition'&&!reduced;
+  const warp=false; // SINGLE OWNER: InvasionDirector renders all hyperspace rings
   for(let i=0;i<this.warpTunnel.length;i++){
    const gate=this.warpTunnel[i];gate.visible=warp;if(!warp)continue;
    const u=mod(3.5-g.transitionTime+i*.36,3.5)/3.5;
@@ -269,7 +271,8 @@ export class VolumetricCinematics {
   }
   const showJet=active&&g.hull>0&&g.state!=='transition';
   this.exhaust.forEach((jet,i)=>{
-   jet.visible=showJet;jet.position.set(g.player.x+(i?1:-1)*.54,g.player.y-1.90,.70);
+   jet.visible=false; // player animation rig owns the sole 3D engine plume
+   jet.position.set(g.player.x+(i?1:-1)*.54,g.player.y-1.90,.70);
    const bank=clamp(g.player.vx*.015,-.28,.28);
    jet.rotation.z=Math.PI+bank;
    const length=1.18+(reduced?0:.27*Math.sin(t*22+i*1.4));
@@ -296,7 +299,8 @@ export class VolumetricCinematics {
   const boss=g.boss&&!g.boss.dead?g.boss:null;
   for(let i=0;i<this.bossHalos.length;i++){
    const m=this.bossHalos[i];
-   m.visible=!!boss&&!reduced;if(!boss)continue;
+   m.visible=false; // InvasionDirector owns all boss perimeter architecture
+   if(!boss)continue;
    const arrival=clamp(boss.age/(1.9+i*.16),0,1);
    const pulse=boss.phase>1?.11*Math.sin(t*(1.2+i*.38)):0;
    m.position.set(boss.x,boss.y-.7,-1.9+i*.31);
@@ -311,7 +315,7 @@ export class VolumetricCinematics {
    m.position.set(ring.x,ring.y,ring.z);m.rotation.set(Math.sin(u*Math.PI)*.24,u*.5,ring.age*.28);
    const radius=ring.radius+ring.grow*u;
    m.scale.set(radius,radius*(1-.20*u),1);
-   m.material.opacity=(1-u)**1.25*(ring.life>1?.44:.32);
+   m.material.opacity=(1-u)**1.25*(ring.life>1?.20:.17);
   }
   for(let i=0;i<this.shardPool.length;i++){const p=this.shardPool[i];if(dt>0){
    p.age+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vz-=2.6*dt;
