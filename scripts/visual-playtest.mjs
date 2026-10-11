@@ -361,6 +361,55 @@ await rich.page.evaluate(()=>{
 });
 await scene(rich.page,'v31-depth-explosion-debris',150);
 results.cinematicBlast=await rich.page.evaluate(()=>{const d=window.__nova.view.getDiagnostics();return {volumetric:d.volumetric,invasion:d.invasion,mix:d.fxMix,mechanical:d.mechanical};});
+// Verify the actual GPU backdrop opacity at both ends of the same finite
+// landmark. A boolean-only test would miss sudden materialization.
+results.landmarkReveal=await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.start('campaign','normal',3,'striker');
+ g.invulnerable=900;g.shotTimer=900;g.waveIndex=999;g.schedule=[];
+ g.sectorMission.started=true;g.encounterSeen={stage:true,mini:true};
+ g.battlefield.seen=[true,true];g.enemies=[];g.bullets=[];
+ const samples=[];
+ for(const offset of [56,50,42,30,0,-30,-42,-50,-56]){
+  g.time=(166-offset)/4.4;g.visualTime=g.time;
+  view.draw(g,.016,16.7);
+  const model=view.background.objects[2];
+  let opacity=null;
+  model.traverse(o=>{if(opacity===null&&o.isMesh){
+   const material=Array.isArray(o.material)?o.material[0]:o.material;
+   opacity=material?.opacity??null;
+  }});
+  samples.push({offset,visible:model.visible,opacity});
+ }
+ return samples;
+});
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.time=(166-42)/4.4;g.visualTime=g.time;view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v44-glacier-landmark-gradual-entry',170);
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.time=166/4.4;g.visualTime=g.time;view.draw(g,.016,16.7);
+});
+await scene(rich.page,'v44-glacier-landmark-fully-arrived',170);
+
+results.hangarReveal=await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;
+ g.start('campaign','normal',2,'striker');
+ g.time=82*.25;g.enemies=[];g.bullets=[];
+ g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];
+ g.sectorMission.started=true;g.waveIndex=999;g.schedule=[];
+ g.update(1/60,{x:0,y:0,focus:false});
+ view.draw(g,.016,16.7);
+ const bay=view.aliveScene.bays[0];
+ const first={y:bay.root.position.y,reveal:view.aliveScene.bayReveal[0]};
+ for(let i=0;i<8;i++)view.draw(g,.05,16.7);
+ const later={y:bay.root.position.y,reveal:view.aliveScene.bayReveal[0]};
+ return {first,later};
+});
+await scene(rich.page,'v44-hangar-sliding-in',200);
+
 const classic=await setup({width:390,height:844},{renderer:'canvas',visual:'classic'});
 results.classic=await classic.page.evaluate(()=>({
  visual:window.__nova.view.getDiagnostics().visualStyle,
@@ -373,6 +422,16 @@ results.errors=errors;
 console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
 console.log('NOVA_REVIEW:'+JSON.stringify(results));
 await browser.close();
+if(results.gpu.view==='View'){
+ const a=results.landmarkReveal;
+ if(!a||a.length!==9||a[0].visible||a[8].visible||
+   !(a[1].opacity>0&&a[1].opacity<a[2].opacity&&a[2].opacity<a[3].opacity&&a[3].opacity<a[4].opacity)||
+   !(a[4].opacity>a[5].opacity&&a[5].opacity>a[6].opacity&&a[6].opacity>a[7].opacity))
+  throw new Error('Live 3D landmark still pops without intermediate opacity: '+JSON.stringify(a));
+ const b=results.hangarReveal;
+ if(!b||!(b.first.reveal>0&&b.first.reveal<.1&&b.later.reveal>b.first.reveal&&b.later.reveal<1&&b.later.y<b.first.y-3))
+  throw new Error('Actual 3D launch bay still teleports in: '+JSON.stringify(b));
+}
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
 if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility 3D core/rings too faint at 50ms or 400ms');
