@@ -214,8 +214,11 @@ for(let stage=0;stage<6;stage++){
   const {view}=window.__nova;
   const detail=view.getDiagnostics().volumetric;
   const kinetic=view.background.scenes[0].getObjectByName('kinetic-world-assembly');
-  return {detail,crowded:window.__nova.game.bullets.length>=38||window.__nova.game.enemies.filter(e=>!e.dead).length>=17,kineticRings:kinetic?.children.filter(x=>x.name.startsWith('kinetic-ring-')).length??0,
-   kineticArms:kinetic?.children.filter(x=>x.name.startsWith('kinetic-arm-')).length??0,
+  const chapters=view.background.scenes.slice(1).map(x=>x.userData.chapterId);
+  const moving=kinetic?.children.filter(x=>x.name.startsWith('hero-actuator-'))??[];
+  return {detail,crowded:window.__nova.game.bullets.length>=38||window.__nova.game.enemies.filter(e=>!e.dead).length>=17,
+   heroMotion:kinetic?.userData.motionId,heroActuators:moving.length,
+   chapterIds:chapters,chapterActuators:view.background.scenes.slice(1).map(x=>x.getObjectByName('stage-primary-motion')?.children.length??0),
    realWorldRoot:!!view.scene.getObjectByName('world-space-cinematics-v31')};
  });
  results.worldRebuild[stage]=await rich.page.evaluate(()=>{
@@ -461,7 +464,9 @@ if(!results.worldAliveCore?.game?.wingBroken.every(Boolean)||!results.worldAlive
 if(results.worldAliveEscape?.state!=='transition'||results.worldAliveEscape?.game?.escape!==true)throw new Error('4.0 actual NOVA boss defeat did not collapse base and start the escape: '+JSON.stringify(results.worldAliveEscape));
 if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
 if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
-if(!Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.kineticRings===3&&x.kineticArms===4&&x.detail&&x.detail.motes>0&&(x.crowded?x.detail.flybys===0:x.detail.flybys>0)))throw new Error('3D cinematics missing or decorative flybys not hidden during dangerous bullet/enemy crowding: '+JSON.stringify(results.cinematicLayers));
+if(new Set(Object.values(results.cinematicLayers).map(x=>x.heroMotion)).size!==6||
+ !Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.heroActuators>=4&&x.chapterIds?.length===3&&new Set(x.chapterIds).size===3&&x.chapterActuators?.every(v=>v>0)&&x.detail&&x.detail.motes>0&&(x.crowded?x.detail.flybys===0:x.detail.flybys>0)))
+ throw new Error('Stage identity is reused, incomplete, or obscures combat: '+JSON.stringify(results.cinematicLayers));
 if(!results.cinematicBoss.invasion?.bossStructure||results.cinematicBoss.volumetric?.bossHalos!==0)throw new Error('Boss ring ownership regression: '+JSON.stringify(results.cinematicBoss));
 if(results.cinematicWarp.invasion?.travelRings<8||results.cinematicWarp.volumetric?.warpRings!==0)throw new Error('Single-owner 3D warp tunnel invisible or overlapping: '+JSON.stringify(results.cinematicWarp));
 if(results.cinematicBlast.mechanical?.panels<6||results.cinematicBlast.mechanical?.reactors<1||results.cinematicBlast.invasion?.armorFragments<8)throw new Error('Multi-stage physical boss breakup invisible: '+JSON.stringify(results.cinematicBlast));
