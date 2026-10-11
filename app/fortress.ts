@@ -211,11 +211,15 @@ export class FortressBackground {
       this.surface=new LivingSurface(stage);this.root.add(this.surface.root);
     }
     // World Rebuild: no seven forever-looping clusters down both edges.
-    if(!usesRebuiltGraphics())for(let i=0;i<7;i++){
+    // Keep source geometry for the Canvas 2D compatibility adapter, but
+    // NEVER mount these repeated strips into the World Rebuild 3D scene.
+    for(let i=0;i<7;i++){
       const g=new T.Group(),x=(i%2?1:-1)*(8+noise(i,stage)*4);
       if(env==='asteroids'||env==='ice'||env==='jungle'||env==='lava')for(let j=0;j<5;j++)rock(g,env==='ice'?p.ice:env==='jungle'?p.moss:p.rock,(noise(i,j,5)-.5)*5,j*2-4,0,.8+noise(i,j)*1.9,1.8,1.1,i*7+j);
       else for(let j=0;j<6;j++){const m=block(g,p.dark,(noise(i,j,5)-.5)*5,j*1.4-4,0,.6+noise(i,j)*1.4,1.3,.4+noise(i,j,9));m.rotation.z=noise(i,j,3)*.2;}
-      const m=batch(g);m.position.set(x,0,-18);this.root.add(m);this.far.push(m);
+      const m=batch(g);m.position.set(x,0,-18);
+      if(!usesRebuiltGraphics())this.root.add(m);
+      this.far.push(m);
     }
     for(let i=0;i<4;i++){
       if(usesRebuiltGraphics()){
