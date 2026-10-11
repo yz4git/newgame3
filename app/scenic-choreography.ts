@@ -2,6 +2,7 @@ import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
 import type {FxMix} from './fx-director.ts';
 import {STAGES} from './stages.ts';
+import {approachReveal,easeReveal} from './scenery-transitions.ts';
 
 const TAU=Math.PI*2;
 const wrap=(x:number,n:number)=>((x%n)+n)%n;
@@ -45,6 +46,7 @@ export class ScenicChoreography3D {
  private cue:BackdropCue|null=null;
  private patrolCount=0;
  private backdropCount=0;
+ private reactionReveal=0;
  private eventCount=0;
  private ambientCount=0;
  constructor(){
@@ -205,7 +207,7 @@ export class ScenicChoreography3D {
    const item=this.makeMachinery(stage,i);
    this.machines.push(item);this.architecture.add(item.root);
   }
-  this.cue=null;this.eventCount=0;
+  this.cue=null;this.eventCount=0;this.reactionReveal=0;
  }
  event(e:GameEvent){
   if(e.type==='stage'){this.cue=null;return;}
@@ -306,16 +308,19 @@ export class ScenicChoreography3D {
   // Reactive architectural light isn't a flash overlay: the shutters physically
   // withdraw and walls' side-mounted metal indicators brighten only modestly.
   const engaged=!reduced&&(!!this.cue&&strength>0||boss&&mix.showBossArchitecture);
-  this.reaction.visible=engaged;
-  const opening=engaged?(boss ? .85 : 1.0)*Math.max(strength,boss ? .60 : 0):0;
+  // Event-based shutters must slide into frame instead of suddenly existing.
+  this.reactionReveal=approachReveal(this.reactionReveal,engaged?1:0,dt,.52);
+  const reveal=easeReveal(this.reactionReveal);
+  this.reaction.visible=reveal>.002;
+  const opening=(boss ? .85 : 1.0)*Math.max(strength,boss ? .60 : 0)*reveal;
   for(let j=0;j<this.facade.length;j++){
    const f=this.facade[j],side=j?1:-1;
-   f.position.set(side*10.7,this.cue?clamp(this.cue.y,-5,14):boss?g.boss!.y:7,-11.6);
+   f.position.set(side*(10.7+(1-reveal)*10),this.cue?clamp(this.cue.y,-5,14):boss?g.boss!.y:7,-11.6);
    this.shutters[j].position.x=side*(.65+opening*1.4);
    this.shutters[j].rotation.y=side*opening*.52;
    (this.warning[j].material as T.MeshBasicMaterial).opacity=.12+.15*opening;
   }
-  this.backdropCount=engaged?2:0;
+  this.backdropCount=this.reaction.visible?2:0;
  }
  diagnostics(){
   return {stage:this.stage,environment:STAGES[this.stage]?.environment??'unknown',
