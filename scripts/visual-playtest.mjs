@@ -225,7 +225,9 @@ for(let stage=0;stage<6;stage++){
   const skinCount=enemies.reduce((a,m)=>a+(m.getObjectByName('skin')?1:0),0);
   return {worldScene:scene,enemy3D:enemies.length,enemyBillboards:skinCount,
     style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background,
-    scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene,rail:view.getDiagnostics().railDistricts};
+    scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene,
+    visibleHangars:view.aliveScene.bays.filter(b=>b.root.visible).length,
+    rail:view.getDiagnostics().railDistricts};
  });
 }
 // 4.3 verify that previously endlessly repeated rail districts really are
@@ -267,6 +269,7 @@ results.worldAliveLaunch=await rich.page.evaluate(()=>({
  game:window.__nova.game.snapshot().worldAlive,
  scene:window.__nova.view.getDiagnostics().worldAliveScene,
  actualEnemyCount:window.__nova.game.enemies.length,
+ visibleHangars:window.__nova.view.aliveScene.bays.filter(b=>b.root.visible).length,
  actualKinds:window.__nova.game.enemies.map(e=>e.kind)
 }));
 await rich.page.evaluate(()=>{
@@ -391,8 +394,8 @@ if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Nu
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>!results.cinematicLayers[stage]?.crowded||x.scenic?.machines===0))throw new Error('Stage machinery obscures dense live projectile patterns');
 if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.scenicPeace?.farWeather<20)throw new Error('Perimeter freight/machinery loops returned: '+JSON.stringify(results.scenicPeace));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
-if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount===0&&r.worldAlive.hangars===2))throw new Error('Repeating structures or linked hangars broken: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
-if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==2)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
+if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount===0&&r.worldAlive.hangars===2&&r.visibleHangars===0))throw new Error('Repeating structures or linked hangars broken: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
+if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==2||results.worldAliveLaunch?.visibleHangars<1)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
 if(results.worldAliveBreach?.game?.baysOpen?.[1]!==false||results.worldAliveBreach?.game?.destroyed?.[1]!==true)throw new Error('4.0 strategic facility blast failed to close the physical right-side hangar: '+JSON.stringify(results.worldAliveBreach));
 if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1||results.worldAliveBoss.game.wingBroken[0]!==true||results.worldAliveBoss.oldBossRings!==0)throw new Error('4.0 boss vault / one wing or excessive old rings obscure HUD: '+JSON.stringify(results.worldAliveBoss));
 if(!results.worldAliveCore?.game?.wingBroken.every(Boolean)||!results.worldAliveCore.scene.centerExposed)throw new Error('4.0 actual wing-break damage must physically open the central 3D reactor: '+JSON.stringify(results.worldAliveCore));
