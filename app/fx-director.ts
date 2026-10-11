@@ -71,7 +71,7 @@ export class FxDirector {
   const strength=active?Math.max(0,1-age/this.cue!.duration):0;
   this.lastMoment=moment;
   return {
-   moment,density:density*(1-readability*.48),intensity:strength,crowded,readability,
+   moment,density:crowded?density:density*(1-readability*.48),intensity:strength,crowded,readability,
    showFlybys:!reduced&&!performance&&!crowded&&!boss&&readability<.22&&moment==='combat',
    showAmbientStructures:!quiet&&readability<.28&&moment==='combat',
    showBossArchitecture:!reduced&&boss&&moment==='boss',
