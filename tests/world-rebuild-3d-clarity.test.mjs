@@ -33,8 +33,8 @@ test('Rebuilt effects use 3D impact volumes, not billboard sprites, and tactical
  assert.match(fx,/if\(!this\.rebuilt\)/);
  assert.match(fx,/new T\.TetrahedronGeometry\(\.70,0\)/);
  assert.match(render,/usesRebuiltGraphics\(\)\?new T\.SphereGeometry\(\.5,6,4\)/);
- assert.match(render,/usesRebuiltGraphics\(\)\?5:45/);
- assert.match(render,/usesRebuiltGraphics\(\)\?\.31:\.52/);
+ assert.match(render,/usesRebuiltGraphics\(\)\?2\.6:45/);
+ assert.match(render,/usesRebuiltGraphics\(\)\?\.20:\.52/);
  assert.match(fac,/depthTest:true/);
  assert.doesNotMatch(fac,/depthTest:false/);
  assert.match(world,/this\.warpStage\.visible=false/);
