@@ -14,9 +14,10 @@ const WHEEL=new T.TorusGeometry(1,.13,6,24);
 const SHARD=new T.IcosahedronGeometry(1,0);
 const TAU=2*Math.PI;
 const clamp=(x:number,a:number,b:number)=>Math.max(a,Math.min(b,x));
+const stageKey=(side:number,stage:number)=>stage+(side>0?31:0);
 
 export const RAIL_DISTRICT_LIMITS={
- sides:2,slotsPerSide:3,variants:7,spacing:22,
+ sides:2,slotsPerSide:3,variants:7,spacing:28,
  minCenterClearance:5.65,maxSceneMeshes:126,
  pulseOpacity:.18
 } as const;
@@ -27,6 +28,7 @@ interface Module{
  side:number;slot:number;segment:number;meshes:number;
 }
 interface EventCue {kind:string;age:number;life:number;side:number;}
+interface LateralLandmark {root:T.Group;head:T.Group;rotor:T.Group;side:number;pieces:number;}
 function buildPart(parent:T.Object3D,geometry:T.BufferGeometry,material:T.Material,x:number,y:number,z:number,w:number,h:number,d:number){
  const m=new T.Mesh(geometry,material);
  m.position.set(x,y,z);m.scale.set(w,h,d);m.receiveShadow=true;
@@ -44,6 +46,9 @@ export class RailDistrictMotion3D {
  private highlights=new T.MeshBasicMaterial({color:0x78b0b6,transparent:true,opacity:.12,depthWrite:false,toneMapped:true});
  private geology=new T.MeshStandardMaterial({color:0x788188,roughness:.89,metalness:0});
  private modules:Module[]=[];
+ private landmarks:LateralLandmark[]=[];
+ private visibleLandmarks=0;
+ private greatestSidewaysMotion=0;
  private lastStage=-1;
  private cue:EventCue|null=null;
  private currentGeometryCount=0;
@@ -54,7 +59,7 @@ export class RailDistrictMotion3D {
  private activeVariants:string[]=[];
  private motionSpan=0;
  constructor(){
-  this.root.name='world-alive-v41-nonrepeating-rail-districts';
+  this.root.name='world-alive-v42-rail-districts-and-lateral-landmarks';
   this.railRoot.name='large-asymmetric-side-chapters';
   this.root.add(this.railRoot);
  }
@@ -165,10 +170,98 @@ export class RailDistrictMotion3D {
   let meshes=0;root.traverse(o=>{if(o instanceof T.Mesh)meshes++;});
   return {root,type:kind,rotor,pod,door,arm,signal,side,slot,segment,meshes};
  }
+
+ /**
+  * These two enormous stage-specific silhouettes DO NOT inherit the vertical
+  * scrolling offset. They enter from outside the field, fold towards the side
+  * of the arena, work for a few seconds, and retreat again. The old rail
+  * background had no objects whose primary motion was lateral.
+  */
+ private makeLateralLandmark(stage:number,side:number):LateralLandmark{
+  const root=new T.Group(),head=new T.Group(),rotor=new T.Group();
+  root.name='independent-sideways-stage-landmark-'+stage+'-'+side;
+  head.name='large-telescoping-machine-head';rotor.name='visible-counterrotating-machinery';
+  root.add(head);head.add(rotor);
+  // Side-mounted pivot: all geometry stays beyond the 5.65m combat clearance.
+  panel(root,this.edges,side*.6,0,-.5,1.2,6.5,1.75);
+  panel(root,this.interiors,side*.45,-2.9,.30,2.6,.65,.75);
+  if(stage===0){ // Asteroid foundry: massive hinged ore crusher
+   panel(head,this.panels,-side*.20,1.05,0,3.45,.86,.95);
+   for(const y of[-1.35,.30,1.95]){
+    const jaw=panel(head,this.edges,-side*1.03,y,.42,2.1,.55,.65);
+    jaw.rotation.z=side*.20;
+   }
+   buildPart(rotor,WHEEL,this.panels,.35,0,1.05,1.45,1.45,.50);
+  }else if(stage===1){ // Ocean dock: fold-out loading crane with counterweight
+   const boom=panel(head,this.panels,-side*.62,1.0,.44,3.85,.56,.74);
+   boom.rotation.z=side*.42;
+   panel(head,this.edges,-side*1.45,-1.30,.44,.72,3.2,.68);
+   panel(head,this.panels,side*1.14,2.0,.12,1.55,1.08,1.15);
+   buildPart(rotor,DRUM,this.edges,side*.24,.10,.85,.85,1.10,.85).rotation.x=Math.PI/2;
+  }else if(stage===2){ // Orbital fortress: iris shutters in a giant launch bay
+   for(const x of[-1.28,1.28])panel(head,this.panels,x,.05,.27,.56,5.5,.80);
+   for(const y of[-2.3,2.45])panel(head,this.edges,0,y,.24,3.3,.45,.70);
+   buildPart(rotor,WHEEL,this.panels,0,0,.94,1.75,1.75,.70);
+   panel(rotor,this.interiors,0,0,1.06,.42,2.35,.36);
+  }else if(stage===3){ // Glacier: off-axis crystal extraction drill
+   buildPart(head,DRUM,this.edges,0,.60,.43,2.25,3.9,2.25).rotation.z=side*.38;
+   for(let k=0;k<3;k++){
+    const shard=buildPart(rotor,SHARD,this.geology,(k-1)*.95,-.45+k*.85,1.33,.82,1.7,.88);
+    shard.rotation.z=side*(.22+k*.3);
+   }
+   panel(head,this.panels,side*.90,-2.5,.45,2.65,.60,.7);
+  }else if(stage===4){ // Jungle ruins: independently waving skeletal root arms
+   panel(head,this.geology,0,-.8,.11,2.5,3.6,1.25);
+   for(let k=0;k<3;k++){
+    const branch=panel(head,k%2?this.panels:this.edges,(k-1)*.85,1.0,.57,.54,3.8-k*.5,.62);
+    branch.rotation.z=(k-1)*.45;
+   }
+   buildPart(rotor,WHEEL,this.panels,0,-.7,1.10,1.18,1.18,.35);
+  }else{ // Volcanic foundry: retracting twin-piston industrial hammer
+   for(const x of[-1.12,1.12])buildPart(head,DRUM,this.edges,x,.0,.30,.84,5.3,.84);
+   panel(head,this.panels,0,-2.25,.98,3.20,1.30,1.16);
+   panel(head,this.interiors,0,1.9,.77,3.1,.65,.65);
+   buildPart(rotor,WHEEL,this.panels,0,1.6,1.29,1.25,1.25,.44);
+  }
+  let pieces=0;root.traverse(o=>{if(o instanceof T.Mesh)pieces++;});
+  return {root,head,rotor,side,pieces};
+ }
+ private moveLateralLandmarks(g:Game,reduced:boolean,performance:boolean,crowded:boolean){
+  this.visibleLandmarks=0;this.greatestSidewaysMotion=0;
+  for(const l of this.landmarks){
+   // Stagger the left and right cycles: neither side can become a mirror of
+   // the other, and the machinery never moves in lockstep with background Y.
+   const cycle=26+(g.stage%3)*3;
+   const phase=((g.visualTime+(l.side>0?cycle*.51:0)+g.stage*2.9)%cycle+cycle)%cycle;
+   const entry=clamp((phase-1.2)/3.5,0,1);
+   const exit=1-clamp((phase-(cycle-7.2))/3.6,0,1);
+   const amount=reduced?1:Math.min(entry,exit);
+   // Cubic easing gives an obvious arrival, long working beat and departure.
+   const eased=amount*amount*(3-2*amount);
+   l.root.visible=amount>.025||reduced;
+   if(performance&&crowded&&l.side>0)l.root.visible=false;
+   if(!l.root.visible)continue;
+   const travel=7.7*eased;
+   l.root.position.set(l.side*(17.7-travel),
+    4.5+(g.stage%3-1)*1.3+Math.sin(g.visualTime*.19+l.side*2)*1.5,
+    -2.65);
+   l.root.rotation.z=l.side*((1-eased)*.27+Math.sin(g.visualTime*.26+g.stage)*.075);
+   l.root.rotation.y=l.side*(1-eased)*.23;
+   l.head.position.set(-l.side*(.8+1.0*Math.sin(g.visualTime*.76+g.stage+l.side)*eased),Math.sin(g.visualTime*.58+l.side)*.65*eased,.25);
+   l.head.rotation.z=l.side*(.14+Math.sin(g.visualTime*.58+g.stage)*.36*eased);
+   l.rotor.rotation.z=g.visualTime*(l.side<0?-.92:.71);
+   l.rotor.rotation.y=Math.sin(g.visualTime*.33+g.stage)*.17;
+   this.visibleLandmarks++;this.greatestSidewaysMotion=Math.max(this.greatestSidewaysMotion,travel);
+  }
+ }
  private init(stage:number){
   if(stage===this.lastStage)return;
   this.lastStage=stage;this.tint(stage);
-  this.railRoot.clear();this.modules=[];
+  this.railRoot.clear();this.modules=[];this.landmarks=[];
+  for(const side of[-1,1]){
+   const landmark=this.makeLateralLandmark(stage,side);
+   this.railRoot.add(landmark.root);this.landmarks.push(landmark);
+  }
   for(const side of[-1,1])for(let slot=0;slot<RAIL_DISTRICT_LIMITS.slotsPerSide;slot++){
    const module=this.makeModule(stage,'open-dock',side,slot,Number.NaN);
    this.railRoot.add(module.root);this.modules.push(module);
@@ -198,16 +291,20 @@ export class RailDistrictMotion3D {
   if(this.cue&&dt>0)this.cue.age+=dt;
   if(this.cue&&this.cue.age>this.cue.life)this.cue=null;
   const pulse=this.cue?1-clamp(this.cue.age/this.cue.life,0,1):0;
-  // World-space sectors occupy 22 m, not the old continuously repeated 8 m
-  // strips. Other side always has a different chapter and staggered motion.
+  // 28m chapters with real empty intervals; side machinery travels in X and
+  // hinges in place, independently of the vertical terrain scroll.
   const distance=g.time*4.4,first=Math.floor((distance-36)/RAIL_DISTRICT_LIMITS.spacing);
+  this.moveLateralLandmarks(g,reduced,performance,mix.crowded);
   this.activeModules=0;this.movingModules=0;this.currentGeometryCount=0;
   this.leftModules=0;this.rightModules=0;this.activeVariants=[];
   for(const initial of [...this.modules]){
    const segment=first+initial.slot+(initial.side>0?1:0);
    const m=this.replace(initial,segment);
    const y=segment*RAIL_DISTRICT_LIMITS.spacing-distance;
-   m.root.position.set(m.side*(8.7+noise(segment,m.side,37)*1.0),y,-8.35-(m.slot%2)*1.1);
+   const lateral=noise(segment,m.side,37);
+   const glide=Math.sin(g.visualTime*.39+segment*2.3+m.side)*.56;
+   m.root.position.set(m.side*(8.35+lateral*1.35)+glide,y,-5.2-(m.slot%2)*1.0);
+   m.root.scale.set(.86+noise(segment,g.stage,81)*.32,.83+noise(segment,m.side,91)*.45,1);
    // Quiet modes choose the section nearest the camera, rather than a
    // fixed array slot: that slot could be 35m away at the scroll boundary.
    // At least one recognizable physical chapter therefore survives on EACH
@@ -215,7 +312,8 @@ export class RailDistrictMotion3D {
    const middle=Math.max(0,Math.min(2,
      Math.round(distance/RAIL_DISTRICT_LIMITS.spacing-first-(m.side>0?1:0))));
    const quiet=reduced||performance||mix.crowded||g.state==='transition';
-   const visible=Math.abs(y)<34 && (!quiet||m.slot===middle);
+   const missing=(segment+g.stage*3+(m.side>0?2:0))%5===0;
+   const visible=Math.abs(y)<35 && (!quiet||m.slot===middle) && (quiet||!missing);
    m.root.visible=visible;
    if(!visible)continue;
    this.activeModules++;this.currentGeometryCount+=m.meshes;
@@ -225,8 +323,8 @@ export class RailDistrictMotion3D {
    const speed=g.stage===5?1.24:g.stage===3?.46:.73;
    const motion=reduced?0:Math.sin(time*speed+offset);
    const horizontal=(m.type==='cargo-elevator'||m.type==='open-dock'||m.type==='pipe-manifold')?
-     m.side*motion*1.05:0;
-   const lift=(m.type==='cargo-elevator'?motion*1.65:m.type==='open-dock'?motion*.7:0);
+     m.side*motion*1.65:0;
+   const lift=(m.type==='cargo-elevator'?motion*2.25:m.type==='open-dock'?motion*1.05:0);
    m.pod.position.set(horizontal,lift,.16);
    m.rotor.rotation.z=reduced?0:time*(m.side<0?-.32:.27)+(m.type==='broken-sector'?0:offset);
    m.arm.rotation.z=m.side*(.16+motion*.31+(this.cue?.kind==='boss'?pulse*.22:0));
@@ -235,16 +333,17 @@ export class RailDistrictMotion3D {
     (g.worldAlive.destroyed[m.side<0?0:1]?-.34:0));
    m.door.rotation.y=m.side*(this.cue?.kind==='collapse'?pulse*.62:0);
    m.root.rotation.z=this.cue?.kind==='collapse'&&m.side===this.cue.side?
-     m.side*pulse*.12:Math.sin(time*.07+offset)*.012;
+     m.side*pulse*.12:Math.sin(time*.19+offset)*.085+(noise(segment,stageKey(m.side,g.stage),19)-.5)*.28;
    (m.signal.material as T.MeshBasicMaterial).opacity=Math.min(RAIL_DISTRICT_LIMITS.pulseOpacity,
     .045+pulse*.12);
    this.movingModules++;
   }
-  this.motionSpan=this.activeModules>0?2.0:0;
+  this.motionSpan=this.activeModules>0?Math.max(2.25,this.greatestSidewaysMotion):this.greatestSidewaysMotion;
  }
  diagnostics(){return {stage:this.lastStage,modules:this.activeModules,left:this.leftModules,right:this.rightModules,
   moving:this.movingModules,geometryParts:this.currentGeometryCount,types:[...new Set(this.activeVariants)],
   activeCue:this.cue?.kind??null,motionRange:this.motionSpan,
+  lateralLandmarks:this.visibleLandmarks,lateralTravel:this.greatestSidewaysMotion,
   architecture:'seven-nonrepeating-physical-rail-chapters',
   limits:RAIL_DISTRICT_LIMITS};
  }
