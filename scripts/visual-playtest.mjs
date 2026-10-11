@@ -198,6 +198,7 @@ await scene(rich.page,'11-gpu-chain-bursts',580);
 
 results.worldRebuild={};
 results.cinematicLayers={};
+results.worldStageEpisodes={};
 for(let stage=0;stage<6;stage++){
  await rich.page.evaluate(stage=>{
   const {game:g,view}=window.__nova;
@@ -210,6 +211,22 @@ for(let stage=0;stage<6;stage++){
   view.draw(g,.02,16.7);
  },stage);
  await scene(rich.page,'world-rebuild-stage-'+String(stage+1).padStart(2,'0'),420);
+ // Snapshot a bespoke stage-only event while it crosses the battlefield.
+ await rich.page.evaluate(stage=>{
+  const {game:g,view}=window.__nova;
+  g.time=[64,74,82,78,82,86][stage]*.43+8.4;
+  g.visualTime=g.time;g.enemies=[];g.bullets=[];
+  view.draw(g,.016,16.7);
+ },stage);
+ await scene(rich.page,'world-unique-sequence-'+String(stage+1).padStart(2,'0'),240);
+ results.worldStageEpisodes[stage]=await rich.page.evaluate(()=>{
+  const layer=window.__nova.view.stageSequences,info=layer.diagnostics();
+  let visibleMeshes=0,allMeshes=0;
+  layer.root.traverse(o=>{if(o.isMesh){allMeshes++;if(o.parent.visible&&o.parent.parent?.visible)visibleMeshes++;}});
+  return {info,visibleMeshes,allMeshes,
+   rootMounted:!!window.__nova.view.scene.getObjectByName('stage-authored-nonrepeating-cinematics')};
+ });
+
  results.cinematicLayers[stage]=await rich.page.evaluate(()=>{
   const {view}=window.__nova;
   const detail=view.getDiagnostics().volumetric;
@@ -442,6 +459,9 @@ if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw n
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
+if(new Set(Object.values(results.worldStageEpisodes).map(x=>x.info.availableIds.join('/'))).size!==6||
+ !Object.values(results.worldStageEpisodes).every(x=>x.rootMounted&&x.info.stageSpecific&&x.info.loops===0&&x.info.availableIds.length===3&&x.info.activeEpisodes.length>=1&&x.visibleMeshes>=5))
+ throw new Error('Stage-specific event sequences absent from real GPU or repeated: '+JSON.stringify(results.worldStageEpisodes));
 if(!Object.values(results.worldRebuild).every(x=>x.rail===null))throw new Error('Decorative rail districts still running in World Rebuild');
 if(!results.sideRemoval?.noRailController||results.sideRemoval.railChildren!==0||results.sideRemoval.visibleWorldTowers!==0||results.sideRemoval.farTileGroups!==0)throw new Error('Scrolling edge decoration still visible: '+JSON.stringify(results.sideRemoval));
 
