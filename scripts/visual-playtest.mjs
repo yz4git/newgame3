@@ -247,7 +247,7 @@ results.sideRemoval=await rich.page.evaluate(()=>{
   if(o.name==='living-stage-megastructures')visibleWorldTowers+=o.children.filter(c=>c.visible).length;
  });
  return {noRailController:view.getDiagnostics().railDistricts===null,railChildren,visibleWorldTowers,
-  farTileGroups:view.background.far.length};
+  farTileGroups:view.background.far.filter(o=>!!o.parent).length};
 });
 // 4.0 real campaign + physical scene proof. The stage's actual Game.update
 // triggers a launch from the left background dock; destroying the linked
