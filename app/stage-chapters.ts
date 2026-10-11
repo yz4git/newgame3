@@ -208,7 +208,11 @@ export function buildStageChapter(p:EnvironmentPalette,stage:number,index:number
    for(let j=0;j<3;j++)shard(secondary,p.warm,-1+j*1.1,-1-j*.7,-2.2,.45,.8,.42);
   }
  }
- root.add(batch(still));
+ const merged=batch(still);
+ // The unbatched construction group must not render on top of its merged copy.
+ // Original extruded and ring geometries are unique to this authored chapter.
+ still.traverse(o=>{if(o instanceof T.Mesh&&o.geometry.type!=='BoxGeometry')o.geometry.dispose();});
+ root.remove(still);root.add(merged);
  return root;
 }
 export function animateStageChapter(root:T.Group,time:number,reduced=false){
