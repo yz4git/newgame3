@@ -40,6 +40,7 @@ function scaffold(g:T.Group,p:EnvironmentPalette,x:number,y:number,w:number,h:nu
   for(let t=-2;t<=2;t++)uplight(g,p.lamp,x+s*w*.39,y+t*h*.11,-3.68);
  }
 }
+const TAU=Math.PI*2;
 export const HERO_MOTION_IDS=['ore-grabber','tidal-floodgates','iris-citadel','prism-resonance','root-altar','forge-press'] as const;
 
 function gantry(g:T.Group,p:EnvironmentPalette,x:number,y:number,w:number,h:number,depth=-3.4){
