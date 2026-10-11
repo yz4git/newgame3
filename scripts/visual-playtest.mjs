@@ -217,7 +217,8 @@ for(let stage=0;stage<6;stage++){
     scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene,rail:view.getDiagnostics().railDistricts};
  });
 }
-// 4.1 compare an actual varied sector with moving elevators and rotary rigs.
+// 4.3 verify that previously endlessly repeated rail districts really are
+// absent from the live graphics scene, not merely low-opacity silhouettes.
 await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
  g.start('campaign','normal',2,'striker');
@@ -226,33 +227,17 @@ await rich.page.evaluate(()=>{
  g.sectorMission.started=true;g.nodes=[];g.enemies=[];g.bullets=[];
  view.draw(g,.016,16.7);
 });
-await scene(rich.page,'v41-rail-fortress-irregular-chapters',220);
-results.railBefore=await rich.page.evaluate(()=>{
- const view=window.__nova.view,rail=view.railDistricts;
- const pods=[],rotors=[];
- rail.root.traverse(o=>{if(o.name==='lateral-cargo-shuttle')pods.push(o.position.x+o.position.y);
- if(o.name==='physical-moving-turbine')rotors.push(o.rotation.z);});
- return {diagnostics:view.getDiagnostics().railDistricts,pods,rotors};
+await scene(rich.page,'v43-fortress-edges-cleared',220);
+results.sideRemoval=await rich.page.evaluate(()=>{
+ const {view}=window.__nova;
+ let railChildren=0,visibleWorldTowers=0;
+ view.scene.traverse(o=>{
+  if(o.name.startsWith('rail-chapter-')||o.name.startsWith('independent-sideways-stage-landmark-'))railChildren++;
+  if(o.name==='living-stage-megastructures')visibleWorldTowers+=o.children.filter(c=>c.visible).length;
+ });
+ return {noRailController:view.getDiagnostics().railDistricts===null,railChildren,visibleWorldTowers,
+  farTileGroups:view.background.far.length};
 });
-await rich.page.evaluate(()=>{
- const {game:g,view}=window.__nova;
- g.visualTime+=2.3;view.draw(g,.016,16.7);
-});
-await scene(rich.page,'v41-rail-fortress-animated-cross-motion',220);
-results.railAfter=await rich.page.evaluate(()=>{
- const view=window.__nova.view,rail=view.railDistricts;
- const pods=[],rotors=[];
- rail.root.traverse(o=>{if(o.name==='lateral-cargo-shuttle')pods.push(o.position.x+o.position.y);
- if(o.name==='physical-moving-turbine')rotors.push(o.rotation.z);});
- return {diagnostics:view.getDiagnostics().railDistricts,pods,rotors};
-});
-await rich.page.evaluate(()=>{
- const {game:g,view}=window.__nova;
- view.event({type:'worldbreach',x:-6,y:9});
- view.draw(g,.016,16.7);
-});
-await scene(rich.page,'v41-breached-side-rail-shutters',170);
-results.railBreach=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().railDistricts);
 // 4.0 real campaign + physical scene proof. The stage's actual Game.update
 // triggers a launch from the left background dock; destroying the linked
 // field node closes that bay and prevents future reinforcements.
@@ -381,21 +366,21 @@ if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw n
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
-if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.rail?.stage===Number(stage)&&x.rail.modules>=2&&x.rail.left>=1&&x.rail.right>=1&&x.rail.geometryParts<=126&&x.rail.architecture.includes('nonrepeating')))throw new Error('4.1 real 3D rail chapters must vary visibly on both sides of all six stages: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.rail)));
-if(!results.railBefore?.diagnostics?.types.length||results.railBefore.diagnostics.types.length<2)throw new Error('4.1 railway silhouette variety missing in the actual fortress playfield: '+JSON.stringify(results.railBefore));
-if(!results.railAfter?.rotors?.some((n,i)=>Math.abs(n-results.railBefore.rotors[i])>.1))throw new Error('4.1 independently animated 3D rail rotors are not moving');
-if(results.railBreach?.activeCue!=='facility')throw new Error('4.1 destroyed 3D rail modules must react to the actual facility breach');
+if(!Object.values(results.worldRebuild).every(x=>x.rail===null))throw new Error('Decorative rail districts still running in World Rebuild');
+if(!results.sideRemoval?.noRailController||results.sideRemoval.railChildren!==0||results.sideRemoval.visibleWorldTowers!==0||results.sideRemoval.farTileGroups!==0)throw new Error('Scrolling edge decoration still visible: '+JSON.stringify(results.sideRemoval));
+
+
 if(!Object.values(results.worldRebuild).every(x=>x.worldScene&&x.enemy3D>=2&&x.enemyBillboards===0&&x.style==='rebuilt'))throw new Error('3D world and physical enemy meshes not rendered consistently: '+JSON.stringify(results.worldRebuild));
 if(!Object.values(results.worldRebuild).every(x=>x.background?.physicalAudit?.textureMappedMeshes===0&&x.background.physicalAudit.flatImageCards===0&&x.background.physicalAudit.sprites===0))throw new Error('2D image/textured photo backdrop still present in REAL World Rebuild scene: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.background?.physicalAudit)));
 if(![3,4,5].every(stage=>results.worldRebuild[stage]?.background?.physicalAudit?.terrainReliefMeshes>0&&results.worldRebuild[stage].background.physicalAudit.terrainTriangles>200))throw new Error('Ice, jungle and lava banks require actual tessellated 3D relief instead of flat painted cliffs');
 // All six stages retain real 3D scenic structures, but these deliberately
 // retract during dense fire. The separate scenicPeace gameplay check below
 // ensures machinery is visible again when the sector is clear.
-if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Number(stage)&&x.scenic?.farWeather>0&&x.scenic?.style==='world-space-3d-only'&&x.scenic?.machines<=2))throw new Error('3D scenic systems disappeared or exceeded staging budget: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.scenic)));
+if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Number(stage)&&x.scenic?.farWeather>0&&x.scenic?.style==='world-space-3d-only'&&x.scenic?.machines===0))throw new Error('3D scenic systems disappeared or exceeded staging budget: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.scenic)));
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>!results.cinematicLayers[stage]?.crowded||x.scenic?.machines===0))throw new Error('Stage machinery obscures dense live projectile patterns');
-if(results.scenicPeace?.traffic<2||results.scenicPeace?.machines<1||results.scenicPeace?.farWeather<20)throw new Error('Background freight and weather must appear when no bullets block the view: '+JSON.stringify(results.scenicPeace));
+if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.scenicPeace?.farWeather<20)throw new Error('Perimeter freight/machinery loops returned: '+JSON.stringify(results.scenicPeace));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
-if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount>=1&&r.worldAlive.hangars===2))throw new Error('4.0 requires real stage-aligned 3D megastructures and game enemy hangars in all six worlds: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
+if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount===0&&r.worldAlive.hangars===2))throw new Error('Repeating structures or linked hangars broken: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
 if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==2)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
 if(results.worldAliveBreach?.game?.baysOpen?.[1]!==false||results.worldAliveBreach?.game?.destroyed?.[1]!==true)throw new Error('4.0 strategic facility blast failed to close the physical right-side hangar: '+JSON.stringify(results.worldAliveBreach));
 if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1||results.worldAliveBoss.game.wingBroken[0]!==true||results.worldAliveBoss.oldBossRings!==0)throw new Error('4.0 boss vault / one wing or excessive old rings obscure HUD: '+JSON.stringify(results.worldAliveBoss));
