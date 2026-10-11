@@ -119,7 +119,7 @@ test('stage-specific giant side structures enter laterally instead of following 
  rail.root.traverse(o=>{if(o.name.startsWith('independent-sideways-stage-landmark-'))landmarks.push(o);});
  assert.equal(landmarks.length,2);
  const before=landmarks.map(o=>o.position.x);
- g.visualTime=10; // Terrain scroll g.time intentionally unchanged.
+ g.visualTime=6; // Test during the visible right-hand retreat, with terrain scroll frozen.
  rail.draw(g,.016,fx.plan(g));
  assert.ok(landmarks.some((o,i)=>Math.abs(o.position.x-before[i])>1),
   'The architecture must move sideways independently of vertical scroll');
