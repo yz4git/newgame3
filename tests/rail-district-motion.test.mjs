@@ -22,7 +22,8 @@ test('fortress chip no longer builds artificial rail chapters or repeated edge r
 test('only finite natural landmarks are allowed in the rebuilt terrain rows',async()=>{
  const src=await read('fortress');
  assert.match(src,/terrain\.visible=landscapeBeats\.includes\(row\)/);
- assert.match(src,/if\(usesRebuiltGraphics\(\)\&\&g\.stage===2\)m\.visible=\[6,20,34\]\.includes\(row\)/);
+ assert.match(src,/if\(usesRebuiltGraphics\(\)\&\&g\.stage===2\)\{/);
+ assert.match(src,/this\.reveal\(m,distanceReveal\(m\.position\.y,15,52\)\)/);
  assert.match(src,/installations\.visible=!usesRebuiltGraphics\(\)&&layout\.installations/);
  assert.match(src,/this\.objects\.forEach/);
  assert.match(src,/this\.scenes\.forEach/);
