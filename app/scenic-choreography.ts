@@ -28,8 +28,8 @@ export class ScenicChoreography3D {
  private traffic=new T.Group();
  private scenery=new T.Group();
  private reaction=new T.Group();
- private shell=new T.MeshStandardMaterial({color:0x43566a,metalness:.48,roughness:.56});
- private bright=new T.MeshStandardMaterial({color:0x647d89,metalness:.52,roughness:.45});
+ private shell=new T.MeshStandardMaterial({color:0x43566a,metalness:.18,roughness:.87});
+ private bright=new T.MeshStandardMaterial({color:0x647d89,metalness:.18,roughness:.83});
  private dark=new T.MeshStandardMaterial({color:0x263847,metalness:.40,roughness:.66});
  private accents=new T.MeshBasicMaterial({color:0x506d78,transparent:true,opacity:.20,depthWrite:false,toneMapped:true});
  private natural=new T.MeshStandardMaterial({color:0x536d64,roughness:.94,metalness:0});
@@ -190,9 +190,11 @@ export class ScenicChoreography3D {
    [0x526c55,0x879d78,0x263e33,0x83a18a,0x617b54],
    [0x78594b,0xa98c6a,0x392823,0xb1845d,0x6c5549]
   ][stage]??[0x607080,0x8197a2,0x28394a,0x6d9ba8,0x627889];
-  this.shell.color.setHex(tint[0]);this.bright.color.setHex(tint[1]);
-  this.dark.color.setHex(tint[2]);this.accents.color.setHex(tint[3]);
-  this.natural.color.setHex(tint[4]);
+  // Applied after each stage palette switch so bright icy/metal chapters
+   // cannot override the darker 3D gameplay scenery treatment.
+   this.shell.color.setHex(tint[0]).multiplyScalar(.45);this.bright.color.setHex(tint[1]).multiplyScalar(.41);
+  this.dark.color.setHex(tint[2]).multiplyScalar(.54);this.accents.color.setHex(tint[3]).multiplyScalar(.27);
+  this.natural.color.setHex(tint[4]).multiplyScalar(.48);
  }
  private setStage(stage:number){
   if(this.stage===stage)return;
