@@ -190,7 +190,8 @@ export class FortressBackground {
     model.visible=alpha>.001;
     if(!model.visible)return;
     for(const item of this.fades.get(model)??[]){
-      const transparent=item.transparent||alpha<.995,depthWrite=item.depthWrite&&alpha>=.995;
+      // Stable transparency prevents renderer reclassification and depth pops.
+      const transparent=true,depthWrite=false;
       item.material.opacity=item.opacity*alpha;
       if(item.material.transparent!==transparent||item.material.depthWrite!==depthWrite){
         item.material.transparent=transparent;item.material.depthWrite=depthWrite;
@@ -279,12 +280,22 @@ export class FortressBackground {
         if(usesRebuiltGraphics()&&terrain){
           const landscapeBeats=[[6,20,34],[],[],[8,20,33],[6,22,37],[9,23,38]][g.stage]??[];
           terrain.visible=landscapeBeats.includes(row);
+          if(terrain.visible){this.prepareReveal(terrain as T.Group);m.userData.finiteBeat=true;}
         }
-        m.traverse(o=>{if(o instanceof T.Mesh&&!installations?.getObjectById(o.id)){o.geometry=o.geometry.clone();o.userData.rowGeometry=true;const v=o.geometry.getAttribute('position');for(let i=0;i<v.count;i++)v.setX(i,terrainX(g.stage,v.getX(i),row*ROW+v.getY(i)));v.needsUpdate=true;o.geometry.computeVertexNormals();o.geometry.computeBoundingSphere();}});this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
+        m.traverse(o=>{if(o instanceof T.Mesh&&!installations?.getObjectById(o.id)){o.geometry=o.geometry.clone();o.userData.rowGeometry=true;const v=o.geometry.getAttribute('position');for(let i=0;i<v.count;i++)v.setX(i,terrainX(g.stage,v.getX(i),row*ROW+v.getY(i)));v.needsUpdate=true;o.geometry.computeVertexNormals();o.geometry.computeBoundingSphere();}});
+        if(usesRebuiltGraphics()&&g.stage===2&&[6,20,34].includes(row)){this.prepareReveal(m);m.userData.finiteBeat=true;}
+        this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
+      if(usesRebuiltGraphics()&&m.userData.finiteBeat){
+        const natural=m.getObjectByName('terrain') as T.Group|undefined;
+        if(natural)this.reveal(natural,distanceReveal(m.position.y,15,52));
+      }
       // Orbital-fortress 8m floor chips previously formed a solid repetitive
       // tiled column across the entire level. Reveal only three authored
       // causeway fragments, with the actual space backdrop open between them.
-      if(usesRebuiltGraphics()&&g.stage===2)m.visible=[6,20,34].includes(row);
+      if(usesRebuiltGraphics()&&g.stage===2){
+        m.visible=[6,20,34].includes(row);
+        if(m.visible)this.reveal(m,distanceReveal(m.position.y,15,52));
+      }
     }
     for(const [row,m]of this.rows)if(!live.has(row)){this.root.remove(m);this.disposeRow(m);this.rows.delete(row);}
     const t=worldClock(g),ocean=STAGES[g.stage].environment==='ocean';
@@ -305,7 +316,18 @@ export class FortressBackground {
       }
     });
   }
-  private disposeRow(group:T.Group){group.traverse(o=>{if(o instanceof T.Mesh&&o.userData.rowGeometry)o.geometry.dispose();});}
+  private disposeRow(group:T.Group){
+    group.traverse(o=>{if(o instanceof T.Mesh&&o.userData.rowGeometry)o.geometry.dispose();});
+    const animated=group.getObjectByName('terrain');
+    for(const target of [group,animated])if(target instanceof T.Group){
+      for(const item of this.fades.get(target)??[]){
+        item.material.dispose();
+        const index=this.materials.indexOf(item.material);
+        if(index>=0)this.materials.splice(index,1);
+      }
+      this.fades.delete(target);
+    }
+  }
   getTemplate(stage:number,variant:number){this.setStage(stage);let m=this.templates.get(variant);if(!m){m=STAGES[stage].environment==='fortress'?fortressChip(this.palette,stage,variant):environmentChip(this.palette,stage,variant);this.templates.set(variant,m);}return m;}
   getScene(stage:number,index:number){this.setStage(stage);const m=this.scenes[index].clone();m.position.set(0,0,0);m.rotation.z=0;return m;}
   getLandmark(stage:number,index:number){this.setStage(stage);const m=this.objects[index].clone();m.position.set(0,0,0);return m;}
