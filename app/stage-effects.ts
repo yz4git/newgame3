@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import {STAGES} from './stages.ts';
+import {usesRebuiltGraphics} from './visual-style.ts';
 import {LANDMARKS,noise,stageDistance} from './bg-map.ts';
 import {block as sharedBlock,ball as sharedBall,glow,radialTexture} from './art.ts';
 import {terrainMaps,playerMap,armourMap,smokeMap,livingMaps,ventFrames} from './visual-assets.ts';
@@ -35,7 +36,7 @@ export class StageEffects{
   }
   private setStage(stage:number){
     if(this.stage===stage)return;this.stage=stage;this.clearProps();const env=STAGES[stage].environment,color=STAGES[stage].color;
-    (this.weather.material as T.MeshBasicMaterial).color.setHex(env==='lava'?0xffbb79:env==='jungle'?0xadffd6:0xcceaff);
+    (this.weather.material as T.MeshBasicMaterial).color.setHex(env==='lava'?0xffbb79:env==='jungle'?0xadffd6:0xcceaff).multiplyScalar(usesRebuiltGraphics()?.38:1);
     for(const [i,entry]of LANDMARKS[stage].entries()){
       const g=new T.Group();g.position.x=entry.x;g.scale.setScalar(entry.scale);g.userData.entry=i;g.userData.kind=entry.kind;this.props.add(g);this.layers.push(g);
       if(['orbital','gate','temple'].includes(entry.kind)){
@@ -94,10 +95,26 @@ export class StageEffects{
     if(env==='jungle')for(let i=0;i<12;i++){
       const leaf=new T.Mesh(new T.IcosahedronGeometry(1,0),new T.MeshStandardMaterial({color:0x49784a,roughness:.89}));leaf.scale.set(2.0,1.0,.7);leaf.name='wind-leaf';leaf.position.set((i%2?1:-1)*(10.9+noise(i,stage)),i*5-28,-1.7);leaf.userData.seed=i;this.props.add(leaf);
     }
+    // Regrade legacy decorative 3D meshes once per stage. The older glow()
+    // materials bypassed tone mapping and remained very bright against the
+    // newer subdued terrain. All combat meshes live in other groups.
+    if(usesRebuiltGraphics())this.props.traverse(o=>{
+      if(!(o instanceof T.Mesh)||Array.isArray(o.material))return;
+      const material=o.material;
+      if(material instanceof T.MeshBasicMaterial){
+        material.toneMapped=true;
+        material.color.multiplyScalar(.34);
+        if(material.transparent)material.opacity*=.75;
+      }else if(material instanceof T.MeshStandardMaterial){
+        material.color.multiplyScalar(.52);
+        material.metalness=Math.min(material.metalness,.22);
+        material.roughness=Math.max(material.roughness,.76);
+      }
+    });
   }
   draw(g:Game,performance=false,reduced=false){
     this.setStage(g.stage);const env=STAGES[g.stage].environment,t=this.time=worldClock(g),distance=g.state==='title'?18+t*1.4:stageDistance(t),boss=!!g.boss&&!g.boss.dead;
-    const count=reduced?18:performance?34:env==='ice'?100:env==='lava'?78:env==='jungle'?60:42;this.ambient=count;
+    const count=reduced?18:performance?34:usesRebuiltGraphics()?(env==='ice'?36:env==='lava'?32:26):env==='ice'?100:env==='lava'?78:env==='jungle'?60:42;this.ambient=count;
     for(let i=0;i<count;i++){
       const seed=noise(i,g.stage,94),side=i%2?1:-1,edge=env==='lava'||env==='asteroids'||env==='jungle';
       const x=edge?side*(7.2+seed*6):seed*27-13.5,y=wrap(noise(i,stageSeed(g.stage))*54-t*(env==='lava'?-2.2:env==='ice'?4.8:2.1),54)-27;
