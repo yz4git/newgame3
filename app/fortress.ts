@@ -13,6 +13,7 @@ import {SCENES} from './scenery.ts';
 import {distanceReveal} from './scenery-transitions.ts';
 import {sceneModel} from './scene-art.ts';
 import {animateWorldSetpiece} from './world-rebuild.ts';
+import {animateStageChapter} from './stage-chapters.ts';
 import {usesRebuiltGraphics} from './visual-style.ts';
 
 const ROW=8;
@@ -288,7 +289,10 @@ export class FortressBackground {
     for(const [row,m]of this.rows)if(!live.has(row)){this.root.remove(m);this.disposeRow(m);this.rows.delete(row);}
     const t=worldClock(g),ocean=STAGES[g.stage].environment==='ocean';
     this.objects.forEach((m,i)=>{const e=LANDMARKS[g.stage][i];m.position.y=e.distance-this.distance;if(usesRebuiltGraphics())this.reveal(m,distanceReveal(m.position.y,24,54));else m.visible=Math.abs(m.position.y)<42;if(ocean&&e.kind==='submarine'){m.position.z=Math.sin(t*.9+i)*.13;m.rotation.z=Math.sin(t*.45+i)*.012;}});
-    this.scenes.forEach((m,i)=>{const e=SCENES[g.stage][i];m.position.set(e.x,e.distance-this.distance,ocean&&e.kind==='artwork'?Math.sin(t*.65)*.12:0);m.rotation.z=e.angle+(ocean&&e.kind==='artwork'?Math.sin(t*.45)*.009:0);if(usesRebuiltGraphics())this.reveal(m,distanceReveal(m.position.y,24,55+e.height*.22));else m.visible=Math.abs(e.distance-this.distance)<36+e.height*.5;if(i===0&&m.visible&&usesRebuiltGraphics())animateWorldSetpiece(m,t,reduced||performance);});
+    this.scenes.forEach((m,i)=>{const e=SCENES[g.stage][i];m.position.set(e.x,e.distance-this.distance,ocean&&e.kind==='artwork'?Math.sin(t*.65)*.12:0);m.rotation.z=e.angle+(ocean&&e.kind==='artwork'?Math.sin(t*.45)*.009:0);if(usesRebuiltGraphics())this.reveal(m,distanceReveal(m.position.y,24,55+e.height*.22));else m.visible=Math.abs(e.distance-this.distance)<36+e.height*.5;if(m.visible&&usesRebuiltGraphics()){
+        if(i===0)animateWorldSetpiece(m,t,reduced||performance);
+        else animateStageChapter(m,t,reduced||performance);
+      }});
     this.surface?.draw(worldClock(g),this.distance,performance,reduced);
     this.far.forEach((m,i)=>{m.position.y=((i*13-this.distance*.30)%91+91)%91-45;});
     this.clouds.forEach((m,i)=>{
