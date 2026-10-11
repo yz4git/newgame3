@@ -16,7 +16,7 @@ test('fortress chip no longer builds artificial rail chapters or repeated edge r
  assert.doesNotMatch(src,/function railDistrictChapter/);
  assert.match(src,/if\(usesRebuiltGraphics\(\)\)continue; \/\/ No edge wedges, roofs or rail modules/);
  assert.match(src,/if\(!usesRebuiltGraphics\(\)\&\&\(v===3\|\|v===7\)\)/);
- assert.match(src,/if\(!usesRebuiltGraphics\(\)\)for\(let i=0;i<7;i\+\+\)/);
+ assert.match(src,/if\(!usesRebuiltGraphics\(\)\)this\.root\.add\(m\)/);
 });
 
 test('only finite natural landmarks are allowed in the rebuilt terrain rows',async()=>{
