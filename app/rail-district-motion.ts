@@ -229,10 +229,11 @@ export class RailDistrictMotion3D {
  private moveLateralLandmarks(g:Game,reduced:boolean,performance:boolean,crowded:boolean){
   this.visibleLandmarks=0;this.greatestSidewaysMotion=0;
   for(const l of this.landmarks){
+   const clock=reduced?0:g.visualTime;
    // Stagger the left and right cycles: neither side can become a mirror of
    // the other, and the machinery never moves in lockstep with background Y.
    const cycle=26+(g.stage%3)*3;
-   const phase=((g.visualTime+(l.side>0?cycle*.51:0)+g.stage*2.9)%cycle+cycle)%cycle;
+   const phase=((clock+(l.side>0?cycle*.51:0)+g.stage*2.9)%cycle+cycle)%cycle;
    const entry=clamp((phase-1.2)/3.5,0,1);
    const exit=1-clamp((phase-(cycle-7.2))/3.6,0,1);
    const amount=reduced?1:Math.min(entry,exit);
@@ -243,14 +244,14 @@ export class RailDistrictMotion3D {
    if(!l.root.visible)continue;
    const travel=7.7*eased;
    l.root.position.set(l.side*(17.7-travel),
-    4.5+(g.stage%3-1)*1.3+Math.sin(g.visualTime*.19+l.side*2)*1.5,
+    4.5+(g.stage%3-1)*1.3+Math.sin(clock*.19+l.side*2)*1.5,
     -2.65);
-   l.root.rotation.z=l.side*((1-eased)*.27+Math.sin(g.visualTime*.26+g.stage)*.075);
+   l.root.rotation.z=l.side*((1-eased)*.27+Math.sin(clock*.26+g.stage)*.075);
    l.root.rotation.y=l.side*(1-eased)*.23;
-   l.head.position.set(-l.side*(.8+1.0*Math.sin(g.visualTime*.76+g.stage+l.side)*eased),Math.sin(g.visualTime*.58+l.side)*.65*eased,.25);
-   l.head.rotation.z=l.side*(.14+Math.sin(g.visualTime*.58+g.stage)*.36*eased);
-   l.rotor.rotation.z=g.visualTime*(l.side<0?-.92:.71);
-   l.rotor.rotation.y=Math.sin(g.visualTime*.33+g.stage)*.17;
+   l.head.position.set(-l.side*(.8+1.0*Math.sin(clock*.76+g.stage+l.side)*eased),Math.sin(clock*.58+l.side)*.65*eased,.25);
+   l.head.rotation.z=l.side*(.14+Math.sin(clock*.58+g.stage)*.36*eased);
+   l.rotor.rotation.z=clock*(l.side<0?-.92:.71);
+   l.rotor.rotation.y=Math.sin(clock*.33+g.stage)*.17;
    this.visibleLandmarks++;this.greatestSidewaysMotion=Math.max(this.greatestSidewaysMotion,travel);
   }
  }
@@ -322,9 +323,11 @@ export class RailDistrictMotion3D {
    const time=g.visualTime,offset=noise(segment,m.side,51)*TAU;
    const speed=g.stage===5?1.24:g.stage===3?.46:.73;
    const motion=reduced?0:Math.sin(time*speed+offset);
-   const horizontal=(m.type==='cargo-elevator'||m.type==='open-dock'||m.type==='pipe-manifold')?
-     m.side*motion*1.65:0;
-   const lift=(m.type==='cargo-elevator'?motion*2.25:m.type==='open-dock'?motion*1.05:0);
+   // Every sector carries visible asynchronous lateral machinery. Otherwise
+   // some combinations of 7 archetypes appear fully motionless in combat.
+   const largePod=m.type==='cargo-elevator'||m.type==='open-dock'||m.type==='pipe-manifold';
+   const horizontal=m.side*motion*(largePod?1.65:.68);
+   const lift=(m.type==='cargo-elevator'?motion*2.25:m.type==='open-dock'?motion*1.05:motion*.48);
    m.pod.position.set(horizontal,lift,.16);
    m.rotor.rotation.z=reduced?0:time*(m.side<0?-.32:.27)+(m.type==='broken-sector'?0:offset);
    m.arm.rotation.z=m.side*(.16+motion*.31+(this.cue?.kind==='boss'?pulse*.22:0));
