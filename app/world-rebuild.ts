@@ -40,6 +40,8 @@ function scaffold(g:T.Group,p:EnvironmentPalette,x:number,y:number,w:number,h:nu
   for(let t=-2;t<=2;t++)uplight(g,p.lamp,x+s*w*.39,y+t*h*.11,-3.68);
  }
 }
+export const HERO_MOTION_IDS=['ore-grabber','tidal-floodgates','iris-citadel','prism-resonance','root-altar','forge-press'] as const;
+
 function gantry(g:T.Group,p:EnvironmentPalette,x:number,y:number,w:number,h:number,depth=-3.4){
  block(g,p.dark,x,y,depth,w,h,.24);
  block(g,p.steel,x,y,depth+.20,w*.95,h*.66,.13);
@@ -148,29 +150,90 @@ export function buildWorldSetpiece(p:EnvironmentPalette,stage:number,width:numbe
   break;
  }
  }
- // Guardrails and service illuminators supply a repeatable real-world scale cue.
- for(const side of[-1,1])for(let j=0;j<7;j++){
-  const x=side*Math.min(6.5,width*.40),y=(j-3)*Math.min(1.9,h*.13);
-  block(g,p.steel,x,y,-4.7,.16,.43,.49);
-  if(j%2===0)uplight(g,p.lamp,x,y,-4.34);
- }
+ // Physical centrepiece motion has six different mechanisms, not one reused
+ // three-ring/four-arm layer painted six ways. All are behind combat actors.
  const result=batch(g);
- // Physical moving machinery on every giant 3D stage structure.
- const machinery=new T.Group();machinery.name='kinetic-world-assembly';
- for(let i=0;i<3;i++){
-  const radius=(i===0?1.85:i===1?1.29:.72)+(stage===2?.2:0);
-  const material=i===1?p.steel:i===2?p.warm:p.plate;
-  const m=new T.Mesh(new T.TorusGeometry(radius,i===0?.115:.065,7,28),material);
-  m.name='kinetic-ring-'+i;m.position.set(stage===3?2.2:0,stage===5?.9:stage===4?.85:0,-1.83+i*.20);
-  m.rotation.x=i*.12;machinery.add(m);
- }
- for(let i=0;i<4;i++){
-  const arm=new T.Group();arm.name='kinetic-arm-'+i;
-  arm.position.set((i%2?1:-1)*(stage===1?3.55:stage===4?2.5:2.9),(i<2?-1:1)*(stage===2?3.0:2.5),-1.82);
-  const deck=new T.Mesh(new T.BoxGeometry(.30,2.25,.32),p.dark);deck.position.y=.15;arm.add(deck);
-  const alloy=new T.Mesh(new T.BoxGeometry(.22,1.40,.23),p.steel);alloy.position.set(.10,.3,.28);arm.add(alloy);
-  const beacon=new T.Mesh(new T.SphereGeometry(.18,8,5),p.lamp);beacon.position.set(.14,1.18,.34);beacon.name='kinetic-spot-'+i;arm.add(beacon);
-  machinery.add(arm);
+ const machinery=new T.Group();
+ machinery.name='kinetic-world-assembly';
+ machinery.userData.motionId=HERO_MOTION_IDS[stage];
+ const actor=(index:number,x:number,y:number,z:number)=>{
+  const joint=new T.Group();
+  joint.name='hero-actuator-'+index;
+  joint.position.set(x,y,z);
+  joint.userData.baseX=x;joint.userData.baseY=y;joint.userData.baseZ=z;
+  machinery.add(joint);return joint;
+ };
+ if(stage===0){ // An off-axis six-finger ore collector physically grips a core.
+  const grip=actor(0,0,0,-1.95);
+  const ore=new T.Mesh(new T.IcosahedronGeometry(1.45,1),p.rock);
+  ore.scale.set(1.1,1.3,.65);grip.add(ore);
+  for(let i=0;i<6;i++){
+   const a=i*Math.PI/3;
+   const claw=actor(i+1,Math.cos(a)*2.8,Math.sin(a)*2.8,-1.85);
+   const m=new T.Mesh(new T.BoxGeometry(.48,2.8,.55),i%2?p.plate:p.steel);
+   m.rotation.z=a-Math.PI/2;claw.add(m);
+   const tip=new T.Mesh(new T.BoxGeometry(.68,.45,.65),p.dark);
+   tip.position.set(-Math.cos(a)*.5,-Math.sin(a)*.5,.20);claw.add(tip);
+  }
+ }else if(stage===1){ // Independently counter-moving seawall doors and sonar dish.
+  for(let i=0;i<5;i++){
+   const gate=actor(i,-3.8+i*1.65,-.4+(i%2)*.4,-2.15);
+   const blade=new T.Mesh(new T.BoxGeometry(1.2,5.5-(i%3)*.9,.73),i%2?p.steel:p.plate);
+   gate.add(blade);
+   const collar=new T.Mesh(new T.BoxGeometry(1.32,.48,.84),p.dark);
+   collar.position.y=-2.7;gate.add(collar);
+  }
+  const sonar=actor(5,2.8,3,-1.65);
+  const disc=new T.Mesh(new T.CylinderGeometry(1.65,1.65,.20,18),p.glass);
+  disc.rotation.x=Math.PI/2;sonar.add(disc);
+  const beam=new T.Mesh(new T.BoxGeometry(.24,4.4,.18),p.lamp);sonar.add(beam);
+ }else if(stage===2){ // A mechanically coupled hexagonal defense iris.
+  for(let i=0;i<6;i++){
+   const a=i*Math.PI/3;
+   const shutter=actor(i,Math.cos(a)*1.9,Math.sin(a)*1.9,-1.70);
+   const blade=new T.Mesh(new T.BoxGeometry(1.8,3.5,.58),i%2?p.steel:p.plate);
+   blade.rotation.z=a;shutter.add(blade);
+  }
+  for(let i=0;i<2;i++){
+   const ram=actor(6+i,i?4.4:-4.4,-.8,-1.50);
+   const housing=new T.Mesh(new T.BoxGeometry(.8,5.9,1.05),p.dark);ram.add(housing);
+   const blade=new T.Mesh(new T.BoxGeometry(.48,3.0,.8),p.core);
+   blade.position.y=1.25;ram.add(blade);
+  }
+ }else if(stage===3){ // Slowly oscillating crystal tuning forks, not machines.
+  for(let i=0;i<7;i++){
+   const a=i*2.399,r=1.4+Math.sqrt(i)*.8;
+   const crystal=actor(i,Math.cos(a)*r,Math.sin(a)*r*.85,-1.95);
+   const shard=new T.Mesh(new T.OctahedronGeometry(1,0),i%3?p.ice:p.snow);
+   shard.scale.set(.42+(i%3)*.12,2+(i%4)*.6,.7);
+   shard.rotation.z=(i-3)*.12;crystal.add(shard);
+  }
+ }else if(stage===4){ // Root tendrils surround a non-concentric stone altar.
+  for(let i=0;i<5;i++){
+   const a=i*TAU/5;
+   const root=actor(i,Math.cos(a)*3,Math.sin(a)*2.9,-2.10);
+   const wood=new T.Mesh(new T.CylinderGeometry(.28,.75,4.5+(i%2)*.8,7),p.moss);
+   wood.rotation.z=a+.7;root.add(wood);
+   const leaves=new T.Mesh(new T.IcosahedronGeometry(1.1,0),p.foliage);
+   leaves.position.set(Math.cos(a)*.8,Math.sin(a)*1.4,.15);
+   leaves.scale.y=.65;root.add(leaves);
+  }
+  const altar=actor(5,0,.4,-1.72);
+  const stone=new T.Mesh(new T.OctahedronGeometry(1.2,0),p.core);
+  altar.add(stone);
+ }else{ // Large independent forging plungers and tilted melt crucible.
+  for(let i=0;i<4;i++){
+   const press=actor(i,-3.15+i*2.1,1.6,-1.95);
+   const ram=new T.Mesh(new T.CylinderGeometry(.34,.47,5.8,9),p.steel);
+   press.add(ram);
+   const head=new T.Mesh(new T.BoxGeometry(1.45,.8,1.2),p.rust);
+   head.position.y=-2.8;press.add(head);
+  }
+  const vessel=actor(4,0,-2.8,-1.5);
+  const bowl=new T.Mesh(new T.CylinderGeometry(1.7,1.08,1.8,12),p.dark);
+  bowl.rotation.x=Math.PI/2;vessel.add(bowl);
+  const melt=new T.Mesh(new T.CylinderGeometry(1.3,1.3,.10,12),p.lava);
+  melt.rotation.x=Math.PI/2;melt.position.z=.95;vessel.add(melt);
  }
  result.add(machinery);
  result.name='physical-world-centrepiece-'+stage;
@@ -178,21 +241,52 @@ export function buildWorldSetpiece(p:EnvironmentPalette,stage:number,width:numbe
  return result;
 }
 
-/** Animates world-space machinery while the structure is in view. */
+/** Each physical hero landmark follows a distinct motion language.
+ * Slower in glacial ruins, hydraulic in the ocean and citadel, rapid in lava.
+ */
 export function animateWorldSetpiece(scene:T.Group,time:number,reduced=false){
- const m=scene.getObjectByName('kinetic-world-assembly');if(!m||reduced)return;
- for(let i=0;i<3;i++){
-  const ring=m.getObjectByName('kinetic-ring-'+i);if(!ring)continue;
-  ring.rotation.z=time*(i===1?-.31:i===2?.64:.19)+i*1.3;
-  ring.rotation.x=Math.sin(time*(.31+i*.11)+i)*(.13+i*.07);
-  ring.rotation.y=Math.cos(time*(.19+i*.04))*.10;
- }
- for(let i=0;i<4;i++){
-  const arm=m.getObjectByName('kinetic-arm-'+i);if(!arm)continue;
-  const phase=time*.71+i*1.31;
-  arm.position.z=-1.82+Math.sin(phase)*.22;
-  arm.rotation.z=Math.sin(phase*.7)*.21*(i%2?-1:1);
-  const light=arm.getObjectByName('kinetic-spot-'+i);
-  if(light)light.scale.setScalar(.83+.2*Math.sin(time*2.4+i*1.5));
+ const motion=scene.getObjectByName('kinetic-world-assembly');
+ if(!motion)return;
+ const stage=scene.userData.stage as number;
+ const nodes=motion.children.filter(o=>o.name.startsWith('hero-actuator-'));
+ const t=reduced?0:time;
+ for(let i=0;i<nodes.length;i++){
+  const node=nodes[i];
+  const x=node.userData.baseX as number,y=node.userData.baseY as number;
+  node.position.x=x;node.position.y=y;
+  node.rotation.set(0,0,0);
+  node.scale.setScalar(1);
+  if(stage===0){
+   const orbit=t*.12+(i-1)*.13;
+   if(i===0){node.rotation.set(t*.10,t*.19,t*.30);}
+   else{
+    node.rotation.z=Math.sin(orbit*2+i)*.19;
+    node.position.x=x*(.94+.06*Math.sin(orbit));
+    node.position.y=y*(.94+.06*Math.sin(orbit));
+   }
+  }else if(stage===1){
+   if(i<5){
+    node.position.y=y+Math.sin(t*.52+i*.77)*1.25;
+    node.rotation.z=Math.sin(t*.22+i*.75)*.075;
+   }else{node.rotation.z=Math.sin(t*.34)*.60;node.rotation.y=Math.sin(t*.18)*.25;}
+  }else if(stage===2){
+   if(i<6){
+    const open=.1+.5*(.5+.5*Math.sin(t*.38));
+    node.rotation.z=(i%2?1:-1)*open;
+    node.position.x=x*(1+.12*Math.sin(t*.38));
+    node.position.y=y*(1+.12*Math.sin(t*.38));
+   }else{node.position.y=y+Math.sin(t*.68+i)*1.10;}
+  }else if(stage===3){
+   node.rotation.y=Math.sin(t*.21+i*1.2)*.20;
+   node.rotation.z=Math.sin(t*.28+i*.75)*.09;
+   node.position.y=y+Math.sin(t*.30+i*.90)*.38;
+  }else if(stage===4){
+   node.rotation.z=Math.sin(t*.22+i*1.3)*.23;
+   node.rotation.y=Math.sin(t*.18+i)*.14;
+   if(i===5){node.rotation.z=t*.19;node.position.y=y+Math.sin(t*.56)*.6;}
+  }else{
+   if(i<4){node.position.y=y+Math.sin(t*1.1+i*1.65)*1.7;}
+   else{node.rotation.z=Math.sin(t*.37)*.42;node.rotation.y=Math.sin(t*.28)*.28;}
+  }
  }
 }
