@@ -465,7 +465,7 @@ if(results.worldAliveEscape?.state!=='transition'||results.worldAliveEscape?.gam
 if(!results.worldBoss.hasBoss||results.worldBoss.skin||results.worldBoss.meshes<3)throw new Error('Boss must be fully geometrical in World Rebuild');
 if(results.classic.visual!=='classic'||!results.classic.buttons.some(b=>b.style==='classic'&&b.selected))throw new Error('Original graphics not accessible after preserving Classic mode');
 if(new Set(Object.values(results.cinematicLayers).map(x=>x.heroMotion)).size!==6||
- !Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.heroActuators>=4&&x.chapterIds?.length===3&&new Set(x.chapterIds).size===3&&x.chapterActuators?.every(v=>v>0)&&x.detail&&x.detail.motes>0&&(x.crowded?x.detail.flybys===0:x.detail.flybys>0)))
+ !Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.heroActuators>=4&&x.chapterIds?.length===3&&new Set(x.chapterIds).size===3&&x.chapterActuators?.every(v=>v>0)&&x.detail&&x.detail.motes>0&&x.detail.flybys===0))
  throw new Error('Stage identity is reused, incomplete, or obscures combat: '+JSON.stringify(results.cinematicLayers));
 if(!results.cinematicBoss.invasion?.bossStructure||results.cinematicBoss.volumetric?.bossHalos!==0)throw new Error('Boss ring ownership regression: '+JSON.stringify(results.cinematicBoss));
 if(results.cinematicWarp.invasion?.travelRings<8||results.cinematicWarp.volumetric?.warpRings!==0)throw new Error('Single-owner 3D warp tunnel invisible or overlapping: '+JSON.stringify(results.cinematicWarp));
