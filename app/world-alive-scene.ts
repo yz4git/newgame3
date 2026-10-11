@@ -35,8 +35,8 @@ export class WorldAliveScene {
  private bayLayer=new T.Group();
  private bossLayer=new T.Group();
  private fractureLayer=new T.Group();
- private archMat=new T.MeshStandardMaterial({color:0x364a62,metalness:.48,roughness:.53});
- private panelMat=new T.MeshStandardMaterial({color:0x506981,metalness:.62,roughness:.41});
+ private archMat=new T.MeshStandardMaterial({color:0x364a62,metalness:.17,roughness:.87});
+ private panelMat=new T.MeshStandardMaterial({color:0x506981,metalness:.18,roughness:.83});
  private innerMat=new T.MeshStandardMaterial({color:0x233849,metalness:.39,roughness:.65});
  private coreMat=new T.MeshBasicMaterial({color:0x64818f,transparent:true,opacity:.29,depthWrite:false,toneMapped:true});
  private burntMat=new T.MeshStandardMaterial({color:0x443d3c,metalness:.22,roughness:.81});
@@ -236,8 +236,11 @@ export class WorldAliveScene {
    [0x526855,0x77987b,0x2c4237,0x7da58a,0x384c3e],
    [0x695047,0x987c60,0x392823,0xb88e64,0x554037]
   ][stage]??[0x526b7f,0x8197a3,0x25374a,0x6b97a6,0x3b4955];
-  this.archMat.color.setHex(colors[0]);this.panelMat.color.setHex(colors[1]);
-  this.innerMat.color.setHex(colors[2]);this.coreMat.color.setHex(colors[3]);this.burntMat.color.setHex(colors[4]);
+  // Stage tints previously overwrote the deliberately dark constructor colors.
+   // Grade ONLY the distant world, not ships, shots, HUD or target materials.
+   this.archMat.color.setHex(colors[0]).multiplyScalar(.42);this.panelMat.color.setHex(colors[1]).multiplyScalar(.39);
+  this.innerMat.color.setHex(colors[2]).multiplyScalar(.48);
+   this.coreMat.color.setHex(colors[3]).multiplyScalar(.62);this.burntMat.color.setHex(colors[4]).multiplyScalar(.48);
   this.main.clear();this.bayLayer.clear();this.rotors=[];this.structures=[];
   this.bays=[this.makeBay(-1,0,stage),this.makeBay(1,1,stage)];
   this.structures=[this.makeMegastructure(-1,stage,0),this.makeMegastructure(1,stage,1)];
