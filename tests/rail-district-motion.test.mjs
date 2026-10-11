@@ -110,3 +110,29 @@ test('all six stages retain both asymmetric moving rail sides across scrolling a
   }
  }
 });
+
+test('stage-specific giant side structures enter laterally instead of following terrain scroll',()=>{
+ const g=testGame(2),fx=new FxDirector(),rail=new RailDistrictMotion3D();
+ g.visualTime=5;
+ rail.draw(g,.016,fx.plan(g));
+ const landmarks=[];
+ rail.root.traverse(o=>{if(o.name.startsWith('independent-sideways-stage-landmark-'))landmarks.push(o);});
+ assert.equal(landmarks.length,2);
+ const before=landmarks.map(o=>o.position.x);
+ g.visualTime=10; // Terrain scroll g.time intentionally unchanged.
+ rail.draw(g,.016,fx.plan(g));
+ assert.ok(landmarks.some((o,i)=>Math.abs(o.position.x-before[i])>1),
+  'The architecture must move sideways independently of vertical scroll');
+ assert.ok(rail.diagnostics().lateralTravel>5);
+});
+test('reduced-motion scenery keeps stage-specific side structures in a stable pose',()=>{
+ const g=testGame(5),fx=new FxDirector(),rail=new RailDistrictMotion3D();
+ g.visualTime=6;
+ rail.draw(g,.016,fx.plan(g),true,false);
+ const landmarks=[];
+ rail.root.traverse(o=>{if(o.name.startsWith('independent-sideways-stage-landmark-'))landmarks.push(o);});
+ const first=landmarks.map(o=>[o.position.x,o.position.y,o.rotation.z]);
+ g.visualTime=24;
+ rail.draw(g,.016,fx.plan(g),true,false);
+ assert.deepEqual(landmarks.map(o=>[o.position.x,o.position.y,o.rotation.z]),first);
+});
