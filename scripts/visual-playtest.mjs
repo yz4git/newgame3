@@ -20,7 +20,18 @@ async function setup(viewport,{renderer='canvas',visual='rebuilt'}={}){
  page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE '+msg.text());});
  const url='http://127.0.0.1:5173/?renderer='+renderer+'&visual='+visual;
  await page.goto(url,{waitUntil:'domcontentloaded'});
- await page.waitForFunction(()=>!!window.__nova&&document.getElementById('boot').hidden,{timeout:90000});
+ try{
+  await page.waitForFunction(()=>!!window.__nova&&document.getElementById('boot').hidden,{timeout:55000});
+ }catch(error){
+  const diagnostic=await page.evaluate(()=>({
+   bootText:document.getElementById('boot-text')?.textContent,
+   bootHTML:document.getElementById('boot')?.innerHTML?.slice(0,700),
+   renderCanvas:document.getElementById('game')?.outerHTML,
+   location:location.href
+  })).catch(e=>({evaluateError:String(e)}));
+  console.error('NOVA_BOOT_DIAGNOSTIC',JSON.stringify({renderer,visual,diagnostic,errors}));
+  throw error;
+ }
  return {page,context};
 }
 const mobile=await setup({width:390,height:844});
