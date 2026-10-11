@@ -102,6 +102,9 @@ export class View {
     this.stars.frustumCulled=false;this.scene.add(this.stars);
     this.ring=new T.Mesh(new T.TorusGeometry(1,.025,5,48),new T.MeshBasicMaterial({color:0x70faff,transparent:true,opacity:0,toneMapped:false}));this.ring.position.z=1.2;this.scene.add(this.ring);
     this.indicator=new T.Group();
+    // Small dark border around the hit point: makes the white/cyan reticle
+    // remain trackable above pale glaciers and metallic structures.
+    const contrast=new T.Mesh(new T.RingGeometry(.255,.345,24),new T.MeshBasicMaterial({color:0x03101e,transparent:true,opacity:.92,depthWrite:false,toneMapped:false}));this.indicator.add(contrast);
     const hit=new T.Mesh(new T.RingGeometry(.19,.27,20),glow(0xffffff,1.3));this.indicator.add(hit);
     const dot=new T.Mesh(new T.CircleGeometry(.08,10),glow(0xa4f6ff,1.7));this.indicator.add(dot);this.scene.add(this.indicator);
     this.setTheme(0);
@@ -285,7 +288,9 @@ export class View {
         skin.material.color.setHex(0xffffff);skin.scale.set(3.55*(1-Math.abs(this.player.rotation.y)*.3),3.85,1);
       }else{skin.material.color.setHex(SHIPS[game.shipClass].tint);skin.scale.set(3.1*(1-Math.abs(this.player.rotation.y)*.3),4.25,1);}}
     animateShip(this.player,pose,this.epoch,'player');
-    this.player.scale.setScalar(title?2.0:game.invulnerable>0?1.015+Math.sin(game.visualTime*15)*.025:1.0);this.player.visible=game.hull>0||title;
+    // Readability-only sprite/mesh presentation; collision and touch coordinates
+    // keep their original world-space radius and positions.
+    this.player.scale.setScalar((title?2.0:game.invulnerable>0?1.015+Math.sin(game.visualTime*15)*.025:1.0)*(usesRebuiltGraphics()?1.11:1));this.player.visible=game.hull>0||title;
     // Never hide the craft during invulnerability: on a busy background players must keep visual tracking.
     this.indicator.position.set(p.x,p.y-.5625,2.8);this.indicator.visible=!title&&game.hull>0&&state!=='transition'&&game.state!=='result';
     this.indicator.scale.setScalar(game.invulnerable>0&&!title?1.2+Math.sin(game.visualTime*11)*.12:p.focus?1.1:.85);
