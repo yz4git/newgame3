@@ -49,7 +49,7 @@ test('All six major structures have individual world-scale moving mechanisms',as
  assert.match(model,/HERO_MOTION_IDS/);
  assert.match(model,/hero-actuator-/);
  assert.match(model,/stage===0/);
- assert.match(model,/stage===5/);
+ assert.match(model,/forge-press/);
  assert.match(model,/export function animateWorldSetpiece/);
  assert.match(bg,/animateWorldSetpiece\(m,t,reduced\|\|performance\)/);
 });
