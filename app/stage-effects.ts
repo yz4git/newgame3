@@ -1,6 +1,7 @@
 import * as T from 'three/webgpu';
 import {STAGES} from './stages.ts';
 import {usesRebuiltGraphics} from './visual-style.ts';
+import {distanceReveal} from './scenery-transitions.ts';
 import {LANDMARKS,noise,stageDistance} from './bg-map.ts';
 import {block as sharedBlock,ball as sharedBall,glow,radialTexture} from './art.ts';
 import {terrainMaps,playerMap,armourMap,smokeMap,livingMaps,ventFrames} from './visual-assets.ts';
@@ -38,7 +39,7 @@ export class StageEffects{
     if(this.stage===stage)return;this.stage=stage;this.clearProps();const env=STAGES[stage].environment,color=STAGES[stage].color;
     (this.weather.material as T.MeshBasicMaterial).color.setHex(env==='lava'?0xffbb79:env==='jungle'?0xadffd6:0xcceaff).multiplyScalar(usesRebuiltGraphics()?.38:1);
     for(const [i,entry]of LANDMARKS[stage].entries()){
-      const g=new T.Group();g.position.x=entry.x;g.scale.setScalar(entry.scale);g.userData.entry=i;g.userData.kind=entry.kind;this.props.add(g);this.layers.push(g);
+      const g=new T.Group();g.position.x=entry.x;g.scale.setScalar(entry.scale);g.userData.entry=i;g.userData.kind=entry.kind;g.userData.baseScale=entry.scale;this.props.add(g);this.layers.push(g);
       if(['orbital','gate','temple'].includes(entry.kind)){
         const rotor=new T.Group();rotor.name='mechanism';rotor.position.z=-1.9;
         const r=entry.kind==='gate'?5.7:entry.kind==='orbital'?4.7:2.6;
@@ -60,7 +61,7 @@ export class StageEffects{
       }
     }
     for(const [i,entry]of SCENES[stage].entries()){
-      const g=new T.Group();g.position.x=entry.x;g.rotation.z=entry.angle;g.userData.scene=i;g.userData.kind=entry.kind;this.props.add(g);this.layers.push(g);
+      const g=new T.Group();g.position.x=entry.x;g.rotation.z=entry.angle;g.userData.scene=i;g.userData.kind=entry.kind;g.userData.baseScale=1;this.props.add(g);this.layers.push(g);
       if(entry.kind==='artwork'){
         for(let j=0;j<3;j++){const beacon=new T.Mesh(new T.IcosahedronGeometry(.28,1),new T.MeshBasicMaterial({color,transparent:true,opacity:.24,depthWrite:false}));beacon.name='beacon'+j;beacon.position.set((j-1)*2.8,1+j*.8,-2.8);g.add(beacon);}
         if(env==='lava'||env==='ice'||env==='jungle')for(let j=0;j<3;j++){const plume=this.mist(g,'plume'+j,(j-1)*3.8,j*.6-1,env==='lava'?3.8:4.5,env==='lava'?0xa98c7b:env==='ice'?0xd5eaff:0xb7d3c6);plume.position.z=.45;}
@@ -122,7 +123,12 @@ export class StageEffects{
       dummy.position.set(x+flutter,y,env==='ice'&&i%5===0?2.5:-1.2);dummy.rotation.set(0,0,env==='ice'?-.35:env==='ocean'?-.16:0);dummy.scale.set(size,env==='ice'?size*2.8:env==='ocean'?size*8:env==='asteroids'&&i%7===0?size*6:size*(env==='lava'?2:1),1);dummy.updateMatrix();this.weather.setMatrixAt(i,dummy.matrix);
     }this.weather.count=count;this.weather.instanceMatrix.needsUpdate=true;
     for(const layer of this.layers){
-      const entry=layer.userData.scene===undefined?LANDMARKS[g.stage][layer.userData.entry]:SCENES[g.stage][layer.userData.scene],kind=entry.kind;layer.position.y=entry.distance-distance;layer.visible=Math.abs(layer.position.y)<38;
+      const entry=layer.userData.scene===undefined?LANDMARKS[g.stage][layer.userData.entry]:SCENES[g.stage][layer.userData.scene],kind=entry.kind;layer.position.y=entry.distance-distance;
+       if(usesRebuiltGraphics()){
+         const reveal=distanceReveal(layer.position.y,23,54);
+         layer.visible=reveal>.001;
+         layer.scale.setScalar(layer.userData.baseScale*(.6+.4*reveal));
+       }else layer.visible=Math.abs(layer.position.y)<38;
       const mechanism=layer.getObjectByName('mechanism');if(mechanism){if(kind==='furnace'||kind==='reactor')mechanism.position.y=Math.sin(t*2.7+layer.userData.entry)*.55;else if(kind==='crane')mechanism.position.x=Math.sin(t*.55)*3.0;else if(kind==='array')mechanism.rotation.y=Math.sin(t*.35)*.35;else mechanism.rotation.z=t*(kind==='temple'?.5:kind==='orbital'?.18:.7);}
       for(let j=0;j<3;j++){
         const mist=layer.getObjectByName('mist'+j) as T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>|undefined;if(mist){mist.material.opacity=.025+.015*Math.sin(t*1.3+j);mist.position.y=Math.sin(t*.7+j)*.6;}
@@ -132,7 +138,7 @@ export class StageEffects{
       const steam=layer.getObjectByName('steam') as T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>|undefined;if(steam){const pressure=.5+.5*Math.sin(t*2+layer.userData.entry);steam.scale.set(1.4+pressure,2+pressure*1.6,.9);steam.material.opacity=.025+pressure*.02;}
     }
     for(const fall of this.waterfalls){const p=waterfallPose(t,fall.userData.index);fall.material.opacity=Math.min(.22,p.opacity*.30);fall.scale.x=p.width*.8;fall.rotation.y=Math.sin(t*.6+fall.userData.index)*.12;}
-    this.vents.forEach((s,i)=>{const p=ventPulse(i,t),y=STAGES[g.stage].duration*4.4*(.23+i*.18)-distance;s.position.y=y;s.visible=Math.abs(y)<34;s.material.opacity=p.alpha*.20;s.scale.set(p.size*1.5,p.size*2.0,p.size*1.2);});
+    this.vents.forEach((s,i)=>{const p=ventPulse(i,t),y=STAGES[g.stage].duration*4.4*(.23+i*.18)-distance;s.position.y=y;const alpha=usesRebuiltGraphics()?distanceReveal(y,20,48):Math.abs(y)<34?1:0;s.visible=alpha>.001;s.material.opacity=p.alpha*.20*alpha;s.scale.set(p.size*1.5,p.size*2.0,p.size*1.2);});
     // A single timed flyover per sector, then a distant relief convoy before the boss.
     const flight=t<16?(t-8)/7:(t-(STAGES[g.stage].duration*.62))/7;
     this.convoy.visible=!reduced&&!boss&&presentationState(g)!=='transition'&&flight>0&&flight<1;
