@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const file=p=>readFile('app/'+p+'.ts','utf8');
+test('six world stories have eighteen separately authored one-shot environmental events',async()=>{
+ const s=await file('stage-sequences');
+ const match=s.match(/export const STAGE_SEQUENCE_IDS=(\[[\s\S]*?\]) as const;/);
+ assert.ok(match,'stage story identifiers must be present');
+ const ids=JSON.parse(match[1].replaceAll("'",'"'));
+ assert.equal(ids.length,6);
+ assert.equal(ids.flat().length,18);
+ assert.equal(new Set(ids.flat()).size,18);
+ assert.match(s,/const timing=\[\.13,\.43,\.72\]/);
+ for(let stage=0;stage<6;stage++)assert.match(s,new RegExp('stage==='+stage));
+ for(let stage=0;stage<6;stage++)assert.match(s,new RegExp('case '+stage+':'));
+ assert.match(s,/elapsed=clock-beat/);
+ assert.match(s,/const y=52-elapsed\*6\.0/);
+ assert.match(s,/const opacity=distanceReveal\(y,23,57\)/);
+ assert.doesNotMatch(s,/Math\.random\(|wrap\(|\bmod\(/);
+ assert.match(s,/loops:0/);
+});
+test('all recurring generic side layers are disabled in World Rebuild',async()=>{
+ const [c,v,i,d,e]=await Promise.all(['colossal-cinematics','volumetric-cinematics','invasion-director','depth-spectacle','stage-effects'].map(file));
+ assert.match(c,/piece\.visible=false/);
+ assert.match(c,/this\.flight\.visible=false/);
+ assert.match(v,/group\.visible=false; \/\/ Old scrolling gantries/);
+ assert.match(v,/m\.visible=false; \/\/ Do not restore generic looping perimeter rotors/);
+ assert.match(v,/const flybyCount=0/);
+ assert.match(v,/const lightCount=0/);
+ assert.match(i,/this\.dock\.visible=false/);
+ assert.match(i,/d\.root\.visible=false/);
+ assert.match(d,/for\(let i=0;i<0;i\+\+\)\{/);
+ assert.match(e,/this\.props\.visible=!usesRebuiltGraphics\(\)/);
+});
+test('finite terrain and bespoke chapters dissolve instead of appearing on a single frame',async()=>{
+ const [f,s,r]=await Promise.all(['fortress','stage-sequences','render'].map(file));
+ assert.match(f,/this\.reveal\(natural,distanceReveal\(m\.position\.y,15,52\)\)/);
+ assert.match(f,/this\.reveal\(m,distanceReveal\(m\.position\.y,15,52\)\)/);
+ assert.match(f,/const transparent=true,depthWrite=false/);
+ assert.match(f,/this\.prepareReveal\(terrain as T\.Group\)/);
+ assert.match(s,/mat\.opacity=\(mat instanceof T\.MeshBasicMaterial \? \.60 : 1\)\*opacity\*\.80/);
+ assert.match(s,/this\.root\.visible=g\.mode==='campaign'/);
+ assert.match(r,/private stageSequences=usesRebuiltGraphics\(\)\?new StageSequences3D\(\):null/);
+ assert.match(r,/this\.stageSequences\?\.draw\(game,dt/);
+ assert.match(r,/stageSequences:this\.stageSequences\?\.diagnostics\(\)/);
+});
