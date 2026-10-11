@@ -48,74 +48,7 @@ function terrace(g:T.Group,p:Palette,x:number,y:number,w:number,h:number,variant
   }
   for(let j=0;j<2;j++)grating(g,p,x+(j?1:-1)*w*.30,y-h*.32,-3.23,w*.19,.46);
 }
-/**
- * Deliberate silhouette breaks in the old 8m endless side rails.
- * Seven large, spatially asymmetrical 3D chapters with separate side walls,
- * real cutouts and rotating-machine anchor points; never a picture plate.
- * Fully static geometry here; RailDistrictMotion moves the visible cranes,
- * lifts and carriages independently so the background is never just scrolling.
- */
-function railDistrictChapter(g:T.Group,p:Palette,side:number,x:number,v:number,stage:number,chapter:number){
-  const z=-3.42,accent=(v+stage)%3? p.steel:p.rust;
-  const inward=-side;
-  // Three large openings in every six chunks eliminate the perpetual
-  // twin-wall illusion. Left/right voids are deliberately staggered.
-  const empty=((v+stage+(side>0?2:0))%6+6)%6;
-  if(empty===1||empty===2||empty===4)return;
-  if(chapter===0){ // a wide dock aperture, not another filled-in wall
-    for(const yy of[-3.1,3.05])block(g,p.plate,x,yy,z,5.9,.75,.78);
-    for(const ss of[-1,1])block(g,p.dark,x+ss*2.57,0,z,.70,6.6,1.4);
-    block(g,p.dark,x,0,z-.56,4.2,4.6,.28);
-    for(let j=0;j<3;j++)block(g,accent,x+inward*(1.6-j*.72),-2.1+j*2.0,z+.55,.47,.29,.36);
-  }else if(chapter===1){ // huge cylindrical motor with legible circle silhouette
-    octagon(g,p.dark,x,0,z,5.8,6.4,1.5);
-    drum(g,p.steel,x,0,z+.85,2.30,.48);drum(g,p.dark,x,0,z+1.12,1.63,.32);
-    for(let j=0;j<6;j++){
-      const a=j*Math.PI/3,blade=block(g,p.plate,x+Math.sin(a)*1.17,Math.cos(a)*1.17,z+1.43,.42,2.1,.27);
-      blade.rotation.z=-a;
-    }
-    drum(g,p.warm,x,0,z+1.59,.39,.18);
-  }else if(chapter===2){ // freighter elevator cutout and two separate rails
-    block(g,p.dark,x,0,z-.3,4.8,7.5,1.0);
-    for(const ss of[-1,1])block(g,p.steel,x+ss*2.05,0,z+1,.41,7.4,.52);
-    const platform=block(g,p.plate,x,-1.15,z+1.2,3.65,1.0,.53);
-    platform.rotation.z=side*.10;
-    for(let j=0;j<3;j++)block(g,p.dark,x+inward*.90,-3+j*2.55,z+1.05,1.1,.22,.35);
-  }else if(chapter===3){ // genuinely open lattice, big diagonal truss
-    const diagonals=[-1,1];
-    for(const d of diagonals){
-      const beam=block(g,p.steel,x+side*d*.9,d*.45,z,.54,6.7,.64);
-      beam.rotation.z=side*d*.40;
-    }
-    for(const yy of[-3.15,3.15])block(g,p.plate,x,yy,z+.40,5.8,.51,.48);
-    const pad=octagon(g,p.dark,x-side*1.15,.9,z+.5,1.9,1.8,.78);pad.rotation.z=side*.22;
-  }else if(chapter===4){ // stepped conduit and furnace manifold
-    block(g,p.dark,x-side*.52,-1.5,z,3.4,2.3,1.2);
-    for(let j=0;j<4;j++){
-      const pipe=tube(g,j%3?p.steel:p.warm,x+(j-1.5)*.67,.15+j*.23,z+.9,.20+j*.015,5.0-j*.35);
-      pipe.rotation.z=(j-1.5)*.11;
-    }
-    for(let j=0;j<3;j++)drum(g,p.rust,x+side*.55,-2.5+j*2.5,z+.8,.49,.38);
-  }else if(chapter===5){ // offset sensor array and protruding antenna
-    const shield=octagon(g,p.plate,x-side*.6,1,z,3.4,5.9,1.1);
-    shield.rotation.z=side*.10;
-    const housing=drum(g,p.dark,x,0,z+1.0,1.25,.55);
-    housing.rotation.z=side*.14;
-    for(let j=0;j<4;j++){
-      const fin=block(g,p.steel,x-side*.6,-2.7+j*1.7,z+1.22,1.8,.19,.27);
-      fin.rotation.z=side*(j%2?.18:-.13);
-    }
-    block(g,p.plate,x-side*2.0,1.5,z+.65,1.2,2.1,.82);
-  }else{ // intentionally shattered section, void and small repair footbridge
-    for(const yy of[-3.45,3.25])block(g,p.dark,x,yy,z-.2,5.4,.51,.68);
-    for(let j=0;j<4;j++){
-      const scrap=block(g,j%2?p.rust:p.steel,x+(j-1.5)*1.1,-.8+(j%3)*1.9,z+.47,.38,1.6,.47);
-      scrap.rotation.z=side*(j%2?.50:-.35);
-    }
-    const walk=block(g,p.plate,x-side*1.3,-2.4,z+.9,2.4,.35,.62);
-    walk.rotation.z=side*.17;
-  }
-}
+/** World Rebuild has no generated repeating left/right rail architecture. */
 export function fortressChip(p:Palette,stage:number,v:number){
   const g=new T.Group();const shift=(v%3-1)*.6;
   // A central causeway with access floors, bolted rails and exposed utility ledges.
@@ -136,17 +69,9 @@ export function fortressChip(p:Palette,stage:number,v:number){
         }
       }
     }
-    // Replace unbroken floor-edge lines with detached angled braces.
-    for(const side of[-1,1]){
-      const offset=noise(v,side,17)*4.8-2.4;
-      for(let i=0;i<2;i++){
-        const y=offset+(i?1.45:-1.45);
-        const brace=block(g,i?p.steel:p.dark,shift+side*(3.4+noise(v,i,23)*.30),
-          y,-4.91,.19,.88+(v%3)*.25,.18);
-        brace.rotation.z=side*(i?.49:-.34);
-      }
-    }
-        // Longitudinal cable conduits and cross-members once formed a regular
+    // No substitute bars along the corridor: even short repeated braces
+    // become an endless artificial fence as the world scrolls.
+    // Longitudinal cable conduits and cross-members once formed a regular
     // grating. Only disjoint transverse expansion joints remain now.
     for(let row=0;row<4;row++){
       if((v+row)%3===0)continue;
@@ -157,29 +82,14 @@ export function fortressChip(p:Palette,stage:number,v:number){
     }
   }
   for(const s of[-1,1]){
-    if(usesRebuiltGraphics()){
-      // Break the former edge rail into short disconnected deck wedges.
-      // Open intervals expose the abyss beyond the central corridor.
-      const gap=(v+(s<0?1:4))%5===0||(v+stage)%4===1;
-      if(!gap){
-        const center=(noise(v,s,13)-.5)*4.2;
-        const bracket=block(g,p.dark,shift+s*4.38,center,-5.05,.63,1.25+(v%3)*.52,.52);
-        bracket.rotation.z=s*((v%3)-1)*.27;
-        const flange=block(g,p.plate,shift+s*4.46,center,-4.74,.55,.39,.16);
-        flange.rotation.z=bracket.rotation.z;
-      }else if((v+s+stage)%3===0){
-        block(g,p.plate,shift+s*4.17,2.4,-4.93,.76,.83,.33);
-      }
-    }else{
+    if(usesRebuiltGraphics())continue; // No edge wedges, roofs or rail modules.
+    {
       block(g,p.dark,shift+s*4.30,0,-5.05,.40,8,.52);block(g,p.steel,shift+s*4.42,0,-4.80,.14,8,.13);
       for(let i=0;i<4;i++){block(g,p.warm,shift+s*4.11,-3+i*2,-4.97,.035,.27,.025);block(g,p.plate,shift+s*3.90,-3+i*2,-5.11,.35,.33,.12);}
     }
     const sideVariant=(v+(s>0?3:0))%8,x=s*(7.9+noise(v,s,stage)*1.0),roofWidth=4.7+noise(v,s,27)*1.0,roofHeight=5.7+noise(v,s,29)*2.0,roofY=(noise(v,s,31)-.5)*1.1;
     const open=stage===1?(sideVariant===1||sideVariant===6):(sideVariant===4);
-    const chapter=(v*5+(s<0?3:0)+stage*2)%7;
-    if(usesRebuiltGraphics()){
-      railDistrictChapter(g,p,s,x,v,stage,chapter);
-    }else if(!open){
+    if(!open){
       terrace(g,p,x,roofY,roofWidth,roofHeight,sideVariant);
       for(let j=0;j<3;j++){
         const xx=x+s*(1.34+j*.38);tube(g,j===1?p.plate:p.steel,xx,0,-2.62,.13+(j===1?.08:0),7.6-j*.3);
@@ -299,7 +209,8 @@ export class FortressBackground {
     if(env==='ocean'||env==='ice'||env==='jungle'||env==='lava'){
       this.surface=new LivingSurface(stage);this.root.add(this.surface.root);
     }
-    for(let i=0;i<7;i++){
+    // World Rebuild: no seven forever-looping clusters down both edges.
+    if(!usesRebuiltGraphics())for(let i=0;i<7;i++){
       const g=new T.Group(),x=(i%2?1:-1)*(8+noise(i,stage)*4);
       if(env==='asteroids'||env==='ice'||env==='jungle'||env==='lava')for(let j=0;j<5;j++)rock(g,env==='ice'?p.ice:env==='jungle'?p.moss:p.rock,(noise(i,j,5)-.5)*5,j*2-4,0,.8+noise(i,j)*1.9,1.8,1.1,i*7+j);
       else for(let j=0;j<6;j++){const m=block(g,p.dark,(noise(i,j,5)-.5)*5,j*1.4-4,0,.6+noise(i,j)*1.4,1.3,.4+noise(i,j,9));m.rotation.z=noise(i,j,3)*.2;}
@@ -323,7 +234,14 @@ export class FortressBackground {
   draw(g:Game,performance=false,reduced=false){
     this.setStage(g.stage);this.distance=g.state==='title'?18+g.visualTime*1.4:stageDistance(worldClock(g));const centre=Math.floor(this.distance/ROW),live=new Set<number>();
     for(let row=centre-4;row<=centre+5;row++){
-      live.add(row);let m=this.rows.get(row);if(!m){const layout=rowScenery(g.stage,row);m=this.getTemplate(g.stage,layout.variant).clone();const installations=m.getObjectByName('installations');const route=routeAt(g.stage,row*ROW);if(installations){installations.visible=layout.installations;installations.position.x=layout.shift+route.center;installations.scale.set(route.width,layout.stretch,1);installations.rotation.z=layout.rotation;}m.traverse(o=>{if(o instanceof T.Mesh&&!installations?.getObjectById(o.id)){o.geometry=o.geometry.clone();o.userData.rowGeometry=true;const v=o.geometry.getAttribute('position');for(let i=0;i<v.count;i++)v.setX(i,terrainX(g.stage,v.getX(i),row*ROW+v.getY(i)));v.needsUpdate=true;o.geometry.computeVertexNormals();o.geometry.computeBoundingSphere();}});this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
+      live.add(row);let m=this.rows.get(row);if(!m){const layout=rowScenery(g.stage,row);m=this.getTemplate(g.stage,layout.variant).clone();const installations=m.getObjectByName('installations');const route=routeAt(g.stage,row*ROW);if(installations){installations.visible=!usesRebuiltGraphics()&&layout.installations;installations.position.x=layout.shift+route.center;installations.scale.set(route.width,layout.stretch,1);installations.rotation.z=layout.rotation;}// Finite stage landmarks instead of endlessly tiled shore infrastructure.
+        // The seamless living surface and major story setpieces are separate.
+        const terrain=m.getObjectByName('terrain');
+        if(usesRebuiltGraphics()&&terrain){
+          const landscapeBeats=[[6,20,34],[],[],[8,20,33],[6,22,37],[9,23,38]][g.stage]??[];
+          terrain.visible=landscapeBeats.includes(row);
+        }
+        m.traverse(o=>{if(o instanceof T.Mesh&&!installations?.getObjectById(o.id)){o.geometry=o.geometry.clone();o.userData.rowGeometry=true;const v=o.geometry.getAttribute('position');for(let i=0;i<v.count;i++)v.setX(i,terrainX(g.stage,v.getX(i),row*ROW+v.getY(i)));v.needsUpdate=true;o.geometry.computeVertexNormals();o.geometry.computeBoundingSphere();}});this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
     }
     for(const [row,m]of this.rows)if(!live.has(row)){this.root.remove(m);this.disposeRow(m);this.rows.delete(row);}
     const t=worldClock(g),ocean=STAGES[g.stage].environment==='ocean';
