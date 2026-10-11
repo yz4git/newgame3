@@ -178,7 +178,7 @@ export class InvasionDirector {
   const transition=g.state==='transition';
   // Opening 0-5 s: the camera dives beneath a shipyard with overhead gantry arches.
   const dive=opening?Math.sin(Math.PI*clamp(g.time/8,0,1))**2:0;
-  this.dock.visible=!reduced&&(opening||title)&&(!mix||!mix.crowded);
+  this.dock.visible=false; // Shared trench-run overlaid identical steel corridors in all worlds.
   let count=0;
   if(this.dock.visible){
    const n=performance?LIMIT.trenchBeams/2:LIMIT.trenchBeams;
@@ -209,7 +209,7 @@ export class InvasionDirector {
    const d=this.battleships[i],u=mod(clock*.12+i*.47,.94)/.94;
    const intro=opening&&i===0;
    const entry=clamp(g.time/4.1,0,1);
-   d.root.visible=!reduced&&(cinematic||i===0)&&(!boss||intro)&&(intro||mix?.showFlybys!==false);
+   d.root.visible=false; // No endlessly resurfacing identical dreadnought silhouettes.
    if(!d.root.visible)continue;
    const scale=intro?
     .35+ease(entry)*1.17:
