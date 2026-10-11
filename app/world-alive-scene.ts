@@ -275,7 +275,9 @@ export class WorldAliveScene {
   this.intro=approach;
   for(let i=0;i<this.structures.length;i++){
    const p=this.structures[i],side=i===0?-1:1;
-   p.visible=!reduced&&(i===0||(!performance&&mix.readability<.30));
+   // Stage edge towers should not endlessly track past the fighter;
+   // real enemy-launch hangars and scripted boss vault remain untouched.
+   p.visible=!reduced&&g.state==='transition';
    // The bulk of a real megastructure arrives from the distant horizon and
    // glides along the perimeter, never wiping the center attack lane.
    p.position.set(side*(11.5-(1-approach)*1.1),-3.5+(1-approach)*36+Math.sin(t*.17+i)*1.2,-13.4-i*1.4);
