@@ -218,7 +218,7 @@ export class DepthSpectacle {
   this.pilotGhosts.count=n;this.pilotGhosts.instanceMatrix.needsUpdate=true;
 
   n=0;
-  for(let i=0;i<(mix&&!mix.showAmbientStructures?0:limit(CAP.driftFrames));i++){
+  for(let i=0;i<0;i++){ // Repeating scrolling deep frames made all stages look identical.
    const side=i%2?-1:1,z=-7.2+(i%4)*1.05;
    dummy.position.set(side*(11.9+(i%3)*1.08),((i*16.7-t*(3.9+g.stage*.18))%104+104)%104-52,z);
    dummy.rotation.set(.11*side,.15*side,side*(.10+Math.sin(t*.32+i)*.07));
