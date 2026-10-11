@@ -34,7 +34,7 @@ test('Warp and boss have unique 3D setpiece owners',async()=>{
  assert.match(volume,/const warp=false; \/\/ SINGLE OWNER/);
  assert.match(volume,/m.visible=false; \/\/ InvasionDirector owns/);
  assert.match(depth,/mix===undefined\)\{ \/\/ owned by InvasionDirector/);
- assert.match(colossal,/this.flight.visible=.*&&!mix; \/\/ 3\.4 invasion fleet/);
+ assert.match(colossal,/this\.flight\.visible=false; \/\/ Eliminate recurring/);
  assert.match(invasion,/this.travel.visible=transition&&!reduced/);
  assert.match(invasion,/this.bossCore.visible=boss&&!reduced/);
  assert.match(invasion,/if\(nw>=LIMIT.ruptureRings\|\|reduced\|\|!!mix\)break/);
