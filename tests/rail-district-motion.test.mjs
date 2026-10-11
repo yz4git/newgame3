@@ -37,7 +37,7 @@ test('looping ambient edge structures are gone; event-based combat architecture 
  assert.match(scenic,/const show=false/);
  assert.match(scenic,/this\.patrolCount=0/);
  assert.match(scenic,/if\(false&&rails&&servicing\)/);
- assert.match(world,/p\.visible=!reduced&&g\.state==='transition'/);
+ assert.match(world,/p\.visible=this\.exitReveal>\.004/);
  assert.match(script,/results\.sideRemoval/);
  assert.match(script,/railChildren!==0/);
 });
