@@ -58,6 +58,10 @@ function terrace(g:T.Group,p:Palette,x:number,y:number,w:number,h:number,variant
 function railDistrictChapter(g:T.Group,p:Palette,side:number,x:number,v:number,stage:number,chapter:number){
   const z=-3.42,accent=(v+stage)%3? p.steel:p.rust;
   const inward=-side;
+  // Three large openings in every six chunks eliminate the perpetual
+  // twin-wall illusion. Left/right voids are deliberately staggered.
+  const empty=((v+stage+(side>0?2:0))%6+6)%6;
+  if(empty===1||empty===2||empty===4)return;
   if(chapter===0){ // a wide dock aperture, not another filled-in wall
     for(const yy of[-3.1,3.05])block(g,p.plate,x,yy,z,5.9,.75,.78);
     for(const ss of[-1,1])block(g,p.dark,x+ss*2.57,0,z,.70,6.6,1.4);
@@ -132,32 +136,39 @@ export function fortressChip(p:Palette,stage:number,v:number){
         }
       }
     }
+    // Replace unbroken floor-edge lines with detached angled braces.
     for(const side of[-1,1]){
-      block(g,p.steel,shift+side*3.83,0,-4.98,.095,7.90,.12);
-      for(let i=0;i<4;i++){
-        const y=-3.15+i*2.08;
-        block(g,p.dark,shift+side*3.49,y,-4.99,.36,.21,.14);
-        block(g,p.plate,shift+side*3.49,y,-4.87,.25,.12,.085);
+      const offset=noise(v,side,17)*4.8-2.4;
+      for(let i=0;i<2;i++){
+        const y=offset+(i?1.45:-1.45);
+        const brace=block(g,i?p.steel:p.dark,shift+side*(3.4+noise(v,i,23)*.30),
+          y,-4.91,.19,.88+(v%3)*.25,.18);
+        brace.rotation.z=side*(i?.49:-.34);
       }
     }
-    // Longitudinal cable conduits and cross-members cast small but genuine
-    // parallax shadows; nothing is painted onto the floor's flat UVs.
+        // Longitudinal cable conduits and cross-members once formed a regular
+    // grating. Only disjoint transverse expansion joints remain now.
     for(let row=0;row<4;row++){
-      const y=-3.92+row*2.06;
-      block(g,p.steel,shift,y,-5.00,8.1,.092,.095);
+      if((v+row)%3===0)continue;
+      const y=-3.75+row*2.05+(noise(v,row,29)-.5)*.48;
+      const x=shift+(noise(v,row,33)-.5)*2.1;
+      const seam=block(g,p.steel,x,y,-5.00,3.0+noise(v,row,34)*3.1,.095,.095);
+      seam.rotation.z=(noise(v,row,39)-.5)*.24;
     }
   }
   for(const s of[-1,1]){
     if(usesRebuiltGraphics()){
-      // No more uninterrupted parallel steel stripes: variable gaps, offset
-      // junction plates and an occasional wide missing rail segment.
-      const gap=(v+(s<0?1:4))%7===0;
+      // Break the former edge rail into short disconnected deck wedges.
+      // Open intervals expose the abyss beyond the central corridor.
+      const gap=(v+(s<0?1:4))%5===0||(v+stage)%4===1;
       if(!gap){
-        const center=(v%3-1)*.82,span=3.9+(v%4)*.42;
-        block(g,p.dark,shift+s*4.30,center,-5.05,.40,span,.52);
-        block(g,p.steel,shift+s*4.42,center,-4.80,.14,span,.13);
-      }else{
-        for(const end of[-1,1])block(g,p.plate,shift+s*4.23,end*2.7,-4.93,.76,.83,.33);
+        const center=(noise(v,s,13)-.5)*4.2;
+        const bracket=block(g,p.dark,shift+s*4.38,center,-5.05,.63,1.25+(v%3)*.52,.52);
+        bracket.rotation.z=s*((v%3)-1)*.27;
+        const flange=block(g,p.plate,shift+s*4.46,center,-4.74,.55,.39,.16);
+        flange.rotation.z=bracket.rotation.z;
+      }else if((v+s+stage)%3===0){
+        block(g,p.plate,shift+s*4.17,2.4,-4.93,.76,.83,.33);
       }
     }else{
       block(g,p.dark,shift+s*4.30,0,-5.05,.40,8,.52);block(g,p.steel,shift+s*4.42,0,-4.80,.14,8,.13);
