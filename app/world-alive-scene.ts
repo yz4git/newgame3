@@ -35,10 +35,10 @@ export class WorldAliveScene {
  private bayLayer=new T.Group();
  private bossLayer=new T.Group();
  private fractureLayer=new T.Group();
- private archMat=new T.MeshStandardMaterial({color:0x465974,metalness:.48,roughness:.53});
- private panelMat=new T.MeshStandardMaterial({color:0x697f9e,metalness:.62,roughness:.41});
+ private archMat=new T.MeshStandardMaterial({color:0x364a62,metalness:.48,roughness:.53});
+ private panelMat=new T.MeshStandardMaterial({color:0x506981,metalness:.62,roughness:.41});
  private innerMat=new T.MeshStandardMaterial({color:0x233849,metalness:.39,roughness:.65});
- private coreMat=new T.MeshBasicMaterial({color:0x7099a7,transparent:true,opacity:.38,depthWrite:false,toneMapped:true});
+ private coreMat=new T.MeshBasicMaterial({color:0x64818f,transparent:true,opacity:.29,depthWrite:false,toneMapped:true});
  private burntMat=new T.MeshStandardMaterial({color:0x443d3c,metalness:.22,roughness:.81});
  private bays:Bay[]=[];
  private structures:T.Group[]=[];
@@ -272,7 +272,7 @@ export class WorldAliveScene {
   this.intro=approach;
   for(let i=0;i<this.structures.length;i++){
    const p=this.structures[i],side=i===0?-1:1;
-   p.visible=!reduced&&(!performance||i===0);
+   p.visible=!reduced&&(i===0||(!performance&&mix.readability<.30));
    // The bulk of a real megastructure arrives from the distant horizon and
    // glides along the perimeter, never wiping the center attack lane.
    p.position.set(side*(11.5-(1-approach)*1.1),-3.5+(1-approach)*36+Math.sin(t*.17+i)*1.2,-13.4-i*1.4);
