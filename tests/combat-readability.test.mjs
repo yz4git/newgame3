@@ -44,7 +44,7 @@ test('The real World Rebuild removes repeating side architecture and preserves b
  assert.match(fortress,/if\(usesRebuiltGraphics\(\)\)continue; \/\/ No edge wedges/);
  assert.match(fortress,/lamp:physical\?new T\.MeshBasicMaterial/);
  assert.match(scenic,/this\.patrolCount=0/);
- assert.match(world,/p\.visible=!reduced&&g\.state==='transition'/);
+ assert.match(world,/p\.visible=this\.exitReveal>\.004/);
 });
 
 test('World Rebuild grades actual background materials without dimming foreground game assets',async()=>{
