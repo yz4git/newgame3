@@ -44,6 +44,9 @@ export class LivingSurface {
     emissive:env==='lava'?0xffac6e:0x000000,
     emissiveMap:env==='lava'?map:null,emissiveIntensity:env==='lava'?1.25:0});
   }
+  // Tint only the physical rebuilt water/ice/volcanic surface.
+  // No change to Classic texture colors or foreground combat actors.
+  if(this.rebuilt)mat.color.multiplyScalar(.56);
   this.base=new T.Mesh(this.geometry,mat);
   this.base.position.z=env==='ice'?-9:-7.6;
   this.base.receiveShadow=true;
@@ -61,19 +64,19 @@ export class LivingSurface {
    m.name='refracted-light-'+i;this.lights.push(m);this.root.add(m);
   }
   this.crests=new T.InstancedMesh(new T.TorusGeometry(.70,.060,6,24),
-   new T.MeshBasicMaterial({color:0x8cbdbe,transparent:true,opacity:.27,depthWrite:false,toneMapped:true}),18);
+   new T.MeshBasicMaterial({color:this.rebuilt?0x678f98:0x8cbdbe,transparent:true,opacity:this.rebuilt?.11:.27,depthWrite:false,toneMapped:true}),18);
   this.crests.setColorAt(0,new T.Color());this.crests.frustumCulled=false;
   this.crests.instanceMatrix.setUsage(T.DynamicDrawUsage);
   this.crests.instanceColor!.setUsage(T.DynamicDrawUsage);
   this.crests.name='wave-crests';this.root.add(this.crests);
   if(this.rebuilt){
    this.volumes=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),
-    new T.MeshStandardMaterial({color:env==='lava'?0x2c2526:env==='ice'?0x5c95a7:env==='jungle'?0x305c4b:0x3d6474,
+    new T.MeshStandardMaterial({color:env==='lava'?0x211c1e:env==='ice'?0x395d70:env==='jungle'?0x213f34:0x294954,
      metalness:env==='lava'?.08:.15,roughness:.76}),36);
    this.volumes.name='edge-rocks-physical-3d';this.volumes.frustumCulled=false;
    this.volumes.instanceMatrix.setUsage(T.DynamicDrawUsage);this.root.add(this.volumes);
    this.streaks=new T.InstancedMesh(new T.CylinderGeometry(.12,.18,1,6),
-    new T.MeshStandardMaterial({color:env==='lava'?0xa95426:env==='ice'?0x8ebac4:env==='jungle'?0x467970:0x4a8d9c,
+    new T.MeshStandardMaterial({color:env==='lava'?0x743b20:env==='ice'?0x567d89:env==='jungle'?0x2e504b:0x305a67,
      metalness:.12,roughness:.62}),64);
    this.streaks.name='flow-ridges-physical-3d';this.streaks.frustumCulled=false;
    this.streaks.instanceMatrix.setUsage(T.DynamicDrawUsage);this.root.add(this.streaks);
