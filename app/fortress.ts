@@ -247,6 +247,10 @@ export class FortressBackground {
           terrain.visible=landscapeBeats.includes(row);
         }
         m.traverse(o=>{if(o instanceof T.Mesh&&!installations?.getObjectById(o.id)){o.geometry=o.geometry.clone();o.userData.rowGeometry=true;const v=o.geometry.getAttribute('position');for(let i=0;i<v.count;i++)v.setX(i,terrainX(g.stage,v.getX(i),row*ROW+v.getY(i)));v.needsUpdate=true;o.geometry.computeVertexNormals();o.geometry.computeBoundingSphere();}});this.rows.set(row,m);this.root.add(m);}m.position.y=row*ROW-this.distance;
+      // Orbital-fortress 8m floor chips previously formed a solid repetitive
+      // tiled column across the entire level. Reveal only three authored
+      // causeway fragments, with the actual space backdrop open between them.
+      if(usesRebuiltGraphics()&&g.stage===2)m.visible=[6,20,34].includes(row);
     }
     for(const [row,m]of this.rows)if(!live.has(row)){this.root.remove(m);this.disposeRow(m);this.rows.delete(row);}
     const t=worldClock(g),ocean=STAGES[g.stage].environment==='ocean';
