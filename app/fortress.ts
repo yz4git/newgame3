@@ -266,14 +266,14 @@ export class FortressBackground {
       ?new T.MeshStandardMaterial({color,roughness,metalness:0})
       :new T.MeshStandardMaterial({map,color,bumpMap:map,bumpScale,roughness,metalness:0});
     const p:Palette={
-      deck:architectural(env==='ocean'?0x8399b2:0x7a8795),
-      plate:architectural(env==='ocean'||env==='ice'?0xc8d2d9:0xa6b2bc,env==='ocean'||env==='ice'),
-      steel:architectural(0x6e8194,true),dark:architectural(0x384754),
+      deck:architectural(env==='ocean'?0x60778b:0x586a7b),
+      plate:architectural(env==='ocean'||env==='ice'?0x98aebb:0x7a91a1,env==='ocean'||env==='ice'),
+      steel:architectural(0x536b7f,true),dark:architectural(0x263746),
       core:physical
         ?new T.MeshStandardMaterial({color:0x285779,roughness:.35,metalness:.6,emissive:STAGES[stage].color,emissiveIntensity:.65})
         :new T.MeshStandardMaterial({map:metalMap,bumpMap:metalMap,bumpScale:.085,color:0x285779,roughness:.25,metalness:.6,emissive:STAGES[stage].color,emissiveMap:metalMap,emissiveIntensity:4}),
-      lamp:glow(STAGES[stage].color,physical?.70:env==='jungle'?1.4:1.8),
-      warm:glow(env==='lava'?0xff780d:0xff9b47,physical?.85:1.75),
+      lamp:glow(STAGES[stage].color,physical?.46:env==='jungle'?1.4:1.8),
+      warm:glow(env==='lava'?0xff780d:0xff9b47,physical?.62:1.75),
       glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1}),
       rock:natural(terrainMaps.rock,env==='lava'?0x55515c:0x6d747a),
       ice:natural(terrainMaps.ice,0x82bad4,.46,.18),
