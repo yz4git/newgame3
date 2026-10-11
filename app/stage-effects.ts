@@ -114,7 +114,12 @@ export class StageEffects{
     });
   }
   draw(g:Game,performance=false,reduced=false){
-    this.setStage(g.stage);const env=STAGES[g.stage].environment,t=this.time=worldClock(g),distance=g.state==='title'?18+t*1.4:stageDistance(t),boss=!!g.boss&&!g.boss.dead;
+    this.setStage(g.stage);
+    // Legacy orbit rings, radar needles, fake flyover and duplicated landmark
+    // sprites appear on all stages. The authored 3D world and finite cinematic
+    // episodes own those silhouettes now. Classic retains its older FX group.
+    this.props.visible=!usesRebuiltGraphics();
+    const env=STAGES[g.stage].environment,t=this.time=worldClock(g),distance=g.state==='title'?18+t*1.4:stageDistance(t),boss=!!g.boss&&!g.boss.dead;
     const count=reduced?18:performance?34:usesRebuiltGraphics()?(env==='ice'?36:env==='lava'?32:26):env==='ice'?100:env==='lava'?78:env==='jungle'?60:42;this.ambient=count;
     for(let i=0;i<count;i++){
       const seed=noise(i,g.stage,94),side=i%2?1:-1,edge=env==='lava'||env==='asteroids'||env==='jungle';
