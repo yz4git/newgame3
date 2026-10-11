@@ -187,7 +187,7 @@ export class VolumetricCinematics {
    dummy.scale.set(scale,scale*(1.5+seed(i+87)*2.8),scale);
    dummy.updateMatrix();this.motes.setMatrixAt(i,dummy.matrix);
   }this.motes.count=density;this.motes.instanceMatrix.needsUpdate=true;
-  const flybyCount=mix&&!mix.showFlybys?0:reduced?0:performance?4:Math.min(7,LIMIT.nearFlybys);
+  const flybyCount=0; // Stage-authored finite encounters replace modulo-wrapped fake flybys.
   for(let i=0;i<flybyCount;i++){
    const side=i%2?-1:1,z=-6.6+seed(i+55)*5.5;
    const y=mod(i*13.7+17-t*speed*(3.5+seed(i+15)*2),104)-52;
@@ -200,7 +200,7 @@ export class VolumetricCinematics {
   }this.flybys.count=flybyCount;this.flybys.instanceMatrix.needsUpdate=true;if(this.flybys.instanceColor)this.flybys.instanceColor.needsUpdate=true;
   for(let i=0;i<this.gantries.length;i++){
    const group=this.gantries[i],side=i%2?-1:1;
-   group.visible=!reduced&&!performance&&stage!==4&&(mix?.showAmbientStructures??true);
+   group.visible=false; // Old scrolling gantries duplicated all six physical worlds.
    group.position.set(side*(12.4+(i%2)*.6),mod(i*31+12-t*3.8*speed,110)-55,-3.7-(i%3)*.35);
    group.rotation.z=side*(.08+Math.sin(t*.13+i)*.025);
    const rim=group.userData.rim as T.Mesh;rim.rotation.z=t*.43+i;
@@ -208,19 +208,19 @@ export class VolumetricCinematics {
   }
   for(let i=0;i<this.rotors.length;i++){
    const m=this.rotors[i],side=i%2?-1:1;
-   m.visible=!performance&&!reduced&&stage!==4&&(mix?.showAmbientStructures??true);
+   m.visible=false; // Do not restore generic looping perimeter rotors.
    m.position.set(side*(11.4+seed(i+7)*1.2),mod(i*33+8-t*4.4,112)-56,-3.1);
    m.rotation.set(Math.sin(t*.4+i)*.26,Math.cos(t*.31+i)*.4,t*.28*(side)+i);
    m.scale.setScalar(.78+(i%2)*.35);
   }
   for(let i=0;i<this.sweeps.length;i++){
    const m=this.sweeps[i],side=i%2?-1:1;
-   m.visible=!reduced&&!performance&&stage!==0&&(mix?.showAmbientStructures??true);
+   m.visible=false; // No recycled rotating stage spotlights.
    m.position.set(side*(10.5+seed(i+29)*2),mod(i*27+15-t*3.8,105)-52,-4.5);
    m.rotation.z=side*(.4+Math.sin(t*.47+i)*.36);
    m.material.opacity=.036+.018*(.5+.5*Math.sin(t*.82+i));
   }
-  const lightCount=reduced?4:performance?7:Math.min(16,Math.ceil(32*(mix?.density??1)));
+  const lightCount=0; // No evenly recycled LED strip along both screen borders.
   for(let i=0;i<lightCount;i++){
    const side=i%2?-1:1,z=-2.9+seed(i+83)*1.1;
    dummy.position.set(side*(9.25+seed(i+94)*4.3),mod(i*11-t*(3.7+seed(i+42)),90)-45,z);
