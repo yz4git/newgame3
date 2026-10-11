@@ -28,10 +28,10 @@ export class ScenicChoreography3D {
  private traffic=new T.Group();
  private scenery=new T.Group();
  private reaction=new T.Group();
- private shell=new T.MeshStandardMaterial({color:0x596b7d,metalness:.48,roughness:.56});
- private bright=new T.MeshStandardMaterial({color:0x879da9,metalness:.52,roughness:.45});
+ private shell=new T.MeshStandardMaterial({color:0x43566a,metalness:.48,roughness:.56});
+ private bright=new T.MeshStandardMaterial({color:0x647d89,metalness:.52,roughness:.45});
  private dark=new T.MeshStandardMaterial({color:0x263847,metalness:.40,roughness:.66});
- private accents=new T.MeshBasicMaterial({color:0x5a8994,transparent:true,opacity:.26,depthWrite:false,toneMapped:true});
+ private accents=new T.MeshBasicMaterial({color:0x506d78,transparent:true,opacity:.20,depthWrite:false,toneMapped:true});
  private natural=new T.MeshStandardMaterial({color:0x536d64,roughness:.94,metalness:0});
  private machines:Machinery[]=[];
  private freighters:Freight[]=[];
@@ -233,7 +233,8 @@ export class ScenicChoreography3D {
   // Large articulated landmarks carry the stage identity; they live at the
   // margins and never overlap the gameplay corridor at z>=0.
   for(const rig of this.machines){
-   const show=!reduced&&(!performance||rig.index===0)&&(mix.showAmbientStructures||rig.index===0||!active); // quiet one side silhouette remains during combat
+   const show=!reduced&&(!performance||rig.index===0)&&mix.readability<.68&&
+     (mix.showAmbientStructures||rig.index===0||!active); // quiet one side silhouette remains during combat
    rig.root.visible=show;
    const phase=wrap(rig.index*31+10-t*(g.stage===2?2.5:3.6),48);
    rig.root.position.set(rig.side*(10.9+rig.index*.7),phase-24,-10-rig.index*3);
@@ -250,8 +251,8 @@ export class ScenicChoreography3D {
   // unlike theatrical flybys it never traverses the center. Full three-ship
   // traffic appears only once the FX director says the sky is clear.
   const patrol=active&&!boss&&!reduced&&mix.moment==='combat';
-  this.patrolCount=patrol?(mix.showFlybys&&!performance?3:1):0;
-  this.traffic.visible=patrol;
+  this.patrolCount=patrol&&mix.readability<.32?(mix.showFlybys&&!performance?3:1):0;
+  this.traffic.visible=this.patrolCount>0;
   if(patrol)for(const freight of this.freighters){
    freight.root.visible=freight.index<this.patrolCount;
    if(!freight.root.visible)continue;
@@ -264,7 +265,7 @@ export class ScenicChoreography3D {
    freight.root.scale.setScalar(distant?.38:.38+Math.sin(u*Math.PI)*.35);
    freight.rotor.rotation.z=t*(1.8+freight.index*.14);
   }
-  const worldDensity=reduced?0:performance?.18:density;
+  const worldDensity=reduced?0:performance?.18:density*(1-mix.readability*.45);
   let count=0;
   for(let i=0;i<Math.floor(84*worldDensity);i++){
    const side=i%2?1:-1;
