@@ -260,35 +260,36 @@ export class FortressBackground {
     // is *entirely texture-free* so none of the ground/rock/canopy/deck surfaces
     // can accidentally turn into 2D photographic scenery again.
     const architectural=(color:number,paint=false)=>physical
-      ?new T.MeshStandardMaterial({color,roughness:paint?.49:.79,metalness:paint?.48:.22})
+      ?new T.MeshStandardMaterial({color:new T.Color(color).multiplyScalar(paint?.43:.47),roughness:paint?.79:.90,metalness:paint?.20:.10})
       :surface(color,paint);
     const natural=(map:T.Texture,color:number,roughness=.9,bumpScale=.13)=>physical
-      ?new T.MeshStandardMaterial({color,roughness,metalness:0})
+      ?new T.MeshStandardMaterial({color:new T.Color(color).multiplyScalar(.52),roughness,metalness:0})
       :new T.MeshStandardMaterial({map,color,bumpMap:map,bumpScale,roughness,metalness:0});
     const p:Palette={
       deck:architectural(env==='ocean'?0x60778b:0x586a7b),
       plate:architectural(env==='ocean'||env==='ice'?0x98aebb:0x7a91a1,env==='ocean'||env==='ice'),
       steel:architectural(0x536b7f,true),dark:architectural(0x263746),
       core:physical
-        ?new T.MeshStandardMaterial({color:0x285779,roughness:.35,metalness:.6,emissive:STAGES[stage].color,emissiveIntensity:.65})
+        ?new T.MeshStandardMaterial({color:0x285779,roughness:.35,metalness:.6,emissive:STAGES[stage].color,emissiveIntensity:.31})
         :new T.MeshStandardMaterial({map:metalMap,bumpMap:metalMap,bumpScale:.085,color:0x285779,roughness:.25,metalness:.6,emissive:STAGES[stage].color,emissiveMap:metalMap,emissiveIntensity:4}),
-      lamp:glow(STAGES[stage].color,physical?.46:env==='jungle'?1.4:1.8),
-      warm:glow(env==='lava'?0xff780d:0xff9b47,physical?.62:1.75),
+      // Background lanterns must be tone-mapped: glow() opts out and can stay white-hot.
+       lamp:physical?new T.MeshBasicMaterial({color:new T.Color(STAGES[stage].color).multiplyScalar(.18),toneMapped:true}):glow(STAGES[stage].color,env==='jungle'?1.4:1.8),
+      warm:physical?new T.MeshBasicMaterial({color:new T.Color(env==='lava'?0xff780d:0xff9b47).multiplyScalar(.17),toneMapped:true}):glow(env==='lava'?0xff780d:0xff9b47,1.75),
       glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1}),
       rock:natural(terrainMaps.rock,env==='lava'?0x55515c:0x6d747a),
       ice:natural(terrainMaps.ice,0x82bad4,.46,.18),
       snow:natural(terrainMaps.snow,0xcbdde5,.9,.075),
       moss:natural(terrainMaps.moss,0x557357,.94,.18),
       water:physical
-        ?new T.MeshStandardMaterial({color:env==='jungle'?0x255e51:env==='ice'?0x315477:0x28647b,roughness:.42,metalness:.08})
+        ?new T.MeshStandardMaterial({color:new T.Color(env==='jungle'?0x255e51:env==='ice'?0x315477:0x28647b).multiplyScalar(.55),roughness:.80,metalness:.02})
         :new T.MeshStandardMaterial({map:env==='ice'?terrainMaps.ice:terrainMaps.ocean,color:env==='jungle'?0x397969:env==='ice'?0x315477:0x619daf,roughness:.38,metalness:.25}),
       lava:physical
-        ?new T.MeshStandardMaterial({color:0x432923,emissive:0x8d2d12,emissiveIntensity:.24,roughness:.91})
+        ?new T.MeshStandardMaterial({color:0x2f1c1b,emissive:0x713018,emissiveIntensity:.12,roughness:.94})
         :new T.MeshStandardMaterial({map:terrainMaps.lava,color:0x9d4518,emissive:0xffac6e,emissiveMap:terrainMaps.lava,emissiveIntensity:1.25,roughness:.8}),
       foliage:physical
-        ?new T.MeshStandardMaterial({color:0x456d44,roughness:.98})
+        ?new T.MeshStandardMaterial({color:0x304a31,roughness:.98})
         :new T.MeshStandardMaterial({map:terrainMaps.canopy,color:0xced5b1,roughness:1,transparent:true,alphaTest:.22,side:T.DoubleSide}),
-      foam:new T.MeshBasicMaterial({color:0xceefff,transparent:true,opacity:.36,depthWrite:false}),
+      foam:new T.MeshBasicMaterial({color:physical?0x668d9b:0xceefff,transparent:true,opacity:physical?.15:.36,depthWrite:false}),
       rust:architectural(env==='ice'?0xcb612a:0x794b30,true),
       terrain:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.97,metalness:0,flatShading:true})
     };
