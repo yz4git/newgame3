@@ -130,3 +130,22 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
 .visual-picker button:focus-visible{outline:2px solid #b9ffe8;outline-offset:2px}
 @media(max-height:720px){.visual-picker{gap:2px;padding:1px 0}.visual-picker>span{font-size:6px;flex-basis:49px}.visual-picker button{font-size:6.5px;padding:4px 1px}}
 @media(max-height:600px){.visual-picker button{padding:3px 1px}.visual-picker>span{font-size:6px}}
+
+/* 4.2 phone-play review: transient labels should not cover the center lane.
+   Preserve complete information, just compact the radio and objective panels. */
+@media(max-width:600px){
+  .stage-cue{top:17%;left:6%;right:9%;padding:8px 12px 7px;max-width:340px;box-shadow:0 3px 11px #0005}
+  .stage-cue strong{font-size:16px;line-height:1.12}
+  .stage-cue .cue-heading{margin-bottom:5px;font-size:8px}
+  .stage-cue .cue-track{margin-top:6px}
+  .stage-cue.radio{top:18%;left:6%;right:9%;padding:7px 10px 6px}
+  .stage-cue.radio strong{font-size:10px;line-height:1.4}
+  .stage-cue.boss{top:21%}
+  .stage-cue.boss strong{font-size:15px}
+  .sector-strip{top:11%;left:6%}
+  .message.tactical{top:26%;left:9%;right:9%}
+  .message.tactical strong{font-size:clamp(12px,3.9vw,16px)}
+  .field-objective{top:clamp(95px,12%,124px);width:min(43%,188px);padding:7px 8px 8px 9px}
+  .field-objective strong{font-size:clamp(10px,2.9vw,12px);margin:4px 0 5px}
+  .field-objective p{font-size:7px;margin-top:4px}
+}
