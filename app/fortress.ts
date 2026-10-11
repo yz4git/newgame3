@@ -277,8 +277,8 @@ export class FortressBackground {
       warm:physical?new T.MeshBasicMaterial({color:new T.Color(env==='lava'?0xff780d:0xff9b47).multiplyScalar(.17),toneMapped:true}):glow(env==='lava'?0xff780d:0xff9b47,1.75),
       glass:new T.MeshPhysicalMaterial({color:0x17263b,metalness:.68,roughness:.13,clearcoat:1}),
       rock:natural(terrainMaps.rock,env==='lava'?0x55515c:0x6d747a),
-      ice:natural(terrainMaps.ice,0x82bad4,.46,.18),
-      snow:natural(terrainMaps.snow,0xcbdde5,.9,.075),
+      ice:natural(terrainMaps.ice,physical?0x51778a:0x82bad4,.65,.18),
+      snow:natural(terrainMaps.snow,physical?0x7e98a8:0xcbdde5,.94,.075),
       moss:natural(terrainMaps.moss,0x557357,.94,.18),
       water:physical
         ?new T.MeshStandardMaterial({color:new T.Color(env==='jungle'?0x255e51:env==='ice'?0x315477:0x28647b).multiplyScalar(.55),roughness:.80,metalness:.02})
