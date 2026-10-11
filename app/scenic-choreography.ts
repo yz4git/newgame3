@@ -235,8 +235,8 @@ export class ScenicChoreography3D {
   // Large articulated landmarks carry the stage identity; they live at the
   // margins and never overlap the gameplay corridor at z>=0.
   for(const rig of this.machines){
-   const show=!reduced&&(!performance||rig.index===0)&&mix.readability<.68&&
-     (mix.showAmbientStructures||rig.index===0||!active); // quiet one side silhouette remains during combat
+   // No repeatedly scrolling machinery along the playfield margins.
+   const show=false;
    rig.root.visible=show;
    const phase=wrap(rig.index*31+10-t*(g.stage===2?2.5:3.6),48);
    rig.root.position.set(rig.side*(10.9+rig.index*.7),phase-24,-10-rig.index*3);
@@ -253,7 +253,7 @@ export class ScenicChoreography3D {
   // unlike theatrical flybys it never traverses the center. Full three-ship
   // traffic appears only once the FX director says the sky is clear.
   const patrol=active&&!boss&&!reduced&&mix.moment==='combat';
-  this.patrolCount=patrol&&mix.readability<.32?(mix.showFlybys&&!performance?3:1):0;
+  this.patrolCount=0; // No repeating wraparound perimeter freight loops.
   this.traffic.visible=this.patrolCount>0;
   if(patrol)for(const freight of this.freighters){
    freight.root.visible=freight.index<this.patrolCount;
@@ -291,7 +291,7 @@ export class ScenicChoreography3D {
   // this entire layer is empty and the distant terrain is exposed.
   const serviceClock=wrap(t+g.stage*3.7,24);
   const servicing=serviceClock>2.4&&serviceClock<11.8;
-  if(rails&&servicing)for(let i=0;i<4;i++){
+  if(false&&rails&&servicing)for(let i=0;i<4;i++){
    const side=i%2?1:-1,depth=Math.floor(i/2);
    const sweep=(serviceClock-2.4)/9.4;
    const x=side*(10.4+depth*.95-2.0*Math.sin(Math.PI*sweep));
