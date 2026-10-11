@@ -39,12 +39,32 @@ test('3D rails and stage scenery retreat from the danger corridor; Classic remai
   ['rail-district-motion','scenic-choreography','world-alive-scene','render','fortress'].map(read));
  assert.match(rails,/readability>\.62/);
  assert.match(rails,/mix\.readability>\.30/);
- assert.match(rails,/this\.panels\.color\.setHex\(palette\[0\]\)\.multiplyScalar\(\.66\)/);
+ assert.match(rails,/this\.panels\.color\.setHex\(palette\[0\]\)\.multiplyScalar\(\.40\)/);
  assert.match(scenic,/mix\.readability<\.32/);
  assert.match(world,/mix\.readability<\.30/);
  assert.match(render,/setColorAt\(coreCount\+\+,this\.shotColor\.setHex\(0xffe1bf\)\)/);
  assert.match(render,/setColorAt\(coreCount\+\+,this\.shotColor\.setHex\(0xbbf5ff\)\)/);
  assert.match(render,/usesRebuiltGraphics\(\)\?\.20:\.52/);
  assert.match(fortress,/if\(usesRebuiltGraphics\(\)\)/);
- assert.match(fortress,/physical\?\.46:env/);
+ assert.match(fortress,/lamp:physical\?new T\.MeshBasicMaterial/);
+});
+
+test('World Rebuild grades actual background materials without dimming foreground game assets',async()=>{
+ const read=n=>readFile('app/'+n+'.ts','utf8');
+ const [background,rails,world,scenic,surface,cliffs,volume,render]=await Promise.all(
+  ['fortress','rail-district-motion','world-alive-scene','scenic-choreography',
+    'living-surface','environment-art','volumetric-cinematics','render'].map(read));
+ assert.match(background,/toneMapped:true\}\):glow\(STAGES\[stage\]\.color/);
+ assert.match(background,/new T\.Color\(color\)\.multiplyScalar\(paint\?\.43:\.47\)/);
+ assert.match(background,/emissiveIntensity:\.31/);
+ assert.match(rails,/panels\.color\.setHex\(palette\[0\]\)\.multiplyScalar\(\.40\)/);
+ assert.match(world,/panelMat\.color\.setHex\(colors\[1\]\)\.multiplyScalar\(\.39\)/);
+ assert.match(scenic,/bright\.color\.setHex\(tint\[1\]\)\.multiplyScalar\(\.41\)/);
+ assert.match(surface,/if\(this\.rebuilt\)mat\.color\.multiplyScalar\(\.56\)/);
+ assert.match(cliffs,/baseColor=new T\.Color\([\s\S]*?\)\.multiplyScalar\(\.57\)/);
+ assert.match(volume,/lanterns\.material as T\.MeshBasicMaterial\)\.color\.copy\(envColor\)/);
+ // Illumination is not globally reduced, which would also dull the
+ // foreground players, enemies and target markers.
+ assert.match(render,/this\.key\.color\.setHex\(theme\.sun\);this\.key\.intensity=theme\.light/);
+ assert.match(render,/this\.shotColor\.setHex\(bullet\.enemy\?/);
 });
