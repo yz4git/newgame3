@@ -273,7 +273,7 @@ export class ColossalCinematics {
   const t=this.t,speed=1+(g.stage===1?.2:0),moving=g.state==='transition';
   for(let i=0;i<this.monoliths.length;i++){
    const piece=this.monoliths[i],side=i?1:-1;
-   piece.visible=!reduced&&(!performance||i===0)&&(mix?.showAmbientStructures??true);
+   piece.visible=false; // No perpetual side megastructures cycling between all six stages.
    piece.position.set(side*(13.1+(i%2)*1.0),mod(25+i*51-t*3.9*speed,118)-59,-8.6-i*2);
    piece.rotation.set(.10*side,Math.sin(t*.1+i)*.1,side*(.025+Math.sin(t*.26+i)*.045));
    piece.scale.setScalar(i?1.05:1.17);
@@ -283,7 +283,7 @@ export class ColossalCinematics {
    }
   }
   // 3.4 invasion director owns the opening encounter; fleet patrol resumes later.
-  this.flight.visible=!reduced&&(!g.boss||g.boss.dead)&&g.time>11&&g.state==='playing'&&!mix; // 3.4 invasion fleet is the sole active flyby owner
+  this.flight.visible=false; // Eliminate recurring off-axis carrier pass; gameplay ships remain. // 3.4 invasion fleet is the sole active flyby owner
   // Capital ships execute a foreground side pass and a deep center-lane departure.
   for(let i=0;i<this.carriers.length;i++){
    const craft=this.carriers[i];
