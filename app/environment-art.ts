@@ -59,7 +59,7 @@ function cliffRelief(g:T.Group,p:EnvironmentPalette,side:number,v:number,stage:n
   const env=STAGES[stage].environment,columns=9,rows=9,positions:number[]=[],colors:number[]=[],indices:number[]=[];
   const topCoords:{x:number;y:number;z:number}[]=[];
   const n=(row:number,col:number,seed:number)=>noise(v*53+row*11,stage*43+col*7,seed);
-  const baseColor=new T.Color(env==='ice'?0x789ab1:env==='jungle'?0x435b42:env==='lava'?0x413d40:0x66747f);
+  const baseColor=new T.Color(env==='ice'?0x789ab1:env==='jungle'?0x435b42:env==='lava'?0x413d40:0x66747f).multiplyScalar(.57);
   const variation=env==='ice'?.27:env==='jungle'?.25:.31;
   function vert(x:number,y:number,z:number,c:T.Color){
     const index=positions.length/3;positions.push(x,y,z);colors.push(c.r,c.g,c.b);return index;
