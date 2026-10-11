@@ -228,7 +228,7 @@ export class StageSequences3D{
    c.root.rotation.set(0,0,Math.sin(t*.09+g.stage)*.025);
    c.root.scale.setScalar((performance?.84:1)*(.82+.18*gesture));
    for(const mat of c.materials){
-    mat.opacity=(mat instanceof T.MeshBasicMaterial?.60:1)*opacity*.80;
+    mat.opacity=(mat instanceof T.MeshBasicMaterial ? .60 : 1)*opacity*.80;
    }
    c.moving.rotation.set(0,0,0);
    c.moving.position.set(0,0,0);c.secondary.position.set(0,0,0);
