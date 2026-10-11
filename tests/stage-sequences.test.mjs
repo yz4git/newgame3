@@ -11,7 +11,8 @@ test('six world stories have eighteen separately authored one-shot environmental
  assert.equal(ids.flat().length,18);
  assert.equal(new Set(ids.flat()).size,18);
  assert.match(s,/const timing=\[\.13,\.43,\.72\]/);
- for(let stage=0;stage<6;stage++)assert.match(s,new RegExp('stage==='+stage));
+ for(let stage=0;stage<5;stage++)assert.match(s,new RegExp('stage==='+stage));
+ assert.match(s,/else\{ \/\/ Magma breach/);
  for(let stage=0;stage<6;stage++)assert.match(s,new RegExp('case '+stage+':'));
  assert.match(s,/elapsed=clock-beat/);
  assert.match(s,/const y=52-elapsed\*6\.0/);
