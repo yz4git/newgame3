@@ -94,10 +94,24 @@ function construct(stage:number,act:number):Chapter{
    add(moving,accent,0,1.5,-6.1,13,.52,.50);
    for(let k=0;k<5;k++)gem(secondary,plate,-5+k*2.5,3,-6.4,.4,.5,.4,k);
   }else if(act===1){
-   cylinder(still,dark,0,0,-7.5,4.6,.9);
-   const dish=cylinder(moving,plate,0,0,-5.7,3.4,.23);dish.scale.y=.65;
-   add(moving,glimmer,0,0,-5.2,.20,7.1,.12);
-   for(let k=0;k<3;k++)add(still,dark,-4.4+k*4,0,-6.8,.5,8.8,.9);
+   // A parabolic, recessed radar mounted on an off-axis ship mast.
+   // No flat front-facing disk: exposed trusses and a curved metal bowl.
+   for(const side of[-1,1]){
+    add(still,dark,side*4.1,-.5,-8.1,1.3,10.2,2.1);
+    const strut=add(still,plate,side*3.2,1.6,-7.0,.52,8.4,.6);strut.rotation.z=side*.25;
+   }
+   add(still,dark,-.2,-3.7,-6.5,8.4,1.3,2.1);
+   const dome=new T.Mesh(new T.SphereGeometry(3.35,20,8,0,Math.PI*2,0,Math.PI*.52),dark);
+   dome.rotation.x=Math.PI/2;dome.position.set(.4,1.0,-6.0);dome.scale.set(1,1,.55);still.add(dome);
+   const rim=new T.Mesh(new T.TorusGeometry(3.4,.24,7,32),plate);
+   rim.position.set(.4,1.0,-5.25);moving.add(rim);
+   for(let k=0;k<7;k++){
+    const a=k*Math.PI*2/7;
+    const arm=add(moving,k%2?plate:accent,.4+Math.cos(a)*1.7,1+Math.sin(a)*1.7,-5.0,.20,3.25,.35);
+    arm.rotation.z=a+Math.PI/2;
+   }
+   cylinder(secondary,accent,.4,1,-4.75,.59,.8);
+   add(secondary,glimmer,.4,1,-4.3,.12,2.5,.17);
   }else{
    const hull=gem(still,dark,0,0,-7,6.5,2.3,2.0);hull.rotation.z=.12;
    const tower=add(moving,plate,1.9,2.5,-5.1,2.7,4.0,1.2);tower.rotation.z=.15;
@@ -152,12 +166,25 @@ function construct(stage:number,act:number):Chapter{
   if(act===0){
    for(let k=0;k<5;k++)rootTree(moving,accent,(k-2)*2.1,-1.4,-5.5,7.5,(k-2)*.16);
   }else if(act===1){
-   cylinder(still,dark,0,0,-6.7,4.4,.9);
-   for(let k=0;k<8;k++){const a=k*Math.PI/4;
-    const leaf=gem(moving,k%2?accent:plate,Math.cos(a)*3.0,Math.sin(a)*3.0,-5.3,1.0,1.7,.7,k);
-    leaf.rotation.z=a;
+   // Uneven stone ziggurat, overgrown arches and three independently
+   // unfolding root clusters, not an emblem-like perfect circular wreath.
+   const slabs=[[-2.7,-2.4,4.3,2.7],[1.2,-1.4,5.5,3.6],[-.5,1.6,6.8,2.5]];
+   for(let k=0;k<slabs.length;k++){
+    const [x,y,w,h]=slabs[k];
+    const stone=add(still,k===1?plate:dark,x,y,-7.5+k*.8,w,h,1.7);
+    stone.rotation.z=(k-1)*.26;
    }
-   gem(secondary,plate,0,0,-4.8,1.3,1.9,.9);
+   for(let k=0;k<8;k++){
+    const ang=(k-3.8)*.38;
+    rootTree(still,k%3?dark:plate,Math.sin(ang)*5.3,-2.1+(k%3)*2.0,-6.6,7.5,ang);
+   }
+   for(let k=0;k<5;k++){
+    const x=[-4.8,-2.9,.2,3.6,4.7][k],y=[2.5,4.6,-.5,2.2,-2.2][k];
+    const leaf=gem(moving,k%2?accent:plate,x,y,-5.2,1.2,2.2,.9,k);
+    leaf.rotation.z=(k-2)*.30;
+   }
+   const guardian=gem(secondary,plate,0,1,-4.4,1.8,2.6,1.2);
+   guardian.rotation.z=.24;
   }else{
    for(let k=0;k<10;k++){
     const a=k*2.399,r=.7+Math.sqrt(k)*1.5;
@@ -174,12 +201,23 @@ function construct(stage:number,act:number):Chapter{
    for(let k=0;k<7;k++)gem(moving,accent,-4+k*1.3,(k%3-1)*1.9,-5.7,.58,1.15,.50,k);
    cylinder(secondary,dark,0,0,-6.1,3.5,1.0);
   }else if(act===1){
-   add(still,dark,0,5,-6.3,9,1.0,1.5);
-   for(let k=0;k<4;k++){
-    cylinder(moving,plate,-3+k*2,0,-5.2,.54,6.1);
-    add(moving,accent,-3+k*2,-2.6,-4.9,1.3,1.0,.72);
+   // Huge steel forge-bed and staggered hammer presses with real
+   // depth-bearing housings, not a row of isolated cylinder symbols.
+   add(still,dark,0,5.2,-7.0,12.1,1.8,2.5);
+   add(still,plate,0,-5.3,-7.0,12.4,1.9,2.8);
+   for(const side of[-1,1]){
+    add(still,dark,side*5.7,-.3,-7.3,1.8,10.5,2.6);
+    const brace=add(still,plate,side*4.9,2.8,-6.7,1.0,5.2,.9);
+    brace.rotation.z=side*.24;
    }
-   add(secondary,glimmer,0,-3.5,-4.7,6,.22,.20);
+   for(let k=0;k<4;k++){
+    const x=-3.3+k*2.25;
+    add(still,dark,x,1.5,-6.45,1.25,6.4,.85);
+    cylinder(moving,plate,x,0,-5.6,.64,5.4);
+    add(moving,accent,x,-2.8,-5.1,1.6,1.1,.90);
+    add(still,plate,x,-4.7,-5.75,2.0,.35,.72);
+   }
+   add(secondary,glimmer,0,-3.9,-4.6,8.1,.20,.30);
   }else{
    cylinder(still,dark,0,-.7,-6.6,5.0,1.2);
    cylinder(still,accent,0,-.7,-5.9,3.8,.2);
