@@ -238,6 +238,14 @@ for(let stage=0;stage<6;stage++){
    chapterIds:chapters,chapterActuators:view.background.scenes.slice(1).map(x=>x.getObjectByName('stage-primary-motion')?.children.length??0),
    realWorldRoot:!!view.scene.getObjectByName('world-space-cinematics-v31')};
  });
+ // The cinematic isolation screenshot clears test enemies on purpose.
+ // Restore two real actors before auditing normal gameplay's ship geometry.
+ await rich.page.evaluate(()=>{
+  const {game:g,view}=window.__nova;
+  g.spawn('fighter',-3.7,7.5);
+  g.spawn('corvette',3.8,10.3);
+  view.draw(g,.016,16.7);
+ });
  results.worldRebuild[stage]=await rich.page.evaluate(()=>{
   const {view,game:g}=window.__nova;
   const scene=view.background.scenes.some(m=>m.name==='physical-world-centrepiece-'+g.stage);
