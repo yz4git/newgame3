@@ -293,7 +293,10 @@ export class WorldAliveScene {
    const preparing=clamp(1-Math.abs(launchAge-1.3)/2.0,0,1);
    const liveOpen=disabled?0:alarm?.45:.12;
    const opening=Math.max(liveOpen,!disabled?preparing:0);
-   bay.root.visible=underway&&!reduced;
+   // Paired backdrop docks now appear only as a brief enemy launch reveal;
+   // permanent identical left/right platforms were visually repetitive.
+   // Enemy spawning and collision remain owned by Game and never change.
+   bay.root.visible=underway&&!reduced&&!disabled&&preparing>.08;
    bay.root.position.y=12.5+Math.sin(t*.22+bay.index)*.22;
    bay.lid.position.x=bay.side*(.8+opening*2.15);
    bay.lid.rotation.y=bay.side*opening*.66;
