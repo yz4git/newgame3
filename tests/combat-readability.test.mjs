@@ -33,31 +33,29 @@ test('visual planning never touches combat simulation, saves or enemy hitboxes',
  assert.deepEqual(g.snapshot(),before);
 });
 
-test('3D rails and stage scenery retreat from the danger corridor; Classic remains separate',async()=>{
- const read=n=>readFile('app/'+n+'.ts','utf8');
- const [rails,scenic,world,render,fortress]=await Promise.all(
-  ['rail-district-motion','scenic-choreography','world-alive-scene','render','fortress'].map(read));
- assert.match(rails,/readability>\.62/);
- assert.match(rails,/mix\.readability>\.30/);
- assert.match(rails,/this\.panels\.color\.setHex\(palette\[0\]\)\.multiplyScalar\(\.40\)/);
- assert.match(scenic,/mix\.readability<\.32/);
- assert.match(world,/mix\.readability<\.30/);
+test('The real World Rebuild removes repeating side architecture and preserves bullet colors',async()=>{
+ const [render,fortress,scenic,world]=await Promise.all(
+ ['render','fortress','scenic-choreography','world-alive-scene'].map(n=>readFile('app/'+n+'.ts','utf8')));
+ assert.doesNotMatch(render,/RailDistrictMotion3D/);
+ assert.match(render,/railDistricts:null/);
  assert.match(render,/setColorAt\(coreCount\+\+,this\.shotColor\.setHex\(0xffe1bf\)\)/);
  assert.match(render,/setColorAt\(coreCount\+\+,this\.shotColor\.setHex\(0xbbf5ff\)\)/);
  assert.match(render,/usesRebuiltGraphics\(\)\?\.20:\.52/);
- assert.match(fortress,/if\(usesRebuiltGraphics\(\)\)/);
+ assert.match(fortress,/if\(usesRebuiltGraphics\(\)\)continue; \/\/ No edge wedges/);
  assert.match(fortress,/lamp:physical\?new T\.MeshBasicMaterial/);
+ assert.match(scenic,/this\.patrolCount=0/);
+ assert.match(world,/p\.visible=!reduced&&g\.state==='transition'/);
 });
 
 test('World Rebuild grades actual background materials without dimming foreground game assets',async()=>{
  const read=n=>readFile('app/'+n+'.ts','utf8');
- const [background,rails,world,scenic,surface,cliffs,volume,render]=await Promise.all(
-  ['fortress','rail-district-motion','world-alive-scene','scenic-choreography',
+ const [background,world,scenic,surface,cliffs,volume,render]=await Promise.all(
+  ['fortress','world-alive-scene','scenic-choreography',
     'living-surface','environment-art','volumetric-cinematics','render'].map(read));
  assert.match(background,/toneMapped:true\}\):glow\(STAGES\[stage\]\.color/);
  assert.match(background,/new T\.Color\(color\)\.multiplyScalar\(paint\?\.43:\.47\)/);
  assert.match(background,/emissiveIntensity:\.31/);
- assert.match(rails,/panels\.color\.setHex\(palette\[0\]\)\.multiplyScalar\(\.40\)/);
+ assert.match(background,/terrain\.visible=landscapeBeats\.includes\(row\)/);
  assert.match(world,/panelMat\.color\.setHex\(colors\[1\]\)\.multiplyScalar\(\.39\)/);
  assert.match(scenic,/bright\.color\.setHex\(tint\[1\]\)\.multiplyScalar\(\.41\)/);
  assert.match(surface,/if\(this\.rebuilt\)mat\.color\.multiplyScalar\(\.56\)/);
