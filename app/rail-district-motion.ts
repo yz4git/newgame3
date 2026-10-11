@@ -40,11 +40,11 @@ function panel(parent:T.Object3D,material:T.Material,x:number,y:number,z:number,
 export class RailDistrictMotion3D {
  readonly root=new T.Group();
  private railRoot=new T.Group();
- private panels=new T.MeshStandardMaterial({color:0x718999,metalness:.55,roughness:.48});
- private edges=new T.MeshStandardMaterial({color:0x3c556a,metalness:.40,roughness:.60});
+ private panels=new T.MeshStandardMaterial({color:0x718999,metalness:.22,roughness:.82});
+ private edges=new T.MeshStandardMaterial({color:0x3c556a,metalness:.16,roughness:.84});
  private interiors=new T.MeshStandardMaterial({color:0x1b3041,metalness:.28,roughness:.81});
- private highlights=new T.MeshBasicMaterial({color:0x607b84,transparent:true,opacity:.08,depthWrite:false,toneMapped:true});
- private geology=new T.MeshStandardMaterial({color:0x788188,roughness:.89,metalness:0});
+ private highlights=new T.MeshBasicMaterial({color:0x506b73,transparent:true,opacity:.045,depthWrite:false,toneMapped:true});
+ private geology=new T.MeshStandardMaterial({color:0x5a646c,roughness:.96,metalness:0});
  private modules:Module[]=[];
  private landmarks:LateralLandmark[]=[];
  private visibleLandmarks=0;
@@ -73,8 +73,8 @@ export class RailDistrictMotion3D {
    [0x876957,0x624437,0x33251f,0xab805d,0x655147]
   ][stage]??[0x758c98,0x415767,0x1c3040,0x8bafb4,0x707b82];
   // Industrial edges are readable silhouettes, not competition for enemy shots.
-  this.panels.color.setHex(palette[0]).multiplyScalar(.66);this.edges.color.setHex(palette[1]).multiplyScalar(.75);
-  this.interiors.color.setHex(palette[2]).multiplyScalar(.8);this.highlights.color.setHex(palette[3]).multiplyScalar(.48);this.geology.color.setHex(palette[4]).multiplyScalar(.72);
+  this.panels.color.setHex(palette[0]).multiplyScalar(.40);this.edges.color.setHex(palette[1]).multiplyScalar(.52);
+  this.interiors.color.setHex(palette[2]).multiplyScalar(.51);this.highlights.color.setHex(palette[3]).multiplyScalar(.26);this.geology.color.setHex(palette[4]).multiplyScalar(.46);
  }
  private typeFor(stage:number,segment:number,side:number):Kind{
   // Deterministic asymmetric runs: left and right do not mirror one another.
