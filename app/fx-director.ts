@@ -7,6 +7,8 @@ export interface FxMix {
  readonly density:number;
  readonly intensity:number;
  readonly crowded:boolean;
+ /** Smooth 0..1 gameplay occlusion budget; suppresses secondary scenery before it masks shots. */
+ readonly readability:number;
  readonly showFlybys:boolean;
  readonly showAmbientStructures:boolean;
  readonly showBossArchitecture:boolean;
@@ -16,9 +18,10 @@ export interface FxMix {
  readonly activeAge:number;
 }
 export const FX_MIX_LIMITS={
- bulletCrowd:38,enemyCrowd:17,
- quietDensity:.23,normalDensity:.56,openDensity:.82,
- maxGameplayRoll:.028,maxGameplayZoom:1.045,
+ bulletCrowd:24,enemyCrowd:12,
+ sceneryFadeStartBullets:6,sceneryFadeFullBullets:25,
+ quietDensity:.15,normalDensity:.42,openDensity:.82,
+ maxGameplayRoll:.012,maxGameplayZoom:1.018,
  maxWarpRoll:.30,maxWarpZoom:1.16,
  maxConcurrentShowpieces:3,
  facilityCueSeconds:1.9,novaCueSeconds:1.35,bossFinishSeconds:2.5
@@ -54,20 +57,23 @@ export class FxDirector {
   const boss=!!g.boss&&!g.boss.dead;
   const crowded=g.bullets.length>=FX_MIX_LIMITS.bulletCrowd||
     g.enemies.filter(e=>!e.dead).length>=FX_MIX_LIMITS.enemyCrowd;
+  const bulletPressure=Math.max(0,Math.min(1,(g.bullets.length-FX_MIX_LIMITS.sceneryFadeStartBullets)/(FX_MIX_LIMITS.sceneryFadeFullBullets-FX_MIX_LIMITS.sceneryFadeStartBullets)));
+  const enemyPressure=Math.max(0,Math.min(1,(g.enemies.filter(e=>!e.dead).length-3)/10));
+  const readability=(g.state==='playing')?Math.min(1,Math.max(bulletPressure,enemyPressure,boss?.42:0)):0;
   const moment:FxMoment=g.state==='transition'?'warp':
     active&&this.cue!.kind==='boss-finish'?'boss-finish':
     boss?'boss':active?this.cue!.kind:
     g.state==='playing'?'combat':'ambient';
-  const quiet=crowded||performance||reduced||moment==='boss'||moment==='boss-finish';
+  const quiet=crowded||readability>.55||performance||reduced||moment==='boss'||moment==='boss-finish';
   const density=reduced?0:performance||crowded?FX_MIX_LIMITS.quietDensity:
     moment==='combat'?FX_MIX_LIMITS.normalDensity:
-    moment==='ambient'?FX_MIX_LIMITS.openDensity:.33;
+    moment==='ambient'?FX_MIX_LIMITS.openDensity:.30;
   const strength=active?Math.max(0,1-age/this.cue!.duration):0;
   this.lastMoment=moment;
   return {
-   moment,density,intensity:strength,crowded,
-   showFlybys:!reduced&&!performance&&!crowded&&!boss&&moment==='combat',
-   showAmbientStructures:!quiet&&moment==='combat',
+   moment,density:density*(1-readability*.48),intensity:strength,crowded,readability,
+   showFlybys:!reduced&&!performance&&!crowded&&!boss&&readability<.22&&moment==='combat',
+   showAmbientStructures:!quiet&&readability<.28&&moment==='combat',
    showBossArchitecture:!reduced&&boss&&moment==='boss',
    showWarpArchitecture:!reduced&&moment==='warp',
    cameraRollCap:reduced?0:moment==='warp'?FX_MIX_LIMITS.maxWarpRoll:FX_MIX_LIMITS.maxGameplayRoll,
