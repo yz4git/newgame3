@@ -3,6 +3,7 @@ import type {Game,GameEvent} from './sim.ts';
 import type {FxMix} from './fx-director.ts';
 import {WORLD_ALIVE_STAGES,WORLD_ALIVE_BUDGET} from './world-alive.ts';
 import {STAGES} from './stages.ts';
+import {approachReveal,easeReveal} from './scenery-transitions.ts';
 
 const clamp=(x:number,a:number,b:number)=>Math.min(b,Math.max(a,x));
 const ease=(x:number)=>{const u=clamp(x,0,1);return u*u*(3-2*u);};
@@ -41,6 +42,7 @@ export class WorldAliveScene {
  private coreMat=new T.MeshBasicMaterial({color:0x64818f,transparent:true,opacity:.29,depthWrite:false,toneMapped:true});
  private burntMat=new T.MeshStandardMaterial({color:0x443d3c,metalness:.22,roughness:.81});
  private bays:Bay[]=[];
+ private bayReveal=[0,0];private exitReveal=0;
  private structures:T.Group[]=[];
  private rotors:T.Group[]=[];
  private vault:BossVault;
@@ -242,6 +244,7 @@ export class WorldAliveScene {
   this.innerMat.color.setHex(colors[2]).multiplyScalar(.48);
    this.coreMat.color.setHex(colors[3]).multiplyScalar(.62);this.burntMat.color.setHex(colors[4]).multiplyScalar(.48);
   this.main.clear();this.bayLayer.clear();this.rotors=[];this.structures=[];
+  this.bayReveal=[0,0];this.exitReveal=0;
   this.bays=[this.makeBay(-1,0,stage),this.makeBay(1,1,stage)];
   this.structures=[this.makeMegastructure(-1,stage,0),this.makeMegastructure(1,stage,1)];
   this.buildVault(stage);
@@ -273,14 +276,16 @@ export class WorldAliveScene {
   const underway=g.state==='playing'||g.state==='transition';
   const approach=ease(clamp((g.time/duration-.025)/.16,0,1));
   this.intro=approach;
+  this.exitReveal=approachReveal(this.exitReveal,g.state==='transition'&&!reduced?1:0,dt,.85);
   for(let i=0;i<this.structures.length;i++){
    const p=this.structures[i],side=i===0?-1:1;
    // Stage edge towers should not endlessly track past the fighter;
    // real enemy-launch hangars and scripted boss vault remain untouched.
-   p.visible=!reduced&&g.state==='transition';
+   // Escape towers move in from outside the camera instead of materializing.
+   p.visible=this.exitReveal>.004;
    // The bulk of a real megastructure arrives from the distant horizon and
    // glides along the perimeter, never wiping the center attack lane.
-   p.position.set(side*(11.5-(1-approach)*1.1),-3.5+(1-approach)*36+Math.sin(t*.17+i)*1.2,-13.4-i*1.4);
+   p.position.set(side*(11.5-(1-approach)*1.1+(1-easeReveal(this.exitReveal))*14),-3.5+(1-approach)*36+Math.sin(t*.17+i)*1.2,-13.4-i*1.4);
    p.rotation.z=side*Math.sin(t*.09+i)*.035;
   }
   for(let i=0;i<this.rotors.length;i++){
@@ -296,8 +301,14 @@ export class WorldAliveScene {
    // Paired backdrop docks now appear only as a brief enemy launch reveal;
    // permanent identical left/right platforms were visually repetitive.
    // Enemy spawning and collision remain owned by Game and never change.
-   bay.root.visible=underway&&!reduced&&!disabled&&preparing>.08;
-   bay.root.position.y=12.5+Math.sin(t*.22+bay.index)*.22;
+   // A game-side sortie may start suddenly, but the decorative dock glides
+   // in from above the field and withdraws over time. No 1-frame pop.
+   const active=underway&&!reduced&&!disabled&&preparing>.08;
+   this.bayReveal[bay.index]=approachReveal(this.bayReveal[bay.index],active?1:0,dt,.57);
+   const reveal=easeReveal(this.bayReveal[bay.index]);
+   bay.root.visible=reveal>.001;
+   bay.root.position.y=12.5+(1-reveal)*19+Math.sin(t*.22+bay.index)*.22;
+   bay.root.scale.setScalar(.78+.22*reveal);
    bay.lid.position.x=bay.side*(.8+opening*2.15);
    bay.lid.rotation.y=bay.side*opening*.66;
    bay.engine.rotation.z=t*(alarm?.64:.25)*(bay.side);
