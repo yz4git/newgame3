@@ -217,7 +217,7 @@ export class StageSequences3D{
   this.activeIds=[];
   for(const c of this.chapters){
    const beat=duration*timing[c.act],elapsed=clock-beat;
-   // One slow physical pass per event. No wrap(), %, teleports, or RNG.
+   // One slow physical pass per event, no cycling, teleportation or RNG.
    const y=52-elapsed*6.0;
    const opacity=distanceReveal(y,23,57);
    c.root.visible=opacity>.002&&!reduced;
