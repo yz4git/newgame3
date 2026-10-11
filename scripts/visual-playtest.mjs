@@ -2,14 +2,15 @@ import {chromium} from 'playwright';
 import fs from 'node:fs/promises';
 const root='visual-review';
 await fs.mkdir(root,{recursive:true});
-const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+let browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const errors=[];
 const results={};
 async function scene(page,name,delay=650){
  await page.waitForTimeout(delay);
  const path=root+'/'+name+'.jpg';
  const picture=await page.screenshot({path,type:'jpeg',quality:49,animations:'disabled',scale:'css'});
- console.log('NOVA_SHOT:'+name+':'+picture.toString('base64'));
+ // Upload the JPEG via GitHub Actions artifact; avoid multi-megabyte console logs.
+ console.log('NOVA_SHOT:'+name+':'+picture.byteLength+' bytes');
  return path;
 }
 async function setup(viewport,{renderer='canvas',visual='rebuilt'}={}){
@@ -110,7 +111,15 @@ results.smallLayout=await small.page.evaluate(()=>{
  const ids=['title-screen','title-top','title-lockup','title-menu','start-button','bossrush-button','help-button'];
  return Object.fromEntries(ids.map(id=>{const r=(document.getElementById(id)||document.querySelector('.'+id)).getBoundingClientRect();return [id,{y:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}]}));
 });
+// Discard two active 2D canvases before starting the heavy true-3D scene.
+// SwiftShader runs out of graphics memory if all three mobile views stay live.
+await mobile.context.close();await small.context.close();
+await browser.close();
+browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const rich=await setup({width:390,height:844},{renderer:'webgl'});
+// This is an actual hardware-API 3D review. Never mistake Canvas fallback for
+// successfully checking the rebuilt scene.
+if(await rich.page.evaluate(()=>window.__nova.view.constructor.name)!=='View')throw new Error('World Rebuild GPU review fell back to Canvas; gameplay visuals were NOT verified');
 await rich.page.locator('#start-button').click();
 await rich.page.waitForFunction(()=>window.__nova?.game.state==='playing');
 await rich.page.evaluate(()=>{const g=window.__nova.game;g.invulnerable=900;g.shotTimer=1000;g.time=64*.095;g.encounterSeen={stage:true,mini:true};});
