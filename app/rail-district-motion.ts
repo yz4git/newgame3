@@ -43,7 +43,7 @@ export class RailDistrictMotion3D {
  private panels=new T.MeshStandardMaterial({color:0x718999,metalness:.55,roughness:.48});
  private edges=new T.MeshStandardMaterial({color:0x3c556a,metalness:.40,roughness:.60});
  private interiors=new T.MeshStandardMaterial({color:0x1b3041,metalness:.28,roughness:.81});
- private highlights=new T.MeshBasicMaterial({color:0x78b0b6,transparent:true,opacity:.12,depthWrite:false,toneMapped:true});
+ private highlights=new T.MeshBasicMaterial({color:0x607b84,transparent:true,opacity:.08,depthWrite:false,toneMapped:true});
  private geology=new T.MeshStandardMaterial({color:0x788188,roughness:.89,metalness:0});
  private modules:Module[]=[];
  private landmarks:LateralLandmark[]=[];
@@ -72,8 +72,9 @@ export class RailDistrictMotion3D {
    [0x728a6b,0x425c4c,0x253c30,0x8aa98d,0x526951],
    [0x876957,0x624437,0x33251f,0xab805d,0x655147]
   ][stage]??[0x758c98,0x415767,0x1c3040,0x8bafb4,0x707b82];
-  this.panels.color.setHex(palette[0]);this.edges.color.setHex(palette[1]);
-  this.interiors.color.setHex(palette[2]);this.highlights.color.setHex(palette[3]);this.geology.color.setHex(palette[4]);
+  // Industrial edges are readable silhouettes, not competition for enemy shots.
+  this.panels.color.setHex(palette[0]).multiplyScalar(.66);this.edges.color.setHex(palette[1]).multiplyScalar(.75);
+  this.interiors.color.setHex(palette[2]).multiplyScalar(.8);this.highlights.color.setHex(palette[3]).multiplyScalar(.48);this.geology.color.setHex(palette[4]).multiplyScalar(.72);
  }
  private typeFor(stage:number,segment:number,side:number):Kind{
   // Deterministic asymmetric runs: left and right do not mirror one another.
@@ -226,7 +227,7 @@ export class RailDistrictMotion3D {
   let pieces=0;root.traverse(o=>{if(o instanceof T.Mesh)pieces++;});
   return {root,head,rotor,side,pieces};
  }
- private moveLateralLandmarks(g:Game,reduced:boolean,performance:boolean,crowded:boolean){
+ private moveLateralLandmarks(g:Game,reduced:boolean,performance:boolean,crowded:boolean,readability:number){
   this.visibleLandmarks=0;this.greatestSidewaysMotion=0;
   for(const l of this.landmarks){
    const clock=reduced?0:g.visualTime;
@@ -240,12 +241,14 @@ export class RailDistrictMotion3D {
    // Cubic easing gives an obvious arrival, long working beat and departure.
    const eased=amount*amount*(3-2*amount);
    l.root.visible=amount>.025||reduced;
-   if(performance&&crowded&&l.side>0)l.root.visible=false;
+   // Giant noninteractive arms give way completely to dangerous bullet patterns.
+   if(crowded||readability>.62)l.root.visible=false;
+   else if(performance&&l.side>0)l.root.visible=false;
    if(!l.root.visible)continue;
    const travel=7.7*eased;
    l.root.position.set(l.side*(17.7-travel),
     4.5+(g.stage%3-1)*1.3+Math.sin(clock*.19+l.side*2)*1.5,
-    -2.65);
+    -6.0);
    l.root.rotation.z=l.side*((1-eased)*.27+Math.sin(clock*.26+g.stage)*.075);
    l.root.rotation.y=l.side*(1-eased)*.23;
    l.head.position.set(-l.side*(.8+1.0*Math.sin(clock*.76+g.stage+l.side)*eased),Math.sin(clock*.58+l.side)*.65*eased,.25);
@@ -295,7 +298,7 @@ export class RailDistrictMotion3D {
   // 28m chapters with real empty intervals; side machinery travels in X and
   // hinges in place, independently of the vertical terrain scroll.
   const distance=g.time*4.4,first=Math.floor((distance-36)/RAIL_DISTRICT_LIMITS.spacing);
-  this.moveLateralLandmarks(g,reduced,performance,mix.crowded);
+  this.moveLateralLandmarks(g,reduced,performance,mix.crowded,mix.readability);
   this.activeModules=0;this.movingModules=0;this.currentGeometryCount=0;
   this.leftModules=0;this.rightModules=0;this.activeVariants=[];
   for(const initial of [...this.modules]){
@@ -312,7 +315,7 @@ export class RailDistrictMotion3D {
    // side throughout the campaign.
    const middle=Math.max(0,Math.min(2,
      Math.round(distance/RAIL_DISTRICT_LIMITS.spacing-first-(m.side>0?1:0))));
-   const quiet=reduced||performance||mix.crowded||g.state==='transition';
+   const quiet=reduced||performance||mix.crowded||mix.readability>.30||g.state==='transition';
    const missing=(segment+g.stage*3+(m.side>0?2:0))%5===0;
    const visible=Math.abs(y)<35 && (!quiet||m.slot===middle) && (quiet||!missing);
    m.root.visible=visible;
@@ -338,7 +341,7 @@ export class RailDistrictMotion3D {
    m.root.rotation.z=this.cue?.kind==='collapse'&&m.side===this.cue.side?
      m.side*pulse*.12:Math.sin(time*.19+offset)*.085+(noise(segment,stageKey(m.side,g.stage),19)-.5)*.28;
    (m.signal.material as T.MeshBasicMaterial).opacity=Math.min(RAIL_DISTRICT_LIMITS.pulseOpacity,
-    .045+pulse*.12);
+    .025+pulse*.08);
    this.movingModules++;
   }
   this.motionSpan=this.activeModules>0?Math.max(2.25,this.greatestSidewaysMotion):this.greatestSidewaysMotion;
