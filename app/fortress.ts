@@ -83,6 +83,7 @@ export function fortressChip(p:Palette,stage:number,v:number){
   }
   for(const s of[-1,1]){
     if(usesRebuiltGraphics())continue; // No edge wedges, roofs or rail modules.
+    // Classic-only corridor fence.
     {
       block(g,p.dark,shift+s*4.30,0,-5.05,.40,8,.52);block(g,p.steel,shift+s*4.42,0,-4.80,.14,8,.13);
       for(let i=0;i<4;i++){block(g,p.warm,shift+s*4.11,-3+i*2,-4.97,.035,.27,.025);block(g,p.plate,shift+s*3.90,-3+i*2,-5.11,.35,.33,.12);}
@@ -109,7 +110,7 @@ export function fortressChip(p:Palette,stage:number,v:number){
       if(stage===1)for(let j=0;j<3;j++){const shard=ball(g,p.steel,x+noise(j,v,3)*3-1.5,j*2-2,-8.0,1.1,.75,.9);shard.rotation.set(v*.4,j*.5,v);}
     }
   }
-  if(v===3||v===7){
+  if(!usesRebuiltGraphics()&&(v===3||v===7)){
     block(g,p.dark,0,2.4,-4.98,23,.62,.55);block(g,p.plate,0,2.4,-4.64,23,.51,.14);
     for(let i=0;i<14;i++)block(g,p.warm,-10.8+i*1.65,2.4,-4.53,.21,.035,.025);
   }
