@@ -60,11 +60,11 @@ export class VolumetricCinematics {
    m.instanceMatrix.setUsage(T.DynamicDrawUsage);m.frustumCulled=false;
    parent.add(m);return m;
   };
-  this.motes=instance(new T.TetrahedronGeometry(.12,0),new T.MeshBasicMaterial({color:0xa7c6d6,transparent:true,opacity:.40,depthWrite:false,toneMapped:true}),LIMIT.atmosphere,this.backdrop);
+  this.motes=instance(new T.TetrahedronGeometry(.12,0),new T.MeshBasicMaterial({color:0x849eae,transparent:true,opacity:.26,depthWrite:false,toneMapped:true}),LIMIT.atmosphere,this.backdrop);
   this.flybys=instance(new T.IcosahedronGeometry(.5,0),new T.MeshStandardMaterial({color:0xb1bfce,roughness:.85,metalness:.15}),LIMIT.nearFlybys,this.near);
   this.contrails=instance(new T.CylinderGeometry(.09,.21,1,5),new T.MeshBasicMaterial({color:0x9dcfff,transparent:true,opacity:.40,depthWrite:false,toneMapped:true}),LIMIT.contrails,this.shipFx);
   this.fragments=instance(new T.IcosahedronGeometry(.38,0),new T.MeshStandardMaterial({color:0xb4ad9f,metalness:.64,roughness:.43,transparent:true,opacity:.92,depthWrite:true}),LIMIT.shards,this.actorFx);
-  this.lanterns=instance(new T.SphereGeometry(.12,6,4),new T.MeshBasicMaterial({color:0xe2eedf,transparent:true,opacity:.63,depthWrite:false,toneMapped:true}),32,this.backdrop);
+  this.lanterns=instance(new T.SphereGeometry(.12,6,4),new T.MeshBasicMaterial({color:0x93abb0,transparent:true,opacity:.30,depthWrite:false,toneMapped:true}),32,this.backdrop);
   this.enemyJets=instance(new T.ConeGeometry(.16,.75,5),new T.MeshBasicMaterial({color:0xf1ab78,transparent:true,opacity:.36,depthWrite:false,toneMapped:true}),96,this.shipFx);
   this.missileSpirals=instance(new T.TorusGeometry(.19,.045,4,10),new T.MeshBasicMaterial({color:0xeea16c,transparent:true,opacity:.52,depthWrite:false,toneMapped:true}),48,this.actorFx);
   for(let i=0;i<9;i++){
@@ -93,7 +93,7 @@ export class VolumetricCinematics {
   }
   for(let i=0;i<LIMIT.gantries;i++){
    const group=new T.Group();group.name='parallax-gantry-'+i;
-   const metal=new T.MeshStandardMaterial({color:0x4f6778,metalness:.62,roughness:.50});
+   const metal=new T.MeshStandardMaterial({color:0x2e4758,metalness:.25,roughness:.82});
    const dark=new T.MeshStandardMaterial({color:0x273e52,metalness:.44,roughness:.6});
    const frame=(x:number,y:number,z:number,w:number,h:number,d:number,mat=metal)=>{
     const box=new T.Mesh(new T.BoxGeometry(w,h,d),mat);box.position.set(x,y,z);box.castShadow=false;group.add(box);
@@ -104,7 +104,7 @@ export class VolumetricCinematics {
    rim.position.set(0,.5,.6);rim.rotation.x=.16;group.add(rim);
    group.userData.rim=rim;this.near.add(group);this.gantries.push(group);
   }
-  const rotorMaterial=new T.MeshStandardMaterial({color:0x92bbc8,metalness:.65,roughness:.30});
+  const rotorMaterial=new T.MeshStandardMaterial({color:0x4e6f80,metalness:.25,roughness:.78});
   for(let i=0;i<4;i++){
    const torus=new T.Mesh(new T.TorusGeometry(1.5,.12,6,32),rotorMaterial);
    torus.name='volumetric-dock-rotor-'+i;torus.castShadow=false;
@@ -159,9 +159,9 @@ export class VolumetricCinematics {
  private setStage(stage:number){
   if(this.currentStage===stage)return;this.currentStage=stage;
   const envColor=stageMats[stage];
-  (this.motes.material as T.MeshBasicMaterial).color.copy(envColor);
-  (this.lanterns.material as T.MeshBasicMaterial).color.copy(envColor).lerp(new T.Color(0xffffff),.23);
-  (this.flybys.material as T.MeshStandardMaterial).color.setHex(stage===3?0xb6d3e5:stage===4?0x708d62:stage===5?0x69504a:0x758fa0);
+  (this.motes.material as T.MeshBasicMaterial).color.copy(envColor).multiplyScalar(.55);
+  (this.lanterns.material as T.MeshBasicMaterial).color.copy(envColor).lerp(new T.Color(0xffffff),.12).multiplyScalar(.46);
+  (this.flybys.material as T.MeshStandardMaterial).color.setHex(stage===3?0xb6d3e5:stage===4?0x708d62:stage===5?0x69504a:0x758fa0).multiplyScalar(.48);
   (this.contrails.material as T.MeshBasicMaterial).color.setHex(stage===5?0xffbb89:0x8cceeb);
   (this.fragments.material as T.MeshStandardMaterial).color.setHex(stage===5?0xaf7957:0xaaaeb3);
   for(const cone of this.sweeps){cone.material.color.copy(envColor);}
