@@ -42,12 +42,14 @@ test('Destruction debris, shockwaves and contrails are bounded and recycled',asy
  assert.match(s,/Math\.min\(jets,34\)/);
  assert.match(s,/m\.material\.opacity=\(1-u\)/);
 });
-test('All six major structures possess real moving arms and 3D rotating rings',async()=>{
+test('All six major structures have individual world-scale moving mechanisms',async()=>{
  const model=await readFile('app/world-rebuild.ts','utf8');
  const bg=await readFile('app/fortress.ts','utf8');
  assert.match(model,/kinetic-world-assembly/);
- assert.match(model,/kinetic-ring-/);
- assert.match(model,/kinetic-arm-/);
+ assert.match(model,/HERO_MOTION_IDS/);
+ assert.match(model,/hero-actuator-/);
+ assert.match(model,/stage===0/);
+ assert.match(model,/stage===5/);
  assert.match(model,/export function animateWorldSetpiece/);
  assert.match(bg,/animateWorldSetpiece\(m,t,reduced\|\|performance\)/);
 });
