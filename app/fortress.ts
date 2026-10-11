@@ -9,7 +9,8 @@ import {noise,zoneAt,stageDistance,fortressVariant,rowScenery,LANDMARKS,terrainX
 export {fortressVariant} from './bg-map.ts';
 import {Game} from './sim.ts';
 import {worldClock} from './motion.ts';
-import {SCENES,sceneVisible} from './scenery.ts';
+import {SCENES} from './scenery.ts';
+import {distanceReveal} from './scenery-transitions.ts';
 import {sceneModel} from './scene-art.ts';
 import {animateWorldSetpiece} from './world-rebuild.ts';
 import {usesRebuiltGraphics} from './visual-style.ts';
@@ -162,8 +163,40 @@ function landmarkModel(p:Palette,entry:Landmark,stage:number){
 }
 export class FortressBackground {
   root=new T.Group();private stage=-1;private templates=new Map<number,T.Group>();private palette!:Palette;private scenes:T.Group[]=[];private rows=new Map<number,T.Group>();private materials:T.Material[]=[];private objects:T.Group[]=[];
+  private fades=new WeakMap<T.Group,{material:T.Material;opacity:number;transparent:boolean;depthWrite:boolean}[]>();
   private far:T.Group[]=[];private clouds:(T.Sprite|T.Mesh<T.IcosahedronGeometry,T.MeshBasicMaterial>)[]=[];private surface?:LivingSurface;distance=0;
   constructor(){this.setStage(0);}
+  // Fade each finite world landmark with its OWN cloned materials. The stage
+  // palette is shared with the floor and target facilities and must not fade.
+  private prepareReveal(model:T.Group){
+    if(!usesRebuiltGraphics())return;
+    const owned=new Map<T.Material,T.Material>();
+    model.traverse(o=>{
+      if(!(o instanceof T.Mesh))return;
+      const own=(source:T.Material)=>{
+        let material=owned.get(source);
+        if(!material){material=source.clone();owned.set(source,material);this.materials.push(material);}
+        return material;
+      };
+      if(Array.isArray(o.material))o.material=o.material.map(own);
+      else o.material=own(o.material);
+    });
+    this.fades.set(model,[...owned.values()].map(material=>({
+      material,opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite
+    })));
+  }
+  private reveal(model:T.Group,alpha:number){
+    model.visible=alpha>.001;
+    if(!model.visible)return;
+    for(const item of this.fades.get(model)??[]){
+      const transparent=item.transparent||alpha<.995,depthWrite=item.depthWrite&&alpha>=.995;
+      item.material.opacity=item.opacity*alpha;
+      if(item.material.transparent!==transparent||item.material.depthWrite!==depthWrite){
+        item.material.transparent=transparent;item.material.depthWrite=depthWrite;
+        item.material.needsUpdate=true;
+      }
+    }
+  }
   private setStage(stage:number){
     if(stage===this.stage)return;this.stage=stage;this.root.clear();for(const r of this.rows.values())this.disposeRow(r);this.rows.clear();for(const t of [...this.templates.values(),...this.objects,...this.far,...this.scenes])t.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});this.surface?.dispose();this.surface=undefined;for(const m of this.materials)m.dispose();for(const cloud of this.clouds)if(cloud instanceof T.Mesh)cloud.geometry.dispose();this.objects=[];this.far=[];this.clouds=[];this.scenes=[];this.templates.clear();
     const env=STAGES[stage].environment,physical=usesRebuiltGraphics();
@@ -205,8 +238,8 @@ export class FortressBackground {
       terrain:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.97,metalness:0,flatShading:true})
     };
     this.palette=p;this.materials=Object.values(p);
-    this.scenes=SCENES[stage].map(entry=>{const m=sceneModel(p,entry,stage);m.rotation.z=entry.angle;this.root.add(m);m.traverse(o=>{if(o instanceof T.Mesh&&o.name==='generated-landmark')this.materials.push(o.material as T.Material);});return m;});
-    this.objects=LANDMARKS[stage].map(entry=>{const m=environmentLandmark(p,entry,stage)??landmarkModel(p,entry,stage);m.scale.set(entry.scale,entry.scale,1);m.position.x=entry.x;m.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});this.root.add(m);return m;});
+    this.scenes=SCENES[stage].map(entry=>{const m=sceneModel(p,entry,stage);m.rotation.z=entry.angle;this.root.add(m);m.traverse(o=>{if(o instanceof T.Mesh&&o.name==='generated-landmark')this.materials.push(o.material as T.Material);});this.prepareReveal(m);return m;});
+    this.objects=LANDMARKS[stage].map(entry=>{const m=environmentLandmark(p,entry,stage)??landmarkModel(p,entry,stage);m.scale.set(entry.scale,entry.scale,1);m.position.x=entry.x;m.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});this.root.add(m);this.prepareReveal(m);return m;});
     if(env==='ocean'||env==='ice'||env==='jungle'||env==='lava'){
       this.surface=new LivingSurface(stage);this.root.add(this.surface.root);
     }
@@ -254,8 +287,8 @@ export class FortressBackground {
     }
     for(const [row,m]of this.rows)if(!live.has(row)){this.root.remove(m);this.disposeRow(m);this.rows.delete(row);}
     const t=worldClock(g),ocean=STAGES[g.stage].environment==='ocean';
-    this.objects.forEach((m,i)=>{const e=LANDMARKS[g.stage][i];m.position.y=e.distance-this.distance;m.visible=Math.abs(m.position.y)<42;if(ocean&&e.kind==='submarine'){m.position.z=Math.sin(t*.9+i)*.13;m.rotation.z=Math.sin(t*.45+i)*.012;}});
-    this.scenes.forEach((m,i)=>{const e=SCENES[g.stage][i];m.position.set(e.x,e.distance-this.distance,ocean&&e.kind==='artwork'?Math.sin(t*.65)*.12:0);m.rotation.z=e.angle+(ocean&&e.kind==='artwork'?Math.sin(t*.45)*.009:0);m.visible=sceneVisible(e,this.distance);if(i===0&&m.visible&&usesRebuiltGraphics())animateWorldSetpiece(m,t,reduced||performance);});
+    this.objects.forEach((m,i)=>{const e=LANDMARKS[g.stage][i];m.position.y=e.distance-this.distance;if(usesRebuiltGraphics())this.reveal(m,distanceReveal(m.position.y,24,54));else m.visible=Math.abs(m.position.y)<42;if(ocean&&e.kind==='submarine'){m.position.z=Math.sin(t*.9+i)*.13;m.rotation.z=Math.sin(t*.45+i)*.012;}});
+    this.scenes.forEach((m,i)=>{const e=SCENES[g.stage][i];m.position.set(e.x,e.distance-this.distance,ocean&&e.kind==='artwork'?Math.sin(t*.65)*.12:0);m.rotation.z=e.angle+(ocean&&e.kind==='artwork'?Math.sin(t*.45)*.009:0);if(usesRebuiltGraphics())this.reveal(m,distanceReveal(m.position.y,24,55+e.height*.22));else m.visible=Math.abs(e.distance-this.distance)<36+e.height*.5;if(i===0&&m.visible&&usesRebuiltGraphics())animateWorldSetpiece(m,t,reduced||performance);});
     this.surface?.draw(worldClock(g),this.distance,performance,reduced);
     this.far.forEach((m,i)=>{m.position.y=((i*13-this.distance*.30)%91+91)%91-45;});
     this.clouds.forEach((m,i)=>{
