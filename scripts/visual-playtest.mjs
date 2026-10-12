@@ -199,6 +199,7 @@ await scene(rich.page,'11-gpu-chain-bursts',580);
 results.worldRebuild={};
 results.cinematicLayers={};
 results.worldStageEpisodes={};
+results.worldStageImpact={};
 for(let stage=0;stage<6;stage++){
  await rich.page.evaluate(stage=>{
   const {game:g,view}=window.__nova;
@@ -216,6 +217,23 @@ for(let stage=0;stage<6;stage++){
   const {game:g,view}=window.__nova;
   g.time=[64,74,82,78,82,86][stage]*.43+8.4;
   g.visualTime=g.time;g.enemies=[];g.bullets=[];
+  view.draw(g,.016,16.7);
+ },stage);
+ await rich.page.evaluate(stage=>{
+  const {game:g,view}=window.__nova;
+  g.time=[64,74,82,78,82,86][stage]*.43+5.99;
+  g.visualTime=g.time;
+  view.draw(g,.016,16.7);
+ },stage);
+ results.worldStageImpact[stage]=await rich.page.evaluate(()=>{
+  const d=window.__nova.view.getDiagnostics().stageSequences;
+  const episode=d.activePhases?.find(x=>x.phase==='action'&&x.impact>.8);
+  return {stage:d.stage,id:episode?.id,phase:episode?.phase,impact:episode?.impact??0,fragments:episode?.fragments??0};
+ });
+ await scene(rich.page,'world-unique-impact-'+String(stage+1).padStart(2,'0'),160);
+ await rich.page.evaluate(stage=>{
+  const {game:g,view}=window.__nova;
+  g.time=[64,74,82,78,82,86][stage]*.43+8.4;g.visualTime=g.time;
   view.draw(g,.016,16.7);
  },stage);
  await scene(rich.page,'world-unique-sequence-'+String(stage+1).padStart(2,'0'),240);
@@ -467,6 +485,9 @@ if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw n
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
+if(Object.keys(results.worldStageImpact).length!==6||
+ !Object.values(results.worldStageImpact).every(x=>x.phase==='action'&&x.impact>.8&&x.fragments>=4))
+ throw new Error('One-time environmental catastrophe invisible at impact moment: '+JSON.stringify(results.worldStageImpact));
 if(new Set(Object.values(results.worldStageEpisodes).map(x=>x.info.availableIds.join('/'))).size!==6||
  !Object.values(results.worldStageEpisodes).every(x=>x.rootMounted&&x.info.stageSpecific&&x.info.loops===0&&x.info.availableIds.length===3&&x.info.activeEpisodes.length>=1&&x.visibleMeshes>=5))
  throw new Error('Stage-specific event sequences absent from real GPU or repeated: '+JSON.stringify(results.worldStageEpisodes));
