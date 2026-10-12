@@ -59,7 +59,7 @@ export class StageSpectacleParticles{
    b.scale.set(.65,scale*(1.0+action*3.6)*(i%2?.75:1.3),1);
   }
   (warningBars[0]?.material as T.MeshBasicMaterial).opacity=.24*pressure;
-  const fade=envelope*(1-reduced*.8);
+  const fade=envelope*(reduced?.20:1);
   const shardCount=reduced?0:performance?16:32;
   const streamCount=reduced?0:performance?10:20;
   let visible=0,clouds=0;
