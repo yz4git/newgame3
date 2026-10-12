@@ -10,7 +10,7 @@ export function stageSpectaclePose(stage:number,act:number,elapsed:number){
  const [warning,breach,impact,settle]=Object.values(SPECTACLE_TIMING);
  const anticipation=easeReveal((t-warning)/1.4)*(1-easeReveal((t-breach)/1.5));
  const motion=easeReveal((t-breach)/(impact-breach));
- const strike=c(1-Math.abs(t-impact)/.90);
+ const strike=easeReveal((t-(impact-.30))/.30)*(1-easeReveal((t-(impact+.44))/1.10));
  const falling=easeReveal((t-impact)/3.2);
  const lingering=falling*(1-easeReveal((t-12)/6));
  const phase:SpectaclePhase=t<warning?'approach':t<breach?'warning':t<settle?'action':'aftermath';
