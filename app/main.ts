@@ -254,13 +254,33 @@ function events(){
     }
   }
 }
+// Fire each cinematic sound once per pass. No synthesis on the render loop:
+ // cached effect buffers, bounded voices and user-unlocked audio only.
+let soundtrackStage=-1,lastSoundTime=0;
+const playedSpectacles=new Set<string>();
+function stageSpectacleAudio(){
+ if(!(view instanceof View)||game.mode!=='campaign'||game.state!=='playing')return;
+ if(soundtrackStage!==game.stage||game.time<lastSoundTime-.30){
+  playedSpectacles.clear();soundtrackStage=game.stage;
+ }
+ lastSoundTime=game.time;
+ for(const event of view.getStageSoundMoments()){
+  const kind=event.phase==='warning'?'warning':event.impact>.50?'impact':null;
+  if(!kind)continue;
+  const key=event.id+':'+kind;
+  if(playedSpectacles.has(key))continue;
+  playedSpectacles.add(key);
+  if(kind==='warning')audio.event({type:'warning',x:0});
+  else audio.event({type:'explode',x:0,size:2.6});
+ }
+}
 function loop(now:number){
   if(!ready){requestAnimationFrame(loop);return;}
   const frameMs=lastTime?now-lastTime:16.67;lastTime=now;const dt=Math.min(.05,frameMs/1000);
   accumulator+=dt;const controls=input();let count=0;
   while(accumulator>=STEP&&count<4){game.update(STEP,controls);accumulator-=STEP;count++;}
   if(game.state!==lastState){lastState=game.state;if(game.state==='result')result();else screens();}
-  events();audio.update(game.state,game.stage,!!game.boss&&!game.boss.dead||!!game.encounter&&!game.encounter.dead);view.draw(game,dt*GAME_SPEED,frameMs);drawPopups(now);updateUI(now);
+  events();audio.update(game.state,game.stage,!!game.boss&&!game.boss.dead||!!game.encounter&&!game.encounter.dead);view.draw(game,dt*GAME_SPEED,frameMs);stageSpectacleAudio();drawPopups(now);updateUI(now);
   requestAnimationFrame(loop);
 }
 async function boot(){
