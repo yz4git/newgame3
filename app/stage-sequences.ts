@@ -3,6 +3,8 @@ import type {Game} from './sim.ts';
 import {STAGES} from './stages.ts';
 import {distanceReveal,easeReveal} from './scenery-transitions.ts';
 import {worldClock} from './motion.ts';
+import {stageSpectaclePose} from './stage-spectacle-timeline.ts';
+import {StageSpectacleParticles} from './stage-spectacle-particles.ts';
 
 /** Three ONE-TIME encounters for each campaign world, not modulo-animated props.
  * A separate physical choreography accompanies the actual backgrounds.
@@ -18,7 +20,8 @@ export const STAGE_SEQUENCE_IDS=[
 ] as const;
 const timing=[.13,.43,.72] as const;
 const clamp=(x:number,a=0,b=1)=>Math.max(a,Math.min(b,x));
-type Chapter={root:T.Group; moving:T.Group;secondary:T.Group;materials:T.Material[];id:string;act:number;};
+type RestPose={x:number;y:number;z:number;rx:number;ry:number;rz:number;sx:number;sy:number;sz:number;index:number;};
+type Chapter={root:T.Group;moving:T.Group;secondary:T.Group;still:T.Group;materials:T.Material[];id:string;act:number;particles:StageSpectacleParticles;rests:Map<T.Object3D,RestPose>;};
 const add=(g:T.Group,m:T.Material,x:number,y:number,z:number,w:number,h:number,d:number)=>{
  const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);g.add(mesh);return mesh;
 };
@@ -225,7 +228,15 @@ function construct(stage:number,act:number):Chapter{
    for(let k=0;k<6;k++)gem(secondary,accent,(k-3)*.9,-2.7+(k%3)*1.2,-4.8,.45,.7,.4,k);
   }
  }
- return {root,moving,secondary,materials,id:STAGE_SEQUENCE_IDS[stage][act],act};
+ const particles=new StageSpectacleParticles(stage,act);
+ root.add(particles.root);
+ const rests=new Map<T.Object3D,RestPose>();
+ for(const group of [still,moving,secondary])group.children.forEach((obj,index)=>{
+  rests.set(obj,{x:obj.position.x,y:obj.position.y,z:obj.position.z,
+   rx:obj.rotation.x,ry:obj.rotation.y,rz:obj.rotation.z,
+   sx:obj.scale.x,sy:obj.scale.y,sz:obj.scale.z,index});
+ });
+ return {root,still,moving,secondary,materials,id:STAGE_SEQUENCE_IDS[stage][act],act,particles,rests};
 }
 
 export class StageSequences3D{
@@ -233,11 +244,12 @@ export class StageSequences3D{
  private chapters:Chapter[]=[];
  private stage=-1;
  private activeIds:string[]=[];
+ private activePhases:{id:string;phase:string;impact:number;fragments:number}[]=[];
  constructor(){this.root.name='stage-authored-nonrepeating-cinematics';}
  private setStage(stage:number){
   if(this.stage===stage)return;
   this.root.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});
-  for(const c of this.chapters)for(const mat of c.materials)mat.dispose();
+  for(const c of this.chapters){for(const mat of c.materials)mat.dispose();c.particles.dispose();}
   this.root.clear();this.chapters=[];
   this.stage=stage;
   for(let act=0;act<3;act++){
@@ -252,7 +264,7 @@ export class StageSequences3D{
   this.root.visible=g.mode==='campaign'&&g.state!=='result';
   if(!this.root.visible)return;
   const duration=STAGES[g.stage].duration,clock=worldClock(g);
-  this.activeIds=[];
+  this.activeIds=[];this.activePhases=[];
   for(const c of this.chapters){
    const beat=duration*timing[c.act],elapsed=clock-beat;
    // One slow physical pass per event, no cycling, teleportation or RNG.
@@ -261,13 +273,15 @@ export class StageSequences3D{
    c.root.visible=opacity>.002&&!reduced;
    if(!c.root.visible)continue;
    this.activeIds.push(c.id);
-   const t=Math.max(0,elapsed),gesture=easeReveal(clamp(t/8));
+   const t=Math.max(0,elapsed),phase=stageSpectaclePose(g.stage,c.act,elapsed);
+   const gesture=phase.action,fallout=phase.fallout,impact=phase.impact;
    c.root.position.set([-.9,1.5,-.6][c.act],y,-.4);
    c.root.rotation.set(0,0,Math.sin(t*.09+g.stage)*.025);
    c.root.scale.setScalar((performance?.84:1)*(.82+.18*gesture));
    for(const mat of c.materials){
     mat.opacity=(mat instanceof T.MeshBasicMaterial ? .60 : 1)*opacity*.80;
    }
+   c.moving.scale.setScalar(1);c.secondary.scale.setScalar(1);
    c.moving.rotation.set(0,0,0);
    c.moving.position.set(0,0,0);c.secondary.position.set(0,0,0);
    c.secondary.rotation.set(0,0,0);
@@ -299,5 +313,5 @@ export class StageSequences3D{
    }
   }
  }
- diagnostics(){return {stage:this.stage,activeEpisodes:this.activeIds,availableIds:STAGE_SEQUENCE_IDS[this.stage],stageSpecific:true,loops:0};}
+ diagnostics(){return {stage:this.stage,activeEpisodes:this.activeIds,activePhases:this.activePhases,availableIds:STAGE_SEQUENCE_IDS[this.stage],stageSpecific:true,loops:0};}
 }
