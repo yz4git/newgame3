@@ -367,5 +367,6 @@ export class StageSequences3D{
    this.activePhases.push({id:c.id,phase:phase.phase,impact:phase.impact,fragments:fx.fragments});
    }
   }
+ impactPulse(){return Math.max(0,...this.activePhases.map(x=>x.impact));}
  diagnostics(){return {stage:this.stage,activeEpisodes:this.activeIds,activePhases:this.activePhases,availableIds:STAGE_SEQUENCE_IDS[this.stage],stageSpecific:true,loops:0};}
 }
