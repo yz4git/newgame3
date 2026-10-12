@@ -270,6 +270,13 @@ export class View {
     this.scenic?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     this.aliveScene?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     this.stageSequences?.draw(game,dt,visualReduced,this.quality==='PERFORMANCE');
+    // Brief, restrained environmental impact; no prolonged HUD-obscuring zoom.
+    if(dt>0&&!visualReduced&&game.state==='playing'){
+      const pulse=this.stageSequences?.impactPulse()??0;
+      this.shake=Math.max(this.shake,Math.min(.20,pulse*.19));
+      this.cinematicKick=Math.max(this.cinematicKick,pulse*.40);
+      this.key.intensity=STAGES[game.stage].light*(1+Math.min(.035,pulse*.035));
+    }
     this.atmosphere.position.y=-this.background.distance*.018;
     for(let i=0;i<200;i++){
       this.starData[i*4+1]-=scroll*dt*.25;if(this.starData[i*4+1]<-40)this.starData[i*4+1]+=80;
