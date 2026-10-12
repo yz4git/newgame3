@@ -286,30 +286,85 @@ export class StageSequences3D{
    c.moving.position.set(0,0,0);c.secondary.position.set(0,0,0);
    c.secondary.rotation.set(0,0,0);
    switch(g.stage){
-    case 0: // The ore splits violently then drifts off in opposite directions.
-     c.moving.rotation.z=t*(c.act===2?.19:.06);
-     c.moving.scale.setScalar(.7+.3*gesture);
-     c.secondary.position.x=Math.sin(t*.28)*2.4;break;
-    case 1: // Storm surge, sonar rotation and one submarine ascent.
-     c.moving.position.y=(c.act===2?1:-1)*Math.sin(t*.30)*1.6;
-     c.moving.rotation.z=c.act===1?Math.sin(t*.24)*.8:Math.sin(t*.13)*.07;
-     c.secondary.rotation.z=t*.12;break;
-    case 2: // Blast iris rotates, lift travels, shield sections split.
-     c.moving.rotation.z=c.act===0?gesture*.65:Math.sin(t*.27)*.3;
-     c.moving.position.y=c.act===1?Math.sin(t*.42)*3:0;
-     c.secondary.scale.setScalar(.7+gesture*.30);break;
-    case 3: // Ice avalanche drops and individual prisms sway.
-     c.moving.position.y=-Math.min(4,t*.33);
-     c.moving.rotation.y=Math.sin(t*.28)*.20;
-     c.secondary.rotation.z=Math.sin(t*.38)*.09;break;
-    case 4: // Forest roots uncurl, altar slowly rotates, giant crown blooms.
-     c.moving.rotation.z=Math.sin(t*.18)*.32;
-     c.moving.scale.setScalar(.63+gesture*.37);
-     c.secondary.rotation.y=t*.15;break;
-    case 5: // Forge presses hammer, magma rises, crucible tips.
-     c.moving.position.y=c.act===1?Math.sin(t*1.1)*2.2:Math.sin(t*.4)*.8;
-     c.moving.rotation.z=c.act===2?Math.sin(t*.26)*.42:0;
-     c.secondary.position.y=Math.sin(t*.7)*.75;break;
+    case 0: // Giant ore-grabber descends, crushes rock and tears the gate apart.
+     c.moving.position.y=c.act===1?(1-gesture)*6-1.5*fallout:-2.2*fallout;
+     c.moving.rotation.z=c.act===2?fallout*.42:fallout*.11;
+     c.secondary.position.x=fallout*2.8;
+     c.secondary.scale.setScalar(.7+impact*.6+fallout*.22);
+     break;
+    case 1: // Floodgate surges, scanning dish locks, submarine rises and remains.
+     c.moving.position.y=c.act===2?-8+gesture*8:c.act===0?gesture*4:Math.sin(t*.34)*.6;
+     c.moving.rotation.y=c.act===1?(-.7+gesture*1.35):0;
+     c.moving.rotation.z=c.act===1?-.6+gesture*1.2:0;
+     c.secondary.position.y=c.act===0?fallout*3:c.act===2?fallout*2.2:0;
+     break;
+    case 2: // Iris shutters slide, elevator actually rises and armor fractures.
+     c.moving.rotation.z=c.act===0?-gesture*.66:c.act===2?gesture*.26:0;
+     c.moving.position.y=c.act===1?-6+gesture*10:0;
+     c.secondary.scale.setScalar(.65+fallout*.45);
+     c.secondary.rotation.z=c.act===2?fallout*.3:0;
+     break;
+    case 3: // Fault shears, avalanche falls and frozen observatory rises.
+     c.moving.position.y=c.act===2?gesture*4.7:-fallout*4.8;
+     c.moving.rotation.y=fallout*.29;
+     c.secondary.position.x=fallout*1.6;
+     c.secondary.rotation.z=fallout*.24;
+     break;
+    case 4: // Buried roots erupt; stone altar unfolds into the canopy.
+     c.moving.position.y=-6.5+gesture*7.2;
+     c.moving.rotation.z=fallout*(c.act===1?.28:.15);
+     c.moving.scale.setScalar(.40+gesture*.60);
+     c.secondary.rotation.y=fallout*.48;
+     c.secondary.scale.setScalar(.5+fallout*.55);
+     break;
+    case 5: // Lava vents, hydraulic rams strike, vessel tips and pours.
+     c.moving.position.y=c.act===1?5.8-gesture*8:fallout*1.2;
+     c.moving.rotation.z=c.act===2?fallout*.65:0;
+     c.secondary.position.y=c.act===2?-fallout*3:impact*1.0;
+     c.secondary.scale.setScalar(.75+fallout*.3);
+     break;
+   }
+   // Individually articulated members deform the setpiece. Always restore
+   // each original pose before evaluation: deterministic seek/restart behavior.
+   for(const [object,rest]of c.rests){
+    object.position.set(rest.x,rest.y,rest.z);
+    object.rotation.set(rest.rx,rest.ry,rest.rz);
+    object.scale.set(rest.sx,rest.sy,rest.sz);
+    const i=rest.index,side=i%2?-1:1;
+    if(object.parent===c.moving){
+     if(g.stage===0){
+      object.position.x+=side*(c.act===1?-.95*gesture+3.5*fallout:2.3*fallout);
+      object.position.y+=c.act===0?2.1*(1-gesture):-.5*fallout;
+      object.rotation.z+=side*fallout*.33;
+     }else if(g.stage===1){
+      object.position.y+=(c.act===0?side*1.8:c.act===2?1:0)*fallout;
+      object.rotation.y+=c.act===1?side*.36*gesture:0;
+     }else if(g.stage===2){
+      object.position.x+=side*fallout*(c.act===0?2.2:c.act===2?2.7:.3);
+      object.rotation.z+=side*gesture*.39;
+     }else if(g.stage===3){
+      object.position.x+=side*fallout*1.85;
+      object.position.y-=fallout*(i%3)*.83;
+      object.rotation.z+=side*fallout*.45;
+     }else if(g.stage===4){
+      object.scale.set(rest.sx*(.43+gesture*.57),rest.sy*(.32+gesture*.68),rest.sz);
+      object.rotation.z+=side*gesture*.48;
+     }else{
+      object.position.y+=(c.act===1?-3.8*gesture:-.45*fallout)*(i%2?.78:1.08);
+      object.rotation.z+=c.act===2?fallout*(side*.17):0;
+     }
+    }else if(object.parent===c.secondary){
+     object.position.x+=side*fallout*(g.stage===0?2.3:g.stage===4?.9:1.15);
+     object.position.y+=(g.stage===3?-1:g.stage===5?-1.5:1)*fallout*(.55+(i%4)*.21);
+     object.rotation.z+=side*impact*.31;
+    }else if(object.parent===c.still&&(g.stage===0||g.stage===3||g.stage===5)){
+     object.position.x+=side*fallout*.32;
+     object.rotation.z+=side*fallout*.055;
+    }
+   }
+   c.particles.draw(phase,opacity,performance,reduced);
+   const fx=c.particles.diagnostics();
+   this.activePhases.push({id:c.id,phase:phase.phase,impact:phase.impact,fragments:fx.fragments});
    }
   }
  }
