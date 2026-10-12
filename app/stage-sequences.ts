@@ -368,5 +368,6 @@ export class StageSequences3D{
    }
   }
  impactPulse(){return Math.max(0,...this.activePhases.map(x=>x.impact));}
+ soundMoments(){return this.activePhases.filter(x=>x.phase==='warning'||(x.phase==='action'&&x.impact>.5));}
  diagnostics(){return {stage:this.stage,activeEpisodes:this.activeIds,activePhases:this.activePhases,availableIds:STAGE_SEQUENCE_IDS[this.stage],stageSpecific:true,loops:0};}
 }
