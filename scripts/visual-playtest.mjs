@@ -8,7 +8,7 @@ const results={};
 async function scene(page,name,delay=650){
  await page.waitForTimeout(delay);
  const path=root+'/'+name+'.jpg';
- const picture=await page.screenshot({path,type:'jpeg',quality:49,animations:'disabled',scale:'css'});
+ const picture=await page.screenshot({path,type:'jpeg',quality:82,animations:'disabled',scale:'css'});
  // Upload the JPEG via GitHub Actions artifact; avoid multi-megabyte console logs.
  console.log('NOVA_SHOT:'+name+':'+picture.byteLength+' bytes');
  return path;
@@ -561,7 +561,7 @@ if(new Set(Object.values(results.filmWorlds).map(x=>x.film?.look)).size!==6||
  throw new Error('Cinematic solid geometry, stage lighting or pooled detonation missing: '+JSON.stringify(results.filmWorlds));
 if(Object.keys(results.flightWorlds).length!==6||!Object.values(results.flightWorlds).every(samples=>
  samples.length===3&&new Set(samples.map(x=>x.flight.section)).size===3&&samples.every(x=>
-  x.mounted&&x.flight.finite&&x.flight.instances>50&&x.flight.triangles<80000&&x.flight.draws<=8&&
+  x.mounted&&x.flight.finite&&x.flight.instances>50&&x.flight.instances<3000&&x.flight.details>0&&x.flight.triangles<80000&&x.flight.draws<=9&&
   x.corners.every(p=>p.x>0&&p.x<x.frame.width&&p.y>0&&p.y<x.frame.height))))
  throw new Error('Authored 3D route, continuous world or camera framing missing: '+JSON.stringify(results.flightWorlds));
 if(Object.keys(results.worldStageImpact).length!==6||

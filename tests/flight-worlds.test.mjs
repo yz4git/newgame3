@@ -30,8 +30,9 @@ test('continuous worlds are finite, substantial, behind combat and bounded in GP
  for(let stage=0;stage<6;stage++){
   g.start('campaign','normal',stage);g.time=STAGES[stage].duration*.34;world.draw(g);
   const d=world.diagnostics(),bounds=new T.Box3().setFromObject(world.root);
-  assert.ok(d.instances>50&&d.instances<700);
-  assert.ok(d.triangles>6000&&d.triangles<80000&&d.draws<=8);
+  assert.ok(d.instances>50&&d.instances<3000);
+  assert.ok(d.details>0,'facade/deck/stone fittings share one instanced batch');
+  assert.ok(d.triangles>6000&&d.triangles<80000&&d.draws<=9);
   assert.ok(bounds.max.z<-.75,`scenery crosses gameplay plane: ${stage}/${bounds.max.z}`);
   assert.ok(bounds.max.y-bounds.min.y>400);
   assert.equal(d.textureCards,0);assert.equal(d.finite,true);

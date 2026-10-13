@@ -1,3 +1,32 @@
+## NOVA STRIKE 7.1.0 — SCULPTURE, ARCHITECTURE & LIGHT (2026-10-13)
+
+The flight worlds now have deeper architectural detail and clearer physical
+materials at changing camera angles:
+
+- Buildings have recessed glazing, projecting floor ledges, roof parapets,
+  louvers, service hatches, antennas and multiple industrial roof styles.
+  Harbour decks add shipping containers, crane booms and suspended cables;
+  citadel crossings and refinery platforms use inset deck panels.
+- Sanctuary towers use carved buttresses, recessed entrances, stepped crowns
+  and approach stairs. The awakening guardian now has a sculpted faceted face,
+  inset sockets, a projecting nose, angular jaw, shoulders and layered collar.
+- Rivers and seas use denser physical wave geometry and analytic normals.
+  Reflections follow the moving surface in both renderers, including the mobile
+  performance profile. Lava has spatially varying molten veins. Ice cliffs add
+  branch fractures, and forest trees have irregular, layered crowns and branches.
+- The landscape now casts shadows inside the extended landscape shadow frustum.
+  Vertex shading retains relief when the adaptive mobile profile disables that
+  pass. Softer ground fill and a deeper fog range expose sides and near detail.
+- Small facade and deck parts share one instanced fitting batch. Each finite
+  world stays below 3,000 instances, 80,000 triangles and nine draws. Large sets
+  retain their existing 40,000-triangle total budget per stage. No image-backed
+  landscape surfaces, extra lighting passes or new render targets are needed.
+
+Regression coverage checks physical wave slopes and unit normals, paused and
+reduced-motion water, faceted sculpture geometry, mobile material relief,
+all eighteen articulated envelopes, flight framing and touch projection.
+Browser captures retain the complete six-stage review at higher image quality.
+
 ## NOVA STRIKE 7.0.1 — FLIGHT CINEMA (2026-10-13)
 
 The six campaigns now fly through continuous physical locations. An authored
@@ -8,7 +37,7 @@ side angles, with smaller pressure fronts keeping their silhouettes clear.
 - Six finite worlds: orbital refineries, coastal harbour districts, a multi-level
   citadel city, glacial faulted cliffs, a forest river and terraced sanctuary,
   and industrial furnace islands above a flowing lava bed.
-- Forty-two named route sections coordinate banks, dives, climbs and approach
+- Forty-two named route waypoints coordinate banks, dives, climbs and approach
   angles. Terrain turns beneath the flight plane; the real perspective camera
   orbits and changes altitude. Every pose refits the actual flight corners, and
   touch rays use the same camera.

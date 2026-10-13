@@ -84,6 +84,12 @@ export class View {
     this.scene.add(this.fill);
     this.key=new T.DirectionalLight(0xffe8d2,3.8);this.key.position.set(-12,18,25);this.key.castShadow=true;
     this.key.shadow.mapSize.set(1024,1024);Object.assign(this.key.shadow.camera,{left:-19,right:19,top:30,bottom:-30,near:1,far:80});this.key.shadow.bias=-.0006;this.key.shadow.normalBias=.09;this.scene.add(this.key);
+    if(usesRebuiltGraphics()){
+      // Include the real landscape below the flight plane. The former short
+      // shadow frustum ended above most buildings and the water surface.
+      Object.assign(this.key.shadow.camera,{left:-38,right:38,top:55,bottom:-55,far:170});
+      this.key.shadow.camera.updateProjectionMatrix();this.key.shadow.normalBias=.12;
+    }
     this.rim.position.set(16,-5,12);this.scene.add(this.rim,this.blastLight);
     if(usesRebuiltGraphics())this.scene.fog=new T.Fog(this.film.stock.fog,52,108);
     if(this.detonations)this.scene.add(this.detonations.root);

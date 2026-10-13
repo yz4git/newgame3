@@ -1,5 +1,6 @@
 import * as T from 'three/webgpu';
 import {cinematicBox,weatheredRock,bakeRigid} from './cinematic-detail.ts';
+import {shadeSolid,guardianFace} from './physical-surface.ts';
 import {easeReveal as ease} from './scenery-transitions.ts';
 import type {stageSpectaclePose} from './stage-spectacle-timeline.ts';
 
@@ -18,6 +19,9 @@ const PALETTES=[
 ] as const;
 const box=(g:T.Object3D,m:T.Material,x:number,y:number,z:number,w:number,h:number,d:number)=>{
  const mesh=new T.Mesh(cinematicBox(w,h,d),m);mesh.position.set(x,y,z);g.add(mesh);return mesh;
+};
+const fitting=(g:T.Object3D,m:T.Material,x:number,y:number,z:number,w:number,h:number,d:number)=>{
+ const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);g.add(mesh);return mesh;
 };
 function solid(g:T.Object3D,m:T.Material,points:number[][],z:number,depth:number){
  const shape=new T.Shape();points.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();
@@ -48,7 +52,15 @@ function panels(g:T.Object3D,m:T.Material,trim:T.Material,x:number,y:number,z:nu
  for(let row=0;row<rows;row++)for(let col=0;col<columns;col++){
   const xx=x+(col-(columns-1)/2)*cw,yy=y+(row-(rows-1)/2)*ch;
   box(g,m,xx,yy,z,cw-.15,ch-.14,.13);
-  if((row+col)%3===0)for(let k=0;k<3;k++)box(g,trim,xx,yy+(k-1)*.17,z+.10,cw*.50,.065,.06);
+  // Recessed joints, raised edge clamps and service slots give large decks a
+  // useful scale reference instead of identical blank rectangular plates.
+  if((row+col)%3===0){
+   for(let k=0;k<3;k++)fitting(g,trim,xx,yy+(k-1)*.17,z+.10,cw*.50,.065,.06);
+   for(const side of[-1,1])fitting(g,trim,xx+side*cw*.35,yy-ch*.30,z+.11,.10,.22,.08);
+  }else if((row+col)%3===1){
+   fitting(g,trim,xx,yy,z+.10,cw*.50,ch*.38,.08);
+   fitting(g,m,xx,yy,z+.16,cw*.39,ch*.27,.05);
+  }
  }
 }
 function windows(g:T.Object3D,m:T.Material,x:number,y:number,z:number,n:number,step=.55){
@@ -59,7 +71,7 @@ export function buildEpicSet(stage:number,act:number):EpicSet{
  const still=new T.Group(),moving=new T.Group(),secondary=new T.Group(),joints:Joint[]=[];
  const p=PALETTES[stage];
  const materials=p.map((color,i)=>new T.MeshStandardMaterial({color,
-  metalness:stage===3||stage===4?.14:i===2?.75:.52,roughness:i===2?.36:.65,
+  metalness:stage===3||stage===4?.10:i===2?.75:.52,roughness:stage===4?.88:stage===3?.43:i===2?.32:.58,vertexColors:true,
   emissive:i===4?color:0,emissiveIntensity:i===4?1.35:0,
   transparent:true,depthWrite:true}));
  const [dark,metal,trim,natural,light]=materials;
@@ -131,6 +143,8 @@ export function buildEpicSet(stage:number,act:number):EpicSet{
     for(let i=0;i<6;i++){
      box(still,metal,side*13,(i-2.5)*5.2,-5.5,4.8,4.5,4.5);
      windows(still,light,side*13,(i-2.5)*5.2,-3.1,6);
+     fitting(still,dark,side*13,(i-2.5)*5.2,-3.15,3.9,2.1,.15);
+     for(let vent=0;vent<4;vent++)fitting(still,trim,side*13+(vent-1.5)*.6,(i-2.5)*5.2,-3.03,.12,1.6,.10);
     }
     const door=joint('floodgate',side,side*12,0,-7);
     box(door,metal,-side*5,0,0,10,15,2.8);
@@ -152,6 +166,12 @@ export function buildEpicSet(stage:number,act:number):EpicSet{
    beam(radar,trim,[0,-1,-1],[0,1,3],.20);
    const dish=new T.Mesh(new T.SphereGeometry(2.6,28,10,0,Math.PI*2,0,Math.PI*.47),metal);dish.rotation.x=Math.PI/2;dish.scale.z=.5;radar.add(dish);
    ring(radar,trim,0,0,.12,2.58,.12);
+   // The island has a lower observation balcony, ladders and a connected
+   // antenna cluster. Short deck markings are shallow physical inlays.
+   box(still,trim,5.6,4.6,-4.4,6.0,1.2,.38);
+   for(let step=0;step<9;step++)fitting(still,trim,8.28,6+step*.55,-3.2,.22,.18,.22);
+   for(let i=0;i<3;i++)beam(still,trim,[4.5+i*.75,12,-2.6],[4.5+i*.75,12,1.2+i*.35],.09);
+   for(let i=0;i<10;i++)fitting(still,trim,-1.7,-21+i*4.6,-8.18,.22,2.1,.06);
    for(let i=0;i<3;i++){
     const lift=joint('deck-lift',i,-4+(i%2)*8,-12+i*12,-8);
     box(lift,dark,0,0,0,5.3,7.5,1.2);panels(lift,trim,metal,0,0,.7,5,7,2,4);
@@ -239,15 +259,28 @@ export function buildEpicSet(stage:number,act:number):EpicSet{
    for(let i=0;i<5;i++)box(still,i%2?dark:metal,0,-10+i*3,-10+i*.8,22-i*2,11,2.5);
    const guardian=joint('guardian',0,0,3,-7);
    solid(guardian,metal,[[-5,-10],[-8,-3],[-6,8],[-3,12],[3,12],[6,8],[8,-3],[5,-10]],-3,5);
-   solid(guardian,trim,[[-4,-5],[-5,4],[-3,8],[3,8],[5,4],[4,-5],[0,-8]],2,1.4);
+   guardian.add(new T.Mesh(guardianFace(),trim));
    for(const side of[-1,1]){
-    const brow=box(guardian,dark,side*2.5,3,3.7,4,.7,.7);brow.rotation.z=side*.16;
-    box(guardian,light,side*2.4,2.7,4,2.6,.18,.16);
-    pipe(guardian,natural,[[side*5,-8,2],[side*7,1,2],[side*4,9,3]],.65);
+    // Stone eyebrows over recessed eye slits, not a flat graphic mask.
+    const brow=solid(guardian,metal,[[-1.7,0],[1.7,.25],[1.5,1.25],[-1.6,.85]],4.5,.7);brow.position.set(side*2.5,3.4,0);brow.rotation.z=side*-.13;
+    box(guardian,dark,side*2.4,2.9,3.9,2.7,.72,.24);
+    box(guardian,light,side*2.4,2.9,4.08,1.9,.16,.08);
+    solid(guardian,metal,[[side*5,-8],[side*8,-4],[side*7,6],[side*5,9]],1.3,2.4);
+    for(let incision=0;incision<4;incision++){
+     const mark=fitting(guardian,dark,side*5.7,-4+incision*2.4,4.0,.13,1.5,.09);mark.rotation.z=side*.28;
+    }
+    // Broad shoulders and layered collar anchor the head to its sanctuary.
+    rock(guardian,metal,side*10,-9,-1.7,4.4,5.3,4.1,71+side,1);
+    solid(guardian,trim,[[side*3,-8],[side*12,-6],[side*13,-11],[side*5,-13]],-.5,2.0);
+    pipe(guardian,natural,[[side*6,-8,1],[side*8,0,1],[side*6,8,2]],.42);
    }
-   solid(guardian,dark,[[-1,2],[1,2],[1.4,-3],[0,-4],[-1.4,-3]],3.5,1.5);
-   box(guardian,dark,0,-5.3,3.6,4.2,.55,.5);
-   for(let i=0;i<5;i++)box(guardian,trim,(i-2)*2.2,10+(2-Math.abs(i-2))*1.3,1.5,1.4,7,.9);
+   box(guardian,dark,0,-5.15,3.25,3.4,.24,.16);
+   solid(guardian,metal,[[-3,-6],[0,-7.8],[3,-6],[2,-9],[0,-10],[-2,-9]],2.7,1.0);
+   for(let i=0;i<5;i++){
+    const xx=(i-2)*2.2,yy=10+(2-Math.abs(i-2))*1.3;
+    solid(guardian,trim,[[xx-.7,yy-2],[xx+.7,yy-2],[xx+.9,yy+1.7],[xx,yy+3.3],[xx-.9,yy+1.7]],1.5,1.4);
+    fitting(guardian,dark,xx,yy,3.04,.12,2.4,.08);
+   }
   }else{
    for(let i=0;i<7;i++){
     const span=joint('bridge-fall',i,0,(i-3)*4,-6);
@@ -294,6 +327,9 @@ export function buildEpicSet(stage:number,act:number):EpicSet{
  }
  bakeRigid(still);
  for(const j of joints)bakeRigid(j.node);
+ for(const group of[still,moving,secondary])group.traverse(o=>{
+  if(o instanceof T.Mesh)shadeSolid(o.geometry,stage===4?.32:.24);
+ });
  for(const mat of materials){mat.userData.filmColor=mat.color.clone();mat.userData.filmEmission=mat.emissiveIntensity;}
  for(const group of [still,moving,secondary])group.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});
  return {still,moving,secondary,materials,joints,span:stage===1&&act===1?58:44};
