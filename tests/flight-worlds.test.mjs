@@ -56,3 +56,14 @@ test('flight direction varies by place, quietens under pressure and stays stable
   assert.ok(Math.abs(left.bank-right.bank)<1e-4&&Math.abs(left.eyeX-right.eyeX)<1e-3);
  }
 });
+
+test('hostile salvo pressure eases the lens back and pausing retains the current bank',()=>{
+ const world=new FlightWorlds3D(),g=new Game();g.start('campaign','normal',2);g.time=82*.34;
+ world.draw(g,false,false,0,1/60);const full=world.diagnostics().bank;
+ g.time+=1/60;world.draw(g,false,false,1,1/60);const first=world.diagnostics().bank;
+ assert.ok(Math.abs(first)<Math.abs(full)&&Math.abs(first)>Math.abs(full)*.85);
+ g.state='paused';g.resumeState='playing';world.draw(g,false,false,0,1/60);
+ assert.equal(world.diagnostics().bank,first);
+ g.state='playing';world.draw(g,false,false,1,.4);
+ assert.ok(Math.abs(world.diagnostics().bank)<Math.abs(first));
+});

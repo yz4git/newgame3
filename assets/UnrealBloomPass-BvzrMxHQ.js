@@ -1,4 +1,4 @@
-import{C as e,S as t,T as n,b as r,o as i,p as a,u as o,w as s}from"./index-CDbUmH9y.js";import{t as c}from"./CopyShader-CHGAmNbz.js";import{n as l,t as u}from"./Pass-E9WWQ65y.js";var d={name:`LuminosityHighPassShader`,uniforms:{tDiffuse:{value:null},luminosityThreshold:{value:1},smoothWidth:{value:1},defaultColor:{value:new i(0)},defaultOpacity:{value:0}},vertexShader:`
+import{C as e,S as t,T as n,b as r,o as i,p as a,u as o,w as s}from"./index-DlI4zxdW.js";import{t as c}from"./CopyShader-CHGAmNbz.js";import{n as l,t as u}from"./Pass-BdMJXRKl.js";var d={name:`LuminosityHighPassShader`,uniforms:{tDiffuse:{value:null},luminosityThreshold:{value:1},smoothWidth:{value:1},defaultColor:{value:new i(0)},defaultOpacity:{value:0}},vertexShader:`
 
 		varying vec2 vUv;
 

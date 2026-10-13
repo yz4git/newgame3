@@ -24,9 +24,10 @@ export class FlightWorlds3D{
  readonly root=new T.Group();
  private stage=-1;private batches:Batch[]=[];private surfaces:T.Mesh[]=[];
  private frame:FlightFrame=flightFrame(0,0);private triangles=0;private instances=0;
+ private cameraPressure=0;private lastClock=NaN;
  constructor(){this.root.name='continuous-3d-flight-world';}
  private setStage(stage:number){
-  if(this.stage===stage)return;this.stage=stage;
+  if(this.stage===stage)return;this.stage=stage;this.lastClock=NaN;
   this.root.traverse(o=>{if(o instanceof T.Mesh){o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});
   this.root.clear();this.batches=[];this.surfaces=[];
   const c=COLOURS[stage],length=STAGES[stage].duration*4.4;
@@ -50,6 +51,7 @@ export class FlightWorlds3D{
    box(x,y,-37+height/2,w,h,height,c[0]);
    box(x,y,-37+height+.7,w+.7,h+.6,1.4,c[1]);
    box(x-w*.22,y+h*.13,-37+height+1.8,w*.48,h*.53,.9,c[2]);
+   for(let i=0;i<3;i++)box(x-w*.22+(i-1)*w*.10,y+h*.13,-37+height+2.29,w*.065,h*.27,.12,c[0]);
    for(let i=0;i<3;i++)add(lamps,x+(i-1)*w*.25,y-h*.5-.03,-35+height*.62,w*.12,.09,.20,c[5]);
    if(seed%3===0)box(x+w*.40,y,-37+height*.5,.42,h*.75,height*.73,c[2]);
   };
@@ -78,6 +80,20 @@ export class FlightWorlds3D{
    geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setAttribute('color',new T.Float32BufferAttribute(colors,3));geometry.setIndex(indices);geometry.computeVertexNormals();
    const mesh=new T.Mesh(geometry,new T.MeshStandardMaterial({vertexColors:true,side:T.DoubleSide,roughness:.89,metalness:stage===2?.42:.04}));mesh.receiveShadow=true;mesh.name='continuous-channel-bank-'+side;this.root.add(mesh);
   }
+  if(stage===2){
+   // A recessed, curved concourse connects the city districts; the old
+   // foreground planet must not cover the space the player is flying through.
+   const vertices:number[]=[],indices:number[]=[];
+   for(let row=0;row<=80;row++)for(let column=0;column<=8;column++){
+    const y=-85+(length+190)*row/80;
+    vertices.push(flightCentre(stage,y)-12+column*3,y,-42+(column%2)*.18);
+   }
+   for(let row=0;row<80;row++)for(let column=0;column<8;column++){
+    const n=row*9+column;indices.push(n,n+9,n+1,n+1,n+9,n+10);
+   }
+   const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setIndex(indices);geometry.computeVertexNormals();
+   const deck=new T.Mesh(geometry,new T.MeshStandardMaterial({color:0x304453,metalness:.45,roughness:.61,side:T.DoubleSide}));deck.name='recessed-curved-citadel-concourse';deck.receiveShadow=true;this.root.add(deck);
+  }
   if(stage===1||stage===3||stage===4||stage===5){
    const geometry=new T.PlaneGeometry(205,length+205,16,55);geometry.translate(0,length/2,-48);
    const material=new T.MeshStandardMaterial({color:c[4],metalness:stage===1?.3:.05,roughness:stage===1?.37:.68,side:T.DoubleSide,
@@ -102,6 +118,8 @@ export class FlightWorlds3D{
     for(let i=0;i<3;i++)beam(x-side*8,y-12+i*10,-33,x-side*17,y-12+i*10,-19,.55,c[2]);
    }else if(stage===2){
     box(x,y,-38,27,43,5,c[0],side*.12);
+    box(centre,y+3,-40.7,20,28,.8,c[1],side*.07);
+    box(centre+side*8,y-8,-40.15,2,21,.4,c[0],side*.22);
     for(let i=0;i<9;i++){const xx=x+(i%3-1)*7.3,yy=y+(Math.floor(i/3)-1)*11;building(xx,yy,4+noise(i+chapter)*2,7,7+noise(i*3+chapter)*16,i+chapter);}
     box(centre,y+17,-37,44,5,4,c[1],side*.11);
     beam(x,y-13,-21,x-side*19,y+17,-30,1.0);
@@ -147,12 +165,17 @@ export class FlightWorlds3D{
   }
   for(const child of this.root.children)if(child instanceof T.Mesh&&!(child instanceof T.InstancedMesh))this.triangles+=(child.geometry.index?.count??child.geometry.getAttribute('position').count)/3;
  }
- draw(g:Game,reduced=false,performance=false,pressure=0){
+ draw(g:Game,reduced=false,performance=false,pressure=0,dt=0){
   this.setStage(g.stage);
   // The final district holds through a long boss fight; escape resumes travel.
   const clock=g.state==='title'?g.visualTime*.35:Math.min(g.time,STAGES[g.stage].duration)+Math.max(0,worldClock(g)-g.time);
   const active=g.mode==='campaign'||g.state==='title';
-  this.frame=flightFrame(g.stage,clock,pressure,reduced,active);this.root.visible=active&&g.state!=='result';
+  // Dense salvos should ease the lens back, never snap it to another angle.
+  // Pausing retains the last pressure as well as the last route position.
+  if(!Number.isFinite(this.lastClock)||Math.abs(clock-this.lastClock)>2)this.cameraPressure=pressure;
+  else if(g.state!=='paused'&&dt>0)this.cameraPressure+=(pressure-this.cameraPressure)*(1-Math.exp(-dt*2.5));
+  this.lastClock=clock;
+  this.frame=flightFrame(g.stage,clock,this.cameraPressure,reduced,active);this.root.visible=active&&g.state!=='result';
   if(!this.root.visible)return;
   this.root.position.set(-this.frame.centre,-this.frame.distance,0);this.root.rotation.z=0;
   // Rotate about the flight position, not the centre of the kilometre-long

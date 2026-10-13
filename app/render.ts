@@ -167,7 +167,7 @@ export class View {
     if(stage===this.theme)return;this.theme=stage;
     for(const object of [...this.atmosphere.children]){object.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();if(o instanceof T.Sprite||o instanceof T.Mesh){if(!Array.isArray(o.material)){if(o.material.map&&o.material.map!==this.spriteTexture&&o.material.map!==planetMap&&!Object.values(terrainMaps).includes(o.material.map as T.CanvasTexture))o.material.map.dispose();o.material.dispose();}}});this.atmosphere.remove(object);}
     const theme=STAGES[stage];
-    if(theme.environment==='fortress')this.atmosphere.add(planetModel());
+    if(theme.environment==='fortress'&&!usesRebuiltGraphics())this.atmosphere.add(planetModel());
     if(theme.environment==='asteroids'){
       if(usesRebuiltGraphics()){
         // Inside-facing THREE-DIMENSIONAL sky volume; never a one-card nebula backdrop.
@@ -272,7 +272,7 @@ export class View {
     const scroll=active?4.4:title?1.4:0;
     const visualReduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mix=this.fxDirector.plan(game,visualReduced,this.quality==='PERFORMANCE');
-    this.flightWorlds?.draw(game,visualReduced,this.quality==='PERFORMANCE',mix.readability);
+    this.flightWorlds?.draw(game,visualReduced,this.quality==='PERFORMANCE',mix.readability,dt);
     this.background.draw(game,this.quality==='PERFORMANCE',visualReduced);
     this.stageEffects.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.airEffects.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);

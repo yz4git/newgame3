@@ -1,4 +1,4 @@
-## NOVA STRIKE 7.0 — FLIGHT CINEMA (2026-10-13)
+## NOVA STRIKE 7.0.1 — FLIGHT CINEMA (2026-10-13)
 
 The six campaigns now fly through continuous physical locations. An authored
 route changes altitude, direction and camera angle as the player approaches a
@@ -23,8 +23,13 @@ side angles, with smaller pressure fronts keeping their silhouettes clear.
   continuous scenery with stable camera angles. Classic and Canvas remain
   available through the existing renderer selector.
 
+Citadel districts connect through a recessed curved concourse; roof detail
+adds scale and the old foreground planet is retired from the new city.
+
 The existing iPhone browser review captures eighteen route views as well as
 all eighteen setpieces, and checks the visible corridor during each route.
+It also exercises two-finger WebGL controls during a bank and verifies that
+pausing freezes the actual camera matrix.
 The retained landmark fade check now distinguishes baseline visibility from the
 intentional handoff to the continuous landscape.
 

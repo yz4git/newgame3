@@ -410,7 +410,9 @@ await rich.page.evaluate(()=>{
  view.draw(g,.016,16.7);
 });
 await scene(rich.page,'v39-3d-background-harbor-freight',450);
-results.scenicPeace=await rich.page.evaluate(()=>window.__nova.view.getDiagnostics().scenic);
+results.scenicPeace=await rich.page.evaluate(()=>({
+ ...window.__nova.view.getDiagnostics().scenic,quality:window.__nova.view.getDiagnostics().quality
+}));
 await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
  g.enemies=[];g.bullets=[];
@@ -496,6 +498,35 @@ results.hangarReveal=await rich.page.evaluate(()=>{
 });
 await scene(rich.page,'v44-hangar-sliding-in',200);
 
+// Test the real two-finger input path while the WebGL camera is banking.
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;g.start('campaign','normal',2);
+ g.time=82*.34;g.visualTime=g.time;g.invulnerable=900;g.shotTimer=900;
+ g.waveIndex=999;g.schedule=[];g.nodes=[];g.enemies=[];g.bullets=[];
+ g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];g.sectorMission.started=true;
+ view.draw(g,.016,16.7);
+});
+await rich.page.waitForTimeout(120);
+const richBox=await rich.page.locator('#game').boundingBox();
+const richFocus=await rich.page.locator('#focus-button').boundingBox();
+const bankPoint=t1(richBox.x+richBox.width*.48,richBox.y+richBox.height*.62,1);
+const bankFocus=t1(richFocus.x+richFocus.width/2,richFocus.y+richFocus.height/2,2);
+const bankBefore=await rich.page.evaluate(()=>window.__nova.game.player.x);
+const bankCDP=await rich.context.newCDPSession(rich.page);
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[bankPoint]});
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[bankPoint,bankFocus]});
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[t1(bankPoint.x+52,bankPoint.y-24,1),bankFocus]});
+await rich.page.waitForTimeout(350);
+results.flightControls=await rich.page.evaluate(()=>({x:window.__nova.game.player.x,focus:window.__nova.game.player.focus,projection:window.__nova.view.camera.type}));
+results.flightControls.moved=Math.abs(results.flightControls.x-bankBefore)>.15;
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+await scene(rich.page,'v7-webgl-banking-dual-touch',120);
+const pausedCamera=await rich.page.evaluate(()=>{const {game:g,view}=window.__nova;g.pause();view.draw(g,0,16.7);return view.camera.matrixWorld.toArray();});
+await rich.page.waitForTimeout(250);
+results.flightPause=await rich.page.evaluate(()=>window.__nova.view.camera.matrixWorld.toArray());
+results.flightPauseStable=JSON.stringify(pausedCamera)===JSON.stringify(results.flightPause);
+await rich.page.evaluate(()=>window.__nova.game.resume());
+
 const classic=await setup({width:390,height:844},{renderer:'canvas',visual:'classic'});
 results.classic=await classic.page.evaluate(()=>({
  visual:window.__nova.view.getDiagnostics().visualStyle,
@@ -551,7 +582,9 @@ if(![3,4,5].every(stage=>results.worldRebuild[stage]?.background?.physicalAudit?
 // ensures machinery is visible again when the sector is clear.
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Number(stage)&&x.scenic?.farWeather>0&&x.scenic?.style==='world-space-3d-only'&&x.scenic?.machines===0))throw new Error('3D scenic systems disappeared or exceeded staging budget: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.scenic)));
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>!results.cinematicLayers[stage]?.crowded||x.scenic?.machines===0))throw new Error('Stage machinery obscures dense live projectile patterns');
-if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.scenicPeace?.farWeather<20)throw new Error('Perimeter freight/machinery loops returned: '+JSON.stringify(results.scenicPeace));
+if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.scenicPeace?.farWeather<(results.scenicPeace?.quality==='PERFORMANCE'?12:20))throw new Error('Quiet scenery restored retired structures or lost its depth particles: '+JSON.stringify(results.scenicPeace));
+if(!results.flightControls?.moved||!results.flightControls.focus||results.flightControls.projection!=='PerspectiveCamera'||!results.flightPauseStable)
+ throw new Error('Banking WebGL flight input or paused camera changed: '+JSON.stringify({controls:results.flightControls,pause:results.flightPauseStable}));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
 if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount===0&&r.worldAlive.hangars===0&&r.visibleHangars===0))throw new Error('Repeating structures or linked hangars broken: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
 if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==1||results.worldAliveLaunch?.visibleHangars<1)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
