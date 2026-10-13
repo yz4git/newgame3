@@ -9,13 +9,13 @@ test('scene motion backs down progressively before dense bullets hide the ship',
  const fx=new FxDirector();
  const empty=fx.plan(g);
  assert.equal(empty.readability,0);
- g.bullets=Array.from({length:12},()=>({}));
+ g.bullets=Array.from({length:12},()=>({enemy:true,dead:false}));
  const medium=fx.plan(g);
  assert.ok(medium.readability>.2 && medium.readability<1);
  assert.ok(medium.density<empty.density);
  assert.equal(medium.showAmbientStructures,false);
  assert.equal(medium.showFlybys,false);
- g.bullets=Array.from({length:FX_MIX_LIMITS.bulletCrowd+10},()=>({}));
+ g.bullets=Array.from({length:FX_MIX_LIMITS.bulletCrowd+10},()=>({enemy:true,dead:false}));
  const dense=fx.plan(g);
  assert.equal(dense.crowded,true);
  assert.equal(dense.density,FX_MIX_LIMITS.quietDensity);

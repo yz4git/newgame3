@@ -244,6 +244,7 @@ export class FortressBackground {
     this.objects=LANDMARKS[stage].map(entry=>{const m=environmentLandmark(p,entry,stage)??landmarkModel(p,entry,stage);m.scale.set(entry.scale,entry.scale,1);m.position.x=entry.x;m.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=true;o.receiveShadow=true;}});this.root.add(m);this.prepareReveal(m);return m;});
     if(env==='ocean'||env==='ice'||env==='jungle'||env==='lava'){
       this.surface=new LivingSurface(stage);this.root.add(this.surface.root);
+      if(usesRebuiltGraphics()){this.surface.root.position.z=-22;this.surface.root.scale.set(2,2,1);}
     }
     // World Rebuild: no seven forever-looping clusters down both edges.
     // Keep source geometry for the Canvas 2D compatibility adapter, but
@@ -326,6 +327,23 @@ export class FortressBackground {
         if(index>=0)this.materials.splice(index,1);
       }
       this.fades.delete(target);
+    }
+  }
+  /** The large new location owns the view while the old small landmarks retire.
+   * Their original fade is recomputed in draw(), so this never accumulates. */
+  cinematicPresence(weight:number){
+    if(!usesRebuiltGraphics())return;
+    const fade=1-Math.max(0,Math.min(1,weight));
+    const dim=(model:T.Group)=>{
+      // Several meshes share each owned material. Fade it once, and never
+      // touch the stage palette also used by the floor and target facilities.
+      for(const item of this.fades.get(model)??[])item.material.opacity*=fade;
+    };
+    for(const object of [...this.scenes,...this.objects])dim(object);
+    for(const row of this.rows.values())if(row.userData.finiteBeat){
+      dim(row);
+      const terrain=row.getObjectByName('terrain');
+      if(terrain instanceof T.Group)dim(terrain);
     }
   }
   getTemplate(stage:number,variant:number){this.setStage(stage);let m=this.templates.get(variant);if(!m){m=STAGES[stage].environment==='fortress'?fortressChip(this.palette,stage,variant):environmentChip(this.palette,stage,variant);this.templates.set(variant,m);}return m;}

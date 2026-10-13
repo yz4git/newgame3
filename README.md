@@ -1,3 +1,35 @@
+## NOVA STRIKE 6.0 — COLOSSAL WORLDS (2026-10-13)
+
+World Rebuild's eighteen authored events now use full-scale articulated
+locations and a perspective flight camera. The previous version's small
+event models have been replaced, with a 35–58 m sense of scale:
+
+- **Asteroid field:** a rupturing mining canyon, a massive industrial ship
+  with a rotating cutter and articulated claws, and a disintegrating station.
+- **Ocean:** opening floodgates, a carrier with moving deck elevators and
+  radar, and a rising pressure-hull dreadnought.
+- **Citadel:** an opening armored iris, a rising gravity dock, and a split
+  bastion exposing its reactor.
+- **Glacier:** a thick faulted canyon, staggered falling ice, and moving
+  observatory domes. **Jungle:** root arches, an awakening carved guardian,
+  and a bridge collapsing one span at a time. **Foundry:** a volcanic
+  rupture, three staggered forge hammers, and a failing articulated crucible.
+- **Perspective camera:** depth changes the apparent scale of distant and
+  near structures. Authored camera movement remains fitted to the flight
+  corridor, and touch raycasts use the same projection. Reduced motion
+  retains a stable camera and Classic retains its original projection.
+- **Clear staging:** smaller scenery fades while a large location passes;
+  the water surface sits below the new structures. The animation envelopes
+  remain behind the player and projectile plane. Each stage's three sets
+  stay below 40,000 geometry triangles and reuse merged rigid assemblies.
+- **Scenery stays visible while firing:** readability pressure counts live
+  hostile projectiles instead of treating the player's own continuous fire
+  as a reason to suppress the background.
+
+The release uses versioned assets and a fresh PWA cache. The title's version
+label now agrees with the selected graphics mode. Existing campaign rules,
+collision, score, saved progress and Canvas compatibility remain intact.
+
 ## NOVA STRIKE 5.0 — CINEMATIC WORLDS (2026-10-13)
 
 World Rebuild's eighteen unique setpieces now have solid depth, machined

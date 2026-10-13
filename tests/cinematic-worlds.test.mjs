@@ -27,7 +27,7 @@ test('all 18 solid animated sets remain behind the player and bullet plane',()=>
   }
   const d=scenes.diagnostics().cinematic;
   assert.ok(d.solidMeshes>20);
-  assert.ok(d.triangles<30000,'all three finite sets fit the mobile geometry budget');
+  assert.ok(d.triangles<40000,'all three finite sets fit the mobile geometry budget');
  }
 });
 
@@ -67,7 +67,7 @@ test('film lighting has six looks, bounded exposure and no camera animation in r
  for(let s=0;s<6;s++){
   const f=filmFrame(s,18,cue),quiet=filmFrame(s,18,cue,1),reduced=filmFrame(s,18,cue,0,true);
   assert.ok(f.exposure>.80&&f.exposure<.92);
-  assert.ok(f.lensPush<=.012&&f.lensLift<=.28);
+  assert.ok(f.lensPush<=.018&&f.lensLift<=3.2&&Math.abs(f.lensSide)<=2.8);
   assert.ok(quiet.lensPush<f.lensPush);
   assert.equal(reduced.lensPush,0);assert.equal(reduced.lensLift,0);
   assert.ok(f.fogNear>50,'projectiles at the gameplay depth must stay clear');

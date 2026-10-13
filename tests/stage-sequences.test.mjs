@@ -11,12 +11,11 @@ test('six world stories have eighteen separately authored one-shot environmental
  assert.equal(ids.flat().length,18);
  assert.equal(new Set(ids.flat()).size,18);
  assert.match(s,/const timing=\[\.13,\.43,\.72\]/);
- for(let stage=0;stage<5;stage++)assert.match(s,new RegExp('stage==='+stage));
- assert.match(s,/else\{ \/\/ Magma breach/);
- for(let stage=0;stage<6;stage++)assert.match(s,new RegExp('case '+stage+':'));
+ assert.match(s,/buildEpicSet\(stage,act\)/);
+ assert.match(s,/animateEpicSet\(c,g.stage,c.act,phase\)/);
  assert.match(s,/elapsed=clock-beat/);
- assert.match(s,/const y=52-elapsed\*6\.0/);
- assert.match(s,/const opacity=distanceReveal\(y,23,57\)/);
+ assert.match(s,/travel=46-elapsed\*6.5/);
+ assert.match(s,/easeReveal\(\(elapsed\+4\)\/3\)/);
  assert.doesNotMatch(s,/Math\.random\(|wrap\(|\bmod\(/);
  assert.match(s,/loops:0/);
 });
@@ -39,7 +38,7 @@ test('finite terrain and bespoke chapters dissolve instead of appearing on a sin
  assert.match(f,/this\.reveal\(m,distanceReveal\(m\.position\.y,15,52\)\)/);
  assert.match(f,/const transparent=true,depthWrite=false/);
  assert.match(f,/this\.prepareReveal\(terrain as T\.Group\)/);
- assert.match(s,/mat\.opacity=\(mat instanceof T\.MeshBasicMaterial \? \.42 : 1\)\*opacity/);
+ assert.match(s,/mat\.opacity=opacity/);
  assert.match(s,/this\.root\.visible=g\.mode==='campaign'/);
  assert.match(r,/private stageSequences=usesRebuiltGraphics\(\)\?new StageSequences3D\(\):null/);
  assert.match(r,/this\.stageSequences\?\.draw\(game,dt/);

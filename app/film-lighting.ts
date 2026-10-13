@@ -29,7 +29,8 @@ export function filmFrame(stage:number,time:number,cue:FilmCue,pressure=0,reduce
   // moving cast shadows, without a distracting light orbit.
   keyX:stock.azimuth+(reduced?0:Math.sin(time*.10+stage)*1.6),
   keyY:17+stage%3*2,keyZ:25,
-  lensPush:push*.012,lensLift:push*.28,
-  fogNear:52,fogFar:108
+  lensPush:push*.018,lensLift:push*3.2,
+  lensSide:reduced?0:Math.sin(cue.elapsed*.21+stage*.85)*push*2.8,
+  fogNear:72,fogFar:164
  };
 }

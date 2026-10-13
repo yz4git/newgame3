@@ -32,7 +32,7 @@ function pipe(parent:T.Object3D,mat:T.Material,points:number[][],radius:number){
 }
 
 /** Bake only rigid members, per material; moving assemblies retain their pivots. */
-function bakeRigid(group:T.Object3D){
+export function bakeRigid(group:T.Object3D){
  group.updateMatrixWorld(true);
  const inverse=group.matrixWorld.clone().invert();
  const batches=new Map<T.Material,T.BufferGeometry[]>(),old=new Set<T.BufferGeometry>();

@@ -55,9 +55,10 @@ export class FxDirector {
   if(this.cue&&age>=this.cue.duration)this.cue=null;
   const active=!!this.cue&&age<this.cue.duration;
   const boss=!!g.boss&&!g.boss.dead;
-  const crowded=g.bullets.length>=FX_MIX_LIMITS.bulletCrowd||
+  const hostileShots=g.bullets.filter(b=>b.enemy&&!b.dead).length;
+  const crowded=hostileShots>=FX_MIX_LIMITS.bulletCrowd||
     g.enemies.filter(e=>!e.dead).length>=FX_MIX_LIMITS.enemyCrowd;
-  const bulletPressure=Math.max(0,Math.min(1,(g.bullets.length-FX_MIX_LIMITS.sceneryFadeStartBullets)/(FX_MIX_LIMITS.sceneryFadeFullBullets-FX_MIX_LIMITS.sceneryFadeStartBullets)));
+  const bulletPressure=Math.max(0,Math.min(1,(hostileShots-FX_MIX_LIMITS.sceneryFadeStartBullets)/(FX_MIX_LIMITS.sceneryFadeFullBullets-FX_MIX_LIMITS.sceneryFadeStartBullets)));
   const enemyPressure=Math.max(0,Math.min(1,(g.enemies.filter(e=>!e.dead).length-3)/10));
   const readability=(g.state==='playing')?Math.min(1,Math.max(bulletPressure,enemyPressure,boss?.42:0)):0;
   const moment:FxMoment=g.state==='transition'?'warp':

@@ -26,6 +26,7 @@ import {ScenicChoreography3D} from './scenic-choreography.ts';
 import {WorldAliveScene} from './world-alive-scene.ts';
 import {StageSequences3D} from './stage-sequences.ts';
 import {filmFrame,EMPTY_FILM_CUE} from './film-lighting.ts';
+import {fitCinemaCamera,poseCinemaCamera} from './cinema-camera.ts';
 import {CinematicDetonations} from './cinematic-detonations.ts';
 // Recurring decorative side rails removed from the playable scene.
 
@@ -38,7 +39,8 @@ interface Particle {x:number;y:number;z:number;vx:number;vy:number;vz:number;lif
 interface Flare {sprite:T.Sprite|T.Mesh<T.IcosahedronGeometry,T.MeshBasicMaterial>;age:number;life:number;size:number;smoke:boolean;}
 interface Wreck {model:T.Group;age:number;life:number;side:number;boss:boolean;}
 export class View {
-  scene=new T.Scene();camera=new T.OrthographicCamera(-12,12,64/3,-64/3,.1,110);
+  scene=new T.Scene();camera:T.OrthographicCamera|T.PerspectiveCamera=usesRebuiltGraphics()
+    ?new T.PerspectiveCamera(50,9/16,.1,260):new T.OrthographicCamera(-12,12,64/3,-64/3,.1,110);
   renderer!: T.WebGPURenderer | import('three').WebGLRenderer;
   pipeline: T.RenderPipeline | null=null;engine='';quality='';
   private composer?:EffectComposer;
@@ -147,7 +149,8 @@ export class View {
     const rect=this.canvas.parentElement!.getBoundingClientRect();this.width=rect.width;this.height=rect.height;
     // Expand the visible vertical flight corridor on tall phones without deforming ship and projectile geometry.
     const vertical=Math.max(128/3,24*rect.height/Math.max(1,rect.width));
-    this.camera.left=-12;this.camera.right=12;this.camera.top=vertical/2;this.camera.bottom=-vertical/2;this.camera.updateProjectionMatrix();
+    if(this.camera instanceof T.PerspectiveCamera)fitCinemaCamera(this.camera,rect.width,rect.height);
+    else{this.camera.left=-12;this.camera.right=12;this.camera.top=vertical/2;this.camera.bottom=-vertical/2;this.camera.updateProjectionMatrix();}
     this.renderer.setSize(rect.width,rect.height,false);
     if(this.composer){this.composer.setPixelRatio(this.pixelRatio);this.composer.setSize(rect.width,rect.height);}
   }
@@ -279,6 +282,7 @@ export class View {
     this.scenic?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     this.aliveScene?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     this.stageSequences?.draw(game,dt,visualReduced,this.quality==='PERFORMANCE',mix.readability);
+    this.background.cinematicPresence(this.stageSequences?.sceneryPresence()??0);
     this.detonations?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     if(this.stageSequences){
       this.film=filmFrame(game.stage,game.visualTime,this.stageSequences.filmCue(),mix.readability,visualReduced);
@@ -438,10 +442,13 @@ export class View {
     this.camera.up.set(-Math.sin(this.cameraRoll),Math.cos(this.cameraRoll),0);
     // Full roll is presentational only: simulation, collision and touch raycasts
     // keep their original world coordinates and use this same actual camera.
-    this.camera.position.z=40-(kinetic?bossEntry*1.45+warp*2.4+intro*1.2+this.cinematicKick*.38:0);
-    this.camera.zoom=this.cameraZoom;
-    this.camera.updateProjectionMatrix();
-    this.camera.lookAt(this.camera.position.x,this.camera.position.y+12.5+(this.stageSequences?this.film.lensLift:0),0);
+    if(this.camera instanceof T.PerspectiveCamera){
+      poseCinemaCamera(this.camera,this.film,this.cameraRoll,this.cameraZoom,kinetic?warp:0);
+    }else{
+      this.camera.position.z=40-(kinetic?bossEntry*1.45+warp*2.4+intro*1.2+this.cinematicKick*.38:0);
+      this.camera.zoom=this.cameraZoom;this.camera.updateProjectionMatrix();
+      this.camera.lookAt(this.camera.position.x,this.camera.position.y+12.5,0);
+    }
     this.frameAverage=this.frameAverage*.98+Math.min(frameMs,100)*.02;this.frames++;
     if(this.frames>150&&this.epoch-this.lastDprChange>5&&this.frameAverage>23&&this.pixelRatio>1){
       this.pixelRatio=Math.max(1,this.pixelRatio-.2);this.renderer.setPixelRatio(this.pixelRatio);this.resize();this.lastDprChange=this.epoch;this.quality='BALANCED';
@@ -450,6 +457,6 @@ export class View {
     if(this.useBloom&&this.pipeline)this.pipeline.render();else if(this.useBloom&&this.composer)this.composer.render();else this.renderer.render(this.scene,this.camera);
   }
   getStageSoundMoments(){return this.stageSequences?.soundMoments()??[];}
-  getDiagnostics(){return {visualStyle:currentVisualStyle(),detonations:this.detonations?.diagnostics()??null,film:this.stageSequences?{look:this.film.stock.name,exposure:this.film.exposure,keyGain:this.film.keyGain,lensPush:this.film.lensPush,fogNear:this.film.fogNear}:null,volumetric:this.volumetric?.diagnostics()??null,depthSpectacle:this.depthSpectacle?.diagnostics()??null,fxMix:this.fxDirector.diagnostics(),scenic:this.scenic?.diagnostics()??null,worldAliveScene:this.aliveScene?.diagnostics()??null,stageSequences:this.stageSequences?.diagnostics()??null,railDistricts:null,mechanical:this.mechanical?.diagnostics()??null,colossal:this.colossal?.diagnostics()??null,invasion:this.invasion?.diagnostics()??null,cameraRig:{roll:this.cameraRoll,zoom:this.cameraZoom,kick:this.cinematicKick},background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {visualStyle:currentVisualStyle(),detonations:this.detonations?.diagnostics()??null,film:this.stageSequences?{look:this.film.stock.name,exposure:this.film.exposure,keyGain:this.film.keyGain,lensPush:this.film.lensPush,fogNear:this.film.fogNear}:null,volumetric:this.volumetric?.diagnostics()??null,depthSpectacle:this.depthSpectacle?.diagnostics()??null,fxMix:this.fxDirector.diagnostics(),scenic:this.scenic?.diagnostics()??null,worldAliveScene:this.aliveScene?.diagnostics()??null,stageSequences:this.stageSequences?.diagnostics()??null,railDistricts:null,mechanical:this.mechanical?.diagnostics()??null,colossal:this.colossal?.diagnostics()??null,invasion:this.invasion?.diagnostics()??null,cameraRig:{projection:this.camera.type,roll:this.cameraRoll,zoom:this.cameraZoom,kick:this.cinematicKick},background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
 }
 function shipTint(kind:Kind){return kind==='dart'?0xb69add:kind==='lancer'?0xd2ddf7:0xffffff;}

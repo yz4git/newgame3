@@ -251,6 +251,16 @@ for(let stage=0;stage<6;stage++){
   return {info,visibleMeshes,allMeshes,
    rootMounted:!!window.__nova.view.scene.getObjectByName('stage-authored-nonrepeating-cinematics')};
  });
+ // Review every newly authored full-scale location, not only the middle act.
+ for(let act=0;act<3;act++){
+  await rich.page.evaluate(({stage,act})=>{
+   const {game:g,view}=window.__nova;
+   g.time=[64,74,82,78,82,86][stage]*[.13,.43,.72][act]+6.7;
+   g.visualTime=g.time;g.enemies=[];g.bullets=[];
+   view.draw(g,.016,16.7);
+  },{stage,act});
+  await scene(rich.page,`v6-colossal-${stage+1}-${act+1}`,80);
+ }
 
  results.cinematicLayers[stage]=await rich.page.evaluate(()=>{
   const {view}=window.__nova;
@@ -493,7 +503,7 @@ if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glar
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
 if(new Set(Object.values(results.filmWorlds).map(x=>x.film?.look)).size!==6||
- !Object.values(results.filmWorlds).every(x=>x.geometry.solidMeshes>20&&x.geometry.triangles<30000&&x.detonations.fire>0&&x.detonations.draws===3&&x.film.exposure<.95))
+ !Object.values(results.filmWorlds).every(x=>x.geometry.solidMeshes>20&&x.geometry.triangles<40000&&x.detonations.fire>0&&x.detonations.draws===3&&x.film.exposure<.95))
  throw new Error('Cinematic solid geometry, stage lighting or pooled detonation missing: '+JSON.stringify(results.filmWorlds));
 if(Object.keys(results.worldStageImpact).length!==6||
  !Object.values(results.worldStageImpact).every(x=>x.phase==='action'&&x.impact>.8&&x.fragments>=4))
