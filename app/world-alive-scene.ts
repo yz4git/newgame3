@@ -1,7 +1,7 @@
 import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
 import type {FxMix} from './fx-director.ts';
-import {WORLD_ALIVE_STAGES,WORLD_ALIVE_BUDGET} from './world-alive.ts';
+import {WORLD_ALIVE_STAGES} from './world-alive.ts';
 import {STAGES} from './stages.ts';
 import {approachReveal,easeReveal} from './scenery-transitions.ts';
 
@@ -15,10 +15,6 @@ const torus=new T.TorusGeometry(1,.11,8,36);
 const octa=new T.OctahedronGeometry(1,0);
 const temp=new T.Object3D();
 
-interface Bay {
- root:T.Group;lid:T.Group;engine:T.Group;panel:T.Mesh;internal:T.Group;
- side:number;index:number;
-}
 interface BossVault {
  root:T.Group;arms:T.Group[];cores:T.Mesh[];shields:T.Group[];center:T.Group;reactor:T.Mesh;covers:T.Mesh[];
 }
@@ -26,14 +22,13 @@ interface Rupture {
  x:number;y:number;z:number;age:number;life:number;speedX:number;speedY:number;speedZ:number;size:number;spin:number;
 }
 /** A genuine, stage-authored architectural counterpart to the real campaign
- * state machine. Bay doors, orbital ring clamps, boss vaults and exit passages
+ * state machine. Orbital ring clamps, boss vaults and exit passages
  * respond to actual nodes, enemy sorties, boss phases and boss defeat.
  * z <= -3.8; zero extra collision surfaces, no extra screen-space bloom.
  */
 export class WorldAliveScene {
  readonly root=new T.Group();
  private main=new T.Group();
- private bayLayer=new T.Group();
  private bossLayer=new T.Group();
  private fractureLayer=new T.Group();
  private archMat=new T.MeshStandardMaterial({color:0x364a62,metalness:.17,roughness:.87});
@@ -41,8 +36,7 @@ export class WorldAliveScene {
  private innerMat=new T.MeshStandardMaterial({color:0x233849,metalness:.39,roughness:.65});
  private coreMat=new T.MeshBasicMaterial({color:0x64818f,transparent:true,opacity:.29,depthWrite:false,toneMapped:true});
  private burntMat=new T.MeshStandardMaterial({color:0x443d3c,metalness:.22,roughness:.81});
- private bays:Bay[]=[];
- private bayReveal=[0,0];private exitReveal=0;
+ private exitReveal=0;
  private structures:T.Group[]=[];
  private rotors:T.Group[]=[];
  private vault:BossVault;
@@ -56,15 +50,13 @@ export class WorldAliveScene {
  private intro=0;
  private bossVisible=false;
  private centerExposed=false;
- private riftOpen=0;
  private worldMode='approach';
  constructor(){
   this.root.name='world-alive-v40-physical-megafortresses';
   this.main.name='living-stage-megastructures';
-  this.bayLayer.name='real-enemy-launch-bays';
   this.bossLayer.name='boss-hangar-and-structural-breakup';
   this.fractureLayer.name='world-space-industrial-debris';
-  this.root.add(this.main,this.bayLayer,this.bossLayer,this.fractureLayer);
+  this.root.add(this.main,this.bossLayer,this.fractureLayer);
   this.vault={root:new T.Group(),arms:[],cores:[],shields:[],center:new T.Group(),reactor:new T.Mesh(octa,this.coreMat),covers:[]};
   this.bossLayer.add(this.vault.root);
   const shards=new T.InstancedMesh(octa,this.panelMat,48);
@@ -85,32 +77,6 @@ export class WorldAliveScene {
  }
  private circle(parent:T.Object3D,mat:T.Material,x:number,y:number,z:number,r:number){
   return this.part(parent,torus,mat,x,y,z,r,r,1);
- }
- private makeBay(side:number,index:number,stage:number):Bay{
-  const root=new T.Group(),lid=new T.Group(),engine=new T.Group(),internal=new T.Group();
-  root.name='real-gameplay-hangar-'+index+'-stage-'+stage;
-  // Real entrance is on the same left/right lane as spawn() in Game.
-  root.position.set(side*7.65,14,-5.6);
-  this.wall(root,this.innerMat,0,0,-1,4.7,8.1,1.7);
-  this.wall(root,this.panelMat,-side*1.8,0,.06,.46,8.0,.73);
-  this.wall(root,this.panelMat,side*1.8,0,.06,.46,8.0,.73);
-  for(let j=0;j<4;j++){
-   const y=-3+j*2.05;
-   this.wall(root,this.archMat,0,y,.20,4.1,.37,.40);
-  }
-  lid.position.set(side*.8,0,.55);root.add(lid);
-  this.wall(lid,this.panelMat,0,0,0,2.3,6.6,.6);
-  for(let j=0;j<4;j++)this.wall(lid,this.archMat,0,-2.55+j*1.75,.36,2.25,.11,.13);
-  engine.position.set(-side*1.0,1.1,.8);root.add(engine);
-  this.circle(engine,this.archMat,0,0,.2,1.18);
-  this.tube(engine,this.innerMat,0,0,-.3,1.45,1.4,1.45);
-  this.tube(engine,this.coreMat,0,0,.28,.55,.38,.55);
-  root.add(internal);
-  for(let j=0;j<3;j++){
-   this.wall(internal,this.coreMat,-side*(.5+j*.45),-2+j*1.75,.23,.16,.67,.18);
-  }
-  this.bayLayer.add(root);
-  return {root,lid,engine,panel:this.wall(root,this.burntMat,0,0,-1.7,4.0,7.3,.26),internal,side,index};
  }
  private makeMegastructure(side:number,stage:number,index:number){
   const g=new T.Group(),rotor=new T.Group();
@@ -243,9 +209,8 @@ export class WorldAliveScene {
    this.archMat.color.setHex(colors[0]).multiplyScalar(.42);this.panelMat.color.setHex(colors[1]).multiplyScalar(.39);
   this.innerMat.color.setHex(colors[2]).multiplyScalar(.48);
    this.coreMat.color.setHex(colors[3]).multiplyScalar(.62);this.burntMat.color.setHex(colors[4]).multiplyScalar(.48);
-  this.main.clear();this.bayLayer.clear();this.rotors=[];this.structures=[];
-  this.bayReveal=[0,0];this.exitReveal=0;
-  this.bays=[this.makeBay(-1,0,stage),this.makeBay(1,1,stage)];
+  this.main.clear();this.rotors=[];this.structures=[];
+  this.exitReveal=0;
   this.structures=[this.makeMegastructure(-1,stage,0),this.makeMegastructure(1,stage,1)];
   this.buildVault(stage);
   this.splinters.length=0;this.fragments.count=0;this.lastCue='';
@@ -273,14 +238,13 @@ export class WorldAliveScene {
   this.root.visible=g.state!=='result'&&g.mode==='campaign';
   if(!this.root.visible){this.fragments.count=0;return;}
   const world=g.worldAlive,t=this.clock,duration=STAGES[g.stage].duration;
-  const underway=g.state==='playing'||g.state==='transition';
   const approach=ease(clamp((g.time/duration-.025)/.16,0,1));
   this.intro=approach;
   this.exitReveal=approachReveal(this.exitReveal,g.state==='transition'&&!reduced?1:0,dt,.85);
   for(let i=0;i<this.structures.length;i++){
    const p=this.structures[i],side=i===0?-1:1;
    // Stage edge towers should not endlessly track past the fighter;
-   // real enemy-launch hangars and scripted boss vault remain untouched.
+   // the scripted boss vault follows the actual boss state.
    // Escape towers move in from outside the camera instead of materializing.
    p.visible=this.exitReveal>.004;
    // The bulk of a real megastructure arrives from the distant horizon and
@@ -291,34 +255,8 @@ export class WorldAliveScene {
   for(let i=0;i<this.rotors.length;i++){
    this.rotors[i].rotation.z=t*(i%2?-0.12:.15)*(g.stage===5?2.1:1);
   }
-  let opens=0;
-  for(const bay of this.bays){
-   const disabled=world.destroyed[bay.index],alarm=world.escaped[bay.index];
-   const launchAge=world.launches[bay.index]?Math.max(0,g.time-duration*(bay.index===0?WORLD_ALIVE_BUDGET.firstLaunch:WORLD_ALIVE_BUDGET.secondLaunch)):999;
-   const preparing=clamp(1-Math.abs(launchAge-1.3)/2.0,0,1);
-   const liveOpen=disabled?0:alarm?.45:.12;
-   const opening=Math.max(liveOpen,!disabled?preparing:0);
-   // Paired backdrop docks now appear only as a brief enemy launch reveal;
-   // permanent identical left/right platforms were visually repetitive.
-   // Enemy spawning and collision remain owned by Game and never change.
-   // A game-side sortie may start suddenly, but the decorative dock glides
-   // in from above the field and withdraws over time. No 1-frame pop.
-   const active=underway&&!reduced&&!disabled&&preparing>.08;
-   this.bayReveal[bay.index]=approachReveal(this.bayReveal[bay.index],active?1:0,dt,.57);
-   const reveal=easeReveal(this.bayReveal[bay.index]);
-   bay.root.visible=reveal>.001;
-   bay.root.position.y=12.5+(1-reveal)*19+Math.sin(t*.22+bay.index)*.22;
-   bay.root.scale.setScalar(.78+.22*reveal);
-   bay.lid.position.x=bay.side*(.8+opening*2.15);
-   bay.lid.rotation.y=bay.side*opening*.66;
-   bay.engine.rotation.z=t*(alarm?.64:.25)*(bay.side);
-   bay.engine.scale.setScalar(disabled?.82:1+opening*.18);
-   bay.internal.visible=!disabled;
-   bay.panel.visible=disabled;
-   bay.panel.rotation.set(disabled?.45:0,0,bay.side*(disabled?.15:0));
-   if(opening>.38)opens++;
-  }
-  this.riftOpen=opens;
+  // Timed sorties belong to Game. Their former identical rectangular dock
+  // props are removed entirely instead of returning with each launch cue.
   const aliveBoss=!!g.boss&&!g.boss.dead;
   const v=this.vault;
   this.bossVisible=aliveBoss&&!reduced;
@@ -383,10 +321,10 @@ export class WorldAliveScene {
  diagnostics(){return {stage:this.lastStage,mode:this.worldMode,
   stageName:WORLD_ALIVE_STAGES[this.lastStage]?.name??'unknown',
   structureCount:this.structures.filter(s=>s.visible).length,
-  hangars:this.bays.filter(b=>b.root.visible).length,openHangars:this.riftOpen,
+  hangars:0,openHangars:0,
   bossVault:this.bossVisible,reactorFaces:this.vault.cores.filter(c=>c.visible).length,
   centerExposed:this.centerExposed,
   fallingFragments:this.fragments.count,lastCue:this.lastCue,approach:this.intro,
-  limits:{megastructures:2,hangars:2,bossArms:2,fragments:48,liveLights:0}};
+  limits:{megastructures:2,hangars:0,bossArms:2,fragments:48,liveLights:0}};
  }
 }

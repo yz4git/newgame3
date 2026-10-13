@@ -1,3 +1,17 @@
+## NOVA STRIKE 7.1.1 — REMOVE SHARED SIDE BOXES (2026-10-14)
+
+Removed the two shared decorative layers that repeatedly introduced rectangular
+props on the left and right of every world: enemy-launch dock models and
+facility/boss-event shutter walls. Their meshes and animation code are removed,
+rather than merely hidden or made more transparent.
+
+Actual reinforcement waves and strategic-facility suppression remain controlled
+by the campaign simulation. Six authored landscapes, eighteen large stage events,
+physical combat targets and boss mechanics retain their existing rendering.
+The browser review checks that no shared dock/wall objects are mounted during
+either launch window in all six stages, while the real two- and three-enemy
+reinforcement waves still occur.
+
 ## NOVA STRIKE 7.1.0 — SCULPTURE, ARCHITECTURE & LIGHT (2026-10-13)
 
 The flight worlds now have deeper architectural detail and clearer physical

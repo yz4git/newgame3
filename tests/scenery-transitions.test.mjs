@@ -48,15 +48,10 @@ test('background-only easing never mutates combat state, bullets or enemy hit bo
  assert.deepEqual(g.snapshot(),before);
 });
 
-test('all active world background systems use a continuous reveal and preserve Classic mode',async()=>{
- const [world,fortress,scenic,stageEffects]=await Promise.all(
-  ['world-alive-scene','fortress','scenic-choreography','stage-effects'].map(n=>readFile('app/'+n+'.ts','utf8')));
- assert.match(world,/this\.bayReveal\[bay\.index\]=approachReveal\(/);
- assert.match(world,/bay\.root\.position\.y=12\.5\+\(1-reveal\)\*19/);
+test('retained world backgrounds use a continuous reveal and preserve Classic mode',async()=>{
+ const [world,fortress,stageEffects]=await Promise.all(
+  ['world-alive-scene','fortress','stage-effects'].map(n=>readFile('app/'+n+'.ts','utf8')));
  assert.match(world,/this\.exitReveal=approachReveal\(/);
- assert.doesNotMatch(world,/bay\.root\.visible=underway&&!reduced&&!disabled&&preparing>/);
- assert.match(scenic,/this\.reactionReveal=approachReveal\(/);
- assert.match(scenic,/side\*\(10\.7\+\(1-reveal\)\*10\)/);
  assert.match(fortress,/this\.reveal\(m,distanceReveal\(m\.position\.y,24,54\)\)/);
  assert.match(fortress,/this\.prepareReveal\(m\)/);
  assert.match(fortress,/else m\.visible=Math\.abs\(m\.position\.y\)<42/);

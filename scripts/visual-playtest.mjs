@@ -308,7 +308,7 @@ for(let stage=0;stage<6;stage++){
   return {worldScene:scene,enemy3D:enemies.length,enemyBillboards:skinCount,
     style:view.getDiagnostics().visualStyle,ship:view.renderedShip,background:view.getDiagnostics().background,
     scenic:view.getDiagnostics().scenic,worldAlive:view.getDiagnostics().worldAliveScene,
-    visibleHangars:view.aliveScene.bays.filter(b=>b.root.visible).length,
+    sharedSideProps:(()=>{let n=0;view.scene.traverse(o=>{if(o.name.startsWith('real-gameplay-hangar-')||['real-enemy-launch-bays','left-reactive-wall','right-reactive-wall','event-reactive-world-machinery'].includes(o.name))n++;});return n;})(),
     rail:view.getDiagnostics().railDistricts};
  });
 }
@@ -333,9 +333,8 @@ results.sideRemoval=await rich.page.evaluate(()=>{
  return {noRailController:view.getDiagnostics().railDistricts===null,railChildren,visibleWorldTowers,
   farTileGroups:view.background.far.filter(o=>!!o.parent).length};
 });
-// 4.0 real campaign + physical scene proof. The stage's actual Game.update
-// triggers a launch from the left background dock; destroying the linked
-// field node closes that bay and prevents future reinforcements.
+// Timed reinforcements remain actual enemies after retiring their decorative
+// box-shaped docks. Destroying a linked field node still suppresses its sortie.
 await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
  g.start('campaign','normal',2,'striker');
@@ -346,12 +345,12 @@ await rich.page.evaluate(()=>{
  g.update(1/60,{x:0,y:0,focus:false});
  view.draw(g,.016,16.7);
 });
-await scene(rich.page,'v40-real-hangar-3d-enemy-sortie',360);
+await scene(rich.page,'v711-reinforcements-without-box-dock',360);
 results.worldAliveLaunch=await rich.page.evaluate(()=>({
  game:window.__nova.game.snapshot().worldAlive,
  scene:window.__nova.view.getDiagnostics().worldAliveScene,
  actualEnemyCount:window.__nova.game.enemies.length,
- visibleHangars:window.__nova.view.aliveScene.bays.filter(b=>b.root.visible).length,
+ sharedSideProps:(()=>{let n=0;window.__nova.view.scene.traverse(o=>{if(o.name.startsWith('real-gameplay-hangar-')||['real-enemy-launch-bays','left-reactive-wall','right-reactive-wall','event-reactive-world-machinery'].includes(o.name))n++;});return n;})(),
  actualKinds:window.__nova.game.enemies.map(e=>e.kind)
 }));
 await rich.page.evaluate(()=>{
@@ -399,9 +398,8 @@ results.worldAliveEscape=await rich.page.evaluate(()=>({
  scene:window.__nova.view.getDiagnostics().worldAliveScene,
  state:window.__nova.game.state
 }));
-// Intentionally quiet airspace proves the new 3D cargo lanes are actually
-// visible when enemy bullets don't need the screen. Then verify a real field
-// event physically moves background wall shutters rather than flashing HUD.
+// Quiet airspace retains depth weather; a real field event must not recreate
+// the retired generic rectangular side walls.
 await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
  g.start('campaign','normal',1,'striker');
@@ -482,21 +480,28 @@ await rich.page.evaluate(()=>{
 });
 await scene(rich.page,'v44-glacier-landmark-fully-arrived',170);
 
-results.hangarReveal=await rich.page.evaluate(()=>{
+results.sharedSceneryRemoval=await rich.page.evaluate(()=>{
  const {game:g,view}=window.__nova;
- g.start('campaign','normal',2,'striker');
- g.time=82*.25;g.enemies=[];g.bullets=[];
- g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];
- g.sectorMission.started=true;g.waveIndex=999;g.schedule=[];
- g.update(1/60,{x:0,y:0,focus:false});
- view.draw(g,.016,16.7);
- const bay=view.aliveScene.bays[0];
- const first={y:bay.root.position.y,reveal:view.aliveScene.bayReveal[0]};
- for(let i=0;i<8;i++)view.draw(g,.05,16.7);
- const later={y:bay.root.position.y,reveal:view.aliveScene.bayReveal[0]};
- return {first,later};
+ const samples=[];
+ for(let stage=0;stage<6;stage++){
+  g.start('campaign','normal',stage,'striker');g.invulnerable=900;g.shotTimer=900;
+  g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];
+  g.sectorMission.started=true;g.waveIndex=999;g.schedule=[];
+  for(const progress of[.25,.70]){
+   g.time=[64,74,82,78,82,86][stage]*progress;g.visualTime=g.time;g.enemies=[];g.bullets=[];
+   g.update(1/60,{x:0,y:0,focus:false});view.draw(g,.016,16.7);
+   view.event({type:'fieldcollapse',x:0,y:7.5,size:4});
+   for(let frame=0;frame<8;frame++)view.draw(g,.05,16.7);
+   let mounted=0;view.scene.traverse(o=>{
+    if(o.name.startsWith('real-gameplay-hangar-')||['real-enemy-launch-bays','left-reactive-wall','right-reactive-wall','event-reactive-world-machinery'].includes(o.name))mounted++;
+   });
+   samples.push({stage,progress,mounted,enemies:g.enemies.length,launched:g.worldAlive.launched,
+    hangars:view.getDiagnostics().worldAliveScene.hangars,walls:view.getDiagnostics().scenic.reactiveWallUnits});
+  }
+ }
+ return samples;
 });
-await scene(rich.page,'v44-hangar-sliding-in',200);
+await scene(rich.page,'v711-launch-and-events-without-shared-boxes',200);
 
 // Test the real two-finger input path while the WebGL camera is banking.
 await rich.page.evaluate(()=>{
@@ -545,9 +550,9 @@ if(results.gpu.view==='View'){
    !(a[1].opacity>0&&a[1].opacity<a[2].opacity&&a[2].opacity<a[3].opacity&&a[3].opacity<a[4].opacity)||
    !(a[4].opacity>a[5].opacity&&a[5].opacity>a[6].opacity&&a[6].opacity>a[7].opacity))
   throw new Error('Live 3D landmark still pops without intermediate opacity: '+JSON.stringify(a));
- const b=results.hangarReveal;
- if(!b||!(b.first.reveal>0&&b.first.reveal<.1&&b.later.reveal>b.first.reveal&&b.later.reveal<1&&b.later.y<b.first.y-3))
-  throw new Error('Actual 3D launch bay still teleports in: '+JSON.stringify(b));
+ if(results.sharedSceneryRemoval?.length!==12||!results.sharedSceneryRemoval.every(x=>
+  x.mounted===0&&x.hangars===0&&x.walls===0&&x.enemies===(x.progress===.25?2:3)))
+  throw new Error('Shared rectangular scenery returned or actual reinforcement waves changed: '+JSON.stringify(results.sharedSceneryRemoval));
 }
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
@@ -577,23 +582,19 @@ if(!results.sideRemoval?.noRailController||results.sideRemoval.railChildren!==0|
 if(!Object.values(results.worldRebuild).every(x=>x.worldScene&&x.enemy3D>=2&&x.enemyBillboards===0&&x.style==='rebuilt'))throw new Error('3D world and physical enemy meshes not rendered consistently: '+JSON.stringify(results.worldRebuild));
 if(!Object.values(results.worldRebuild).every(x=>x.background?.physicalAudit?.textureMappedMeshes===0&&x.background.physicalAudit.flatImageCards===0&&x.background.physicalAudit.sprites===0))throw new Error('2D image/textured photo backdrop still present in REAL World Rebuild scene: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.background?.physicalAudit)));
 if(![3,4,5].every(stage=>results.worldRebuild[stage]?.background?.physicalAudit?.terrainReliefMeshes>0&&results.worldRebuild[stage].background.physicalAudit.terrainTriangles>200))throw new Error('Ice, jungle and lava banks require actual tessellated 3D relief instead of flat painted cliffs');
-// All six stages retain real 3D scenic structures, but these deliberately
-// retract during dense fire. The separate scenicPeace gameplay check below
-// ensures machinery is visible again when the sector is clear.
+// All six stages retain depth weather, with the generic edge machinery retired.
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>x.scenic?.stage===Number(stage)&&x.scenic?.farWeather>0&&x.scenic?.style==='world-space-3d-only'&&x.scenic?.machines===0))throw new Error('3D scenic systems disappeared or exceeded staging budget: '+JSON.stringify(Object.values(results.worldRebuild).map(x=>x.scenic)));
 if(!Object.entries(results.worldRebuild).every(([stage,x])=>!results.cinematicLayers[stage]?.crowded||x.scenic?.machines===0))throw new Error('Stage machinery obscures dense live projectile patterns');
 if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.scenicPeace?.farWeather<(results.scenicPeace?.quality==='PERFORMANCE'?12:20))throw new Error('Quiet scenery restored retired structures or lost its depth particles: '+JSON.stringify(results.scenicPeace));
 if(!results.flightControls?.moved||!results.flightControls.focus||results.flightControls.projection!=='PerspectiveCamera'||!results.flightPauseStable)
  throw new Error('Banking WebGL flight input or paused camera changed: '+JSON.stringify({controls:results.flightControls,pause:results.flightPauseStable}));
-if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
-// Route captures now advance through both authored launch windows. One or
-// two real tactical bays may still be withdrawing when the snapshot is taken.
-// Retired repeating towers must stay absent and bay geometry remains bounded.
+if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==0)throw new Error('Facility events restored retired shared rectangular walls: '+JSON.stringify(results.scenicResponse));
+// Neither normal route snapshots nor actual launch windows may mount the
+// former shared rectangular dock/wall models, even as hidden objects.
 if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&
- r.worldAlive.structureCount===0&&r.worldAlive.hangars>=0&&r.worldAlive.hangars<=2&&
- r.visibleHangars===r.worldAlive.hangars))
- throw new Error('Repeated scenery or unbounded tactical bay geometry: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
-if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==1||results.worldAliveLaunch?.visibleHangars<1)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
+ r.worldAlive.structureCount===0&&r.worldAlive.hangars===0&&r.sharedSideProps===0))
+ throw new Error('Shared rectangular stage props returned: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
+if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==0||results.worldAliveLaunch?.sharedSideProps!==0)throw new Error('Actual reinforcements changed or their decorative docks returned: '+JSON.stringify(results.worldAliveLaunch));
 if(results.worldAliveBreach?.game?.baysOpen?.[1]!==false||results.worldAliveBreach?.game?.destroyed?.[1]!==true)throw new Error('4.0 strategic facility blast failed to close the physical right-side hangar: '+JSON.stringify(results.worldAliveBreach));
 if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1||results.worldAliveBoss.game.wingBroken[0]!==true||results.worldAliveBoss.oldBossRings!==0)throw new Error('4.0 boss vault / one wing or excessive old rings obscure HUD: '+JSON.stringify(results.worldAliveBoss));
 if(!results.worldAliveCore?.game?.wingBroken.every(Boolean)||!results.worldAliveCore.scene.centerExposed)throw new Error('4.0 actual wing-break damage must physically open the central 3D reactor: '+JSON.stringify(results.worldAliveCore));

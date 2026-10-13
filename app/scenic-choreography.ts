@@ -2,7 +2,6 @@ import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
 import type {FxMix} from './fx-director.ts';
 import {STAGES} from './stages.ts';
-import {approachReveal,easeReveal} from './scenery-transitions.ts';
 
 const TAU=Math.PI*2;
 const wrap=(x:number,n:number)=>((x%n)+n)%n;
@@ -28,7 +27,6 @@ export class ScenicChoreography3D {
  private architecture=new T.Group();
  private traffic=new T.Group();
  private scenery=new T.Group();
- private reaction=new T.Group();
  private shell=new T.MeshStandardMaterial({color:0x43566a,metalness:.18,roughness:.87});
  private bright=new T.MeshStandardMaterial({color:0x647d89,metalness:.18,roughness:.83});
  private dark=new T.MeshStandardMaterial({color:0x263847,metalness:.40,roughness:.66});
@@ -38,15 +36,11 @@ export class ScenicChoreography3D {
  private freighters:Freight[]=[];
  private motes:T.InstancedMesh;
  private lines:T.InstancedMesh;
- private facade:T.Group[]=[];
- private shutters:T.Group[]=[];
- private warning:T.Mesh[]=[];
  private stage=-1;
  private lastTime=0;
  private cue:BackdropCue|null=null;
  private patrolCount=0;
  private backdropCount=0;
- private reactionReveal=0;
  private eventCount=0;
  private ambientCount=0;
  constructor(){
@@ -54,36 +48,13 @@ export class ScenicChoreography3D {
   this.architecture.name='stage-specific-kinetic-silhouettes';
   this.traffic.name='distant-intercept-cargo-traffic';
   this.scenery.name='far-field-weather-and-conduit-motion';
-  this.reaction.name='event-reactive-world-machinery';
-  this.root.add(this.architecture,this.traffic,this.scenery,this.reaction);
+  this.root.add(this.architecture,this.traffic,this.scenery);
   this.motes=this.batch('deep-stage-volume-particles',crystal,this.natural,84,this.scenery);
   this.lines=this.batch('moving-cable-guides',cube,this.dark,48,this.scenery);
   for(let i=0;i<3;i++){
    const item=this.makeFreighter(i);
    this.freighters.push(item);this.traffic.add(item.root);
   }
-  for(const side of[-1,1]){
-   const sideRoot=new T.Group();
-   sideRoot.name=side<0?'left-reactive-wall':'right-reactive-wall';
-   sideRoot.position.set(side*10.7,7,-11.6);
-   this.reaction.add(sideRoot);this.facade.push(sideRoot);
-   this.block(sideRoot,this.dark,0,0,-.1,2.8,13.5,2.1);
-   for(let j=0;j<5;j++){
-    const y=-5.5+j*2.7;
-    this.block(sideRoot,this.shell,0,y,.8,2.8,.32,.8);
-    this.block(sideRoot,this.accents,side*.85,y,.92,.16,1.0,.12);
-   }
-   const hatch=new T.Group();
-   hatch.position.set(side*.65,0,1.1);
-   sideRoot.add(hatch);this.shutters.push(hatch);
-   this.block(hatch,this.bright,0,0,0,1.35,7.1,.48);
-   for(let j=0;j<4;j++){
-    this.block(hatch,this.dark,0,-2.5+j*1.65,.28,1.2,.11,.16);
-   }
-   const indicator=this.block(sideRoot,this.accents,-side*.65,0,1.30,.22,2.7,.22);
-   this.warning.push(indicator);
-  }
-  this.reaction.visible=false;
  }
  private batch(name:string,geo:T.BufferGeometry,mat:T.Material,max:number,owner:T.Group){
   const m=new T.InstancedMesh(geo,mat,max);
@@ -207,7 +178,7 @@ export class ScenicChoreography3D {
    const item=this.makeMachinery(stage,i);
    this.machines.push(item);this.architecture.add(item.root);
   }
-  this.cue=null;this.eventCount=0;this.reactionReveal=0;
+  this.cue=null;this.eventCount=0;
  }
  event(e:GameEvent){
   if(e.type==='stage'){this.cue=null;return;}
@@ -305,22 +276,9 @@ export class ScenicChoreography3D {
    dummy.updateMatrix();this.lines.setMatrixAt(n++,dummy.matrix);
   }
   this.lines.count=n;this.lines.instanceMatrix.needsUpdate=true;
-  // Reactive architectural light isn't a flash overlay: the shutters physically
-  // withdraw and walls' side-mounted metal indicators brighten only modestly.
-  const engaged=!reduced&&(!!this.cue&&strength>0||boss&&mix.showBossArchitecture);
-  // Event-based shutters must slide into frame instead of suddenly existing.
-  this.reactionReveal=approachReveal(this.reactionReveal,engaged?1:0,dt,.52);
-  const reveal=easeReveal(this.reactionReveal);
-  this.reaction.visible=reveal>.002;
-  const opening=(boss ? .85 : 1.0)*Math.max(strength,boss ? .60 : 0)*reveal;
-  for(let j=0;j<this.facade.length;j++){
-   const f=this.facade[j],side=j?1:-1;
-   f.position.set(side*(10.7+(1-reveal)*10),this.cue?clamp(this.cue.y,-5,14):boss?g.boss!.y:7,-11.6);
-   this.shutters[j].position.x=side*(.65+opening*1.4);
-   this.shutters[j].rotation.y=side*opening*.52;
-   (this.warning[j].material as T.MeshBasicMaterial).opacity=.12+.15*opening;
-  }
-  this.backdropCount=this.reaction.visible?2:0;
+  // Facility and boss events must not slide the same rectangular walls in
+  // over every environment. Their former meshes are no longer constructed.
+  this.backdropCount=0;
  }
  diagnostics(){
   return {stage:this.stage,environment:STAGES[this.stage]?.environment??'unknown',
@@ -328,7 +286,7 @@ export class ScenicChoreography3D {
    farWeather:this.ambientCount,animatedCables:this.lines.count,
    reactiveWallUnits:this.backdropCount,cue:this.cue?.kind??null,
    eventCount:this.eventCount,
-   limits:{machines:2,freighters:3,environmentParticles:84,cableSegments:48,reactiveWalls:2},
+   limits:{machines:2,freighters:3,environmentParticles:84,cableSegments:48,reactiveWalls:0},
    style:'world-space-3d-only'};
  }
 }

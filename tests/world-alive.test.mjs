@@ -98,10 +98,9 @@ test('rendering 4.0 connects to real game state, 3D topology and explicit scene 
  assert.match(view,/private aliveScene=usesRebuiltGraphics\(\)\?new WorldAliveScene\(\):null/);
  assert.match(view,/this\.aliveScene\?\.event\(e\)/);
  assert.match(view,/this\.aliveScene\?\.draw\(game,dt,mix/);
- assert.match(scene,/real-gameplay-hangar-/);
+ assert.doesNotMatch(scene,/real-gameplay-hangar-|makeBay\(/);
  assert.match(scene,/reactive-.*-dock/);
  assert.match(scene,/this\.vault\.cores/);
- assert.match(scene,/WORLD_ALIVE_BUDGET\.firstLaunch/);
  assert.doesNotMatch(scene,/new T\.PlaneGeometry|new T\.Sprite|AdditiveBlending|Math\.random|new T\.PointLight/);
 });
 
