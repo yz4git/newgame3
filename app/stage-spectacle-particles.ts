@@ -117,15 +117,16 @@ export class StageSpectacleParticles{
   let fronts=0;
   for(let i=0;i<this.fronts.length;i++){
    const front=this.fronts[i];front.visible=false;
-   if(reduced||i>=(performance?2:6))continue;
+   const frontBudget=this.stage===1?2:this.stage===3||this.stage===4?0:1;
+   if(reduced||i>=Math.min(frontBudget,performance?1:2))continue;
    const age=t-beat-i*.14;
    if(age<=0||age>=2.5)continue;
-   const radius=.85+age*(this.stage===1?3.6:2.7);
+   const radius=.65+age*(this.stage===1?2.0:1.65);
    front.position.set(0,0,-4.7-i*.28);
    front.rotation.set(.18+Math.sin(i)*.12,.08*Math.cos(i),i*1.7+age*.12);
    const strength=clamp(age/.2)*clamp((2.5-age)/1.6)*fade;
    front.scale.set(radius,radius*(this.stage===1?.66:.88),1.8);
-   front.material.opacity=.15*strength;front.visible=strength>.002;fronts+=Number(front.visible);
+   front.material.opacity=.09*strength;front.visible=strength>.002;fronts+=Number(front.visible);
   }
   (this.fragments.material as T.MeshStandardMaterial).opacity=.90*envelope;
   (this.wash.material as T.MeshStandardMaterial).opacity=(this.stage===1?.16:.24)*fade;

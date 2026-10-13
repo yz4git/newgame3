@@ -7,6 +7,7 @@ import {stageSpectaclePose} from './stage-spectacle-timeline.ts';
 import {StageSpectacleParticles} from './stage-spectacle-particles.ts';
 import {buildEpicSet,animateEpicSet,type EpicSet} from './epic-setpieces.ts';
 import {EMPTY_FILM_CUE,type FilmCue} from './film-lighting.ts';
+import {episodeFlightPose} from './flight-route.ts';
 
 export const STAGE_SEQUENCE_IDS=[
  ['ORE CANYON RUPTURE','LEVIATHAN MINING SHIP','ORBITAL STATION BREAKUP'],
@@ -28,13 +29,15 @@ function construct(stage:number,act:number):Chapter{
  // Measure the entire animated envelope once. No frame-dependent correction:
  // a surfacing hull must really rise, and falling wreckage must keep falling.
  let ceiling=-Infinity;
- for(let tick=0;tick<=80;tick++){
-  animateEpicSet(set,stage,act,stageSpectaclePose(stage,act,tick*.25));
+ for(let tick=0;tick<=96;tick++){
+  const elapsed=tick*.25,flight=episodeFlightPose(stage,act,elapsed);
+  root.rotation.set(flight.rx,flight.ry,flight.rz);
+  animateEpicSet(set,stage,act,stageSpectaclePose(stage,act,elapsed));
   root.updateMatrixWorld(true);
   bounds.setFromObject(root);ceiling=Math.max(ceiling,bounds.max.z);
  }
  const particles=new StageSpectacleParticles(stage,act);
- particles.root.scale.set(2.3,2.3,1);
+ particles.root.scale.set(1.6,1.6,1);
  particles.root.position.z=ceiling-1;
  root.add(particles.root);
  return {...set,root,id:STAGE_SEQUENCE_IDS[stage][act],act,particles,ceiling};
@@ -74,10 +77,9 @@ export class StageSequences3D{
    const opacity=easeReveal((elapsed+4)/3)*(1-easeReveal((elapsed-16)/5));
    c.root.visible=opacity>.002&&!reduced;
    if(!c.root.visible)continue;
-   const phase=stageSpectaclePose(g.stage,c.act,elapsed),travel=46-elapsed*6.5;
-   const angle=g.stage===0&&c.act===1?-.24:g.stage===1&&c.act===1?.14:g.stage===4&&c.act===1?-.06:0;
-   c.root.position.set(g.stage===0&&c.act===1?-4+phase.action*6:0,travel,-c.ceiling-1.15);
-   c.root.rotation.set(0,0,angle+Math.sin(Math.max(0,elapsed)*.10+g.stage)*.035);
+   const phase=stageSpectaclePose(g.stage,c.act,elapsed),flight=episodeFlightPose(g.stage,c.act,elapsed);
+   c.root.position.set(flight.x,flight.y,-c.ceiling-1.15);
+   c.root.rotation.set(flight.rx,flight.ry,flight.rz);
    animateEpicSet(c,g.stage,c.act,phase);
    for(const mat of c.materials){
     mat.opacity=opacity;

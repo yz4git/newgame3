@@ -28,6 +28,7 @@ import {StageSequences3D} from './stage-sequences.ts';
 import {filmFrame,EMPTY_FILM_CUE} from './film-lighting.ts';
 import {fitCinemaCamera,poseCinemaCamera} from './cinema-camera.ts';
 import {CinematicDetonations} from './cinematic-detonations.ts';
+import {FlightWorlds3D} from './flight-worlds.ts';
 // Recurring decorative side rails removed from the playable scene.
 
 const boxGeometry=new T.BoxGeometry(1,1,1);
@@ -76,6 +77,7 @@ export class View {
    private aliveScene=usesRebuiltGraphics()?new WorldAliveScene():null;
    private stageSequences=usesRebuiltGraphics()?new StageSequences3D():null;
    private detonations=usesRebuiltGraphics()?new CinematicDetonations():null;
+   private flightWorlds=usesRebuiltGraphics()?new FlightWorlds3D():null;
    private cameraRoll=0;private cameraZoom=1;private cinematicKick=0;
   constructor(private canvas:HTMLCanvasElement){
     this.scene.background=new T.Color(0x030914);this.scene.environment=environmentTexture();this.camera.position.set(0,-12.5,40);this.camera.lookAt(0,0,0);
@@ -85,6 +87,7 @@ export class View {
     this.rim.position.set(16,-5,12);this.scene.add(this.rim,this.blastLight);
     if(usesRebuiltGraphics())this.scene.fog=new T.Fog(this.film.stock.fog,52,108);
     if(this.detonations)this.scene.add(this.detonations.root);
+    if(this.flightWorlds)this.scene.add(this.flightWorlds.root);
     this.scene.add(this.background.root,this.atmosphere,this.stageEffects.root,this.combatEffects.root,this.facilityDemolition.root,this.airEffects.root,this.encounterView.root);if(this.volumetric)this.scene.add(this.volumetric.root);if(this.depthSpectacle)this.scene.add(this.depthSpectacle.root);if(this.colossal)this.scene.add(this.colossal.root);if(this.invasion)this.scene.add(this.invasion.root);if(this.mechanical)this.scene.add(this.mechanical.root);if(this.scenic)this.scene.add(this.scenic.root);if(this.aliveScene)this.scene.add(this.aliveScene.root);if(this.stageSequences)this.scene.add(this.stageSequences.root);this.player.position.z=1.0;this.scene.add(this.player);
     for(const s of[-1,1]){const satellite=new T.Group();ball(satellite,white,0,0,0,.3,.4,.23);ball(satellite,cyan,0,.15,.22,.14,.2,.06);satellite.position.z=1;this.satellites.push(satellite);this.scene.add(satellite);}
     const bulletMat=new T.MeshBasicMaterial({color:0xffffff,toneMapped:false});
@@ -269,6 +272,7 @@ export class View {
     const scroll=active?4.4:title?1.4:0;
     const visualReduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mix=this.fxDirector.plan(game,visualReduced,this.quality==='PERFORMANCE');
+    this.flightWorlds?.draw(game,visualReduced,this.quality==='PERFORMANCE',mix.readability);
     this.background.draw(game,this.quality==='PERFORMANCE',visualReduced);
     this.stageEffects.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.airEffects.draw(game,this.quality==='PERFORMANCE',window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -283,6 +287,7 @@ export class View {
     this.aliveScene?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     this.stageSequences?.draw(game,dt,visualReduced,this.quality==='PERFORMANCE',mix.readability);
     this.background.cinematicPresence(this.stageSequences?.sceneryPresence()??0);
+    this.background.root.visible=!this.flightWorlds||game.mode!=='campaign'&&game.state!=='title';
     this.detonations?.draw(game,dt,mix,visualReduced,this.quality==='PERFORMANCE');
     if(this.stageSequences){
       this.film=filmFrame(game.stage,game.visualTime,this.stageSequences.filmCue(),mix.readability,visualReduced);
@@ -443,7 +448,7 @@ export class View {
     // Full roll is presentational only: simulation, collision and touch raycasts
     // keep their original world coordinates and use this same actual camera.
     if(this.camera instanceof T.PerspectiveCamera){
-      poseCinemaCamera(this.camera,this.film,this.cameraRoll,this.cameraZoom,kinetic?warp:0);
+      poseCinemaCamera(this.camera,this.film,this.cameraRoll,this.cameraZoom,kinetic?warp:0,this.flightWorlds?.cameraFrame());
     }else{
       this.camera.position.z=40-(kinetic?bossEntry*1.45+warp*2.4+intro*1.2+this.cinematicKick*.38:0);
       this.camera.zoom=this.cameraZoom;this.camera.updateProjectionMatrix();
@@ -457,6 +462,6 @@ export class View {
     if(this.useBloom&&this.pipeline)this.pipeline.render();else if(this.useBloom&&this.composer)this.composer.render();else this.renderer.render(this.scene,this.camera);
   }
   getStageSoundMoments(){return this.stageSequences?.soundMoments()??[];}
-  getDiagnostics(){return {visualStyle:currentVisualStyle(),detonations:this.detonations?.diagnostics()??null,film:this.stageSequences?{look:this.film.stock.name,exposure:this.film.exposure,keyGain:this.film.keyGain,lensPush:this.film.lensPush,fogNear:this.film.fogNear}:null,volumetric:this.volumetric?.diagnostics()??null,depthSpectacle:this.depthSpectacle?.diagnostics()??null,fxMix:this.fxDirector.diagnostics(),scenic:this.scenic?.diagnostics()??null,worldAliveScene:this.aliveScene?.diagnostics()??null,stageSequences:this.stageSequences?.diagnostics()??null,railDistricts:null,mechanical:this.mechanical?.diagnostics()??null,colossal:this.colossal?.diagnostics()??null,invasion:this.invasion?.diagnostics()??null,cameraRig:{projection:this.camera.type,roll:this.cameraRoll,zoom:this.cameraZoom,kick:this.cinematicKick},background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
+  getDiagnostics(){return {visualStyle:currentVisualStyle(),flight:this.flightWorlds?.diagnostics()??null,detonations:this.detonations?.diagnostics()??null,film:this.stageSequences?{look:this.film.stock.name,exposure:this.film.exposure,keyGain:this.film.keyGain,lensPush:this.film.lensPush,fogNear:this.film.fogNear}:null,volumetric:this.volumetric?.diagnostics()??null,depthSpectacle:this.depthSpectacle?.diagnostics()??null,fxMix:this.fxDirector.diagnostics(),scenic:this.scenic?.diagnostics()??null,worldAliveScene:this.aliveScene?.diagnostics()??null,stageSequences:this.stageSequences?.diagnostics()??null,railDistricts:null,mechanical:this.mechanical?.diagnostics()??null,colossal:this.colossal?.diagnostics()??null,invasion:this.invasion?.diagnostics()??null,cameraRig:{projection:this.camera.type,roll:this.cameraRoll,zoom:this.cameraZoom,kick:this.cinematicKick},background:this.background.diagnostics(),stageEffects:this.stageEffects.diagnostics(),combatEffects:this.combatEffects.diagnostics(),air:this.airEffects.diagnostics(),animation:{player:this.playerAnimation,enemies:this.enemyAnimations,boss:this.bossAnimation,wrecks:this.wrecks.length},encounters:this.encounterView.diagnostics(),facilityDemolition:this.facilityDemolition.diagnostics(),textures:visualAssetStatus(),shadows:this.key.castShadow,engine:this.engine,quality:this.quality,dpr:this.pixelRatio,frameMs:this.frameAverage,particles:this.particles.length,width:this.width,height:this.height};}
 }
 function shipTint(kind:Kind){return kind==='dart'?0xb69add:kind==='lancer'?0xd2ddf7:0xffffff;}

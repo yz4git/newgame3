@@ -1,3 +1,37 @@
+## NOVA STRIKE 7.0 — FLIGHT CINEMA (2026-10-13)
+
+The six campaigns now fly through continuous physical locations. An authored
+route changes altitude, direction and camera angle as the player approaches a
+new district. Large stage events share that route and are viewed from changing
+side angles, with smaller pressure fronts keeping their silhouettes clear.
+
+- Six finite worlds: orbital refineries, coastal harbour districts, a multi-level
+  citadel city, glacial faulted cliffs, a forest river and terraced sanctuary,
+  and industrial furnace islands above a flowing lava bed.
+- Forty-two named route sections coordinate banks, dives, climbs and approach
+  angles. Terrain turns beneath the flight plane; the real perspective camera
+  orbits and changes altitude. Every pose refits the actual flight corners, and
+  touch rays use the same camera.
+- Thick curved banks, connected foundations, varied building heights, transverse
+  bridges, trees, ships and pipes make each location readable as one space.
+  Landscapes have a finite beginning and end and never wrap into repeated rails.
+- Landscape geometry uses five instanced material groups plus terrain and water,
+  with at most eight additional draws. Rivers use animated 3D surface geometry.
+- The eighteen large setpieces now travel obliquely and tilt on approach. Their
+  complete animated envelopes, including that tilt, remain behind combat.
+- Dense hostile fire reduces camera movement. Reduced-motion settings retain
+  continuous scenery with stable camera angles. Classic and Canvas remain
+  available through the existing renderer selector.
+
+The existing iPhone browser review captures eighteen route views as well as
+all eighteen setpieces, and checks the visible corridor during each route.
+The retained landmark fade check now distinguishes baseline visibility from the
+intentional handoff to the continuous landscape.
+
+Visual direction references: [TAITO's official RayStorm/RayCrisis overview](https://www.taito.co.jp/rayzarcadechronology/title)
+and [Treasure's Ikaruga](https://www.treasure-inc.co.jp/products/lp/ikaruga_nesica/main.html).
+The scenery and route choreography are original procedural geometry.
+
 ## NOVA STRIKE 6.0 — COLOSSAL WORLDS (2026-10-13)
 
 World Rebuild's eighteen authored events now use full-scale articulated

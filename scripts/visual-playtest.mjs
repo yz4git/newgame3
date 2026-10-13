@@ -201,6 +201,7 @@ results.cinematicLayers={};
 results.worldStageEpisodes={};
 results.worldStageImpact={};
 results.filmWorlds={};
+results.flightWorlds={};
 for(let stage=0;stage<6;stage++){
  await rich.page.evaluate(stage=>{
   const {game:g,view}=window.__nova;
@@ -261,6 +262,24 @@ for(let stage=0;stage<6;stage++){
   },{stage,act});
   await scene(rich.page,`v6-colossal-${stage+1}-${act+1}`,80);
  }
+
+ const flightSamples=[];
+ for(const progress of[.16,.34,.72]){
+  await rich.page.evaluate(({stage,progress})=>{
+   const {game:g,view}=window.__nova;
+   g.time=[64,74,82,78,82,86][stage]*progress;g.visualTime=g.time;
+   g.enemies=[];g.bullets=[];view.draw(g,.016,16.7);
+  },{stage,progress});
+  await scene(rich.page,`v7-flight-${stage+1}-${Math.round(progress*100)}`,80);
+  flightSamples.push(await rich.page.evaluate(()=>{
+   const {view}=window.__nova;
+   const corners=[[-10.2,-14.4],[10.2,-14.4],[-10.2,14.8],[10.2,14.8]].map(([x,y])=>view.worldToScreen(x,y));
+   return {flight:view.getDiagnostics().flight,camera:view.camera.position.toArray(),corners,
+    frame:{width:view.getDiagnostics().width,height:view.getDiagnostics().height},
+    mounted:!!view.scene.getObjectByName('continuous-3d-flight-world')?.visible};
+  }));
+ }
+ results.flightWorlds[stage]=flightSamples;
 
  results.cinematicLayers[stage]=await rich.page.evaluate(()=>{
   const {view}=window.__nova;
@@ -442,7 +461,11 @@ results.landmarkReveal=await rich.page.evaluate(()=>{
    const material=Array.isArray(o.material)?o.material[0]:o.material;
    opacity=material?.opacity??null;
   }});
-  samples.push({offset,visible:model.visible,opacity});
+  // The flight world now owns campaign scenery. Audit the retained legacy
+  // fade independently from the deliberate cinematic handoff to the new map.
+  view.background.draw(g);
+  let baseline=null;model.traverse(o=>{if(baseline===null&&o.isMesh)baseline=(Array.isArray(o.material)?o.material[0]:o.material).opacity;});
+  samples.push({offset,visible:model.visible,opacity:baseline,handoffOpacity:opacity});
  }
  return samples;
 });
@@ -505,6 +528,11 @@ if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.u
 if(new Set(Object.values(results.filmWorlds).map(x=>x.film?.look)).size!==6||
  !Object.values(results.filmWorlds).every(x=>x.geometry.solidMeshes>20&&x.geometry.triangles<40000&&x.detonations.fire>0&&x.detonations.draws===3&&x.film.exposure<.95))
  throw new Error('Cinematic solid geometry, stage lighting or pooled detonation missing: '+JSON.stringify(results.filmWorlds));
+if(Object.keys(results.flightWorlds).length!==6||!Object.values(results.flightWorlds).every(samples=>
+ samples.length===3&&new Set(samples.map(x=>x.flight.section)).size===3&&samples.every(x=>
+  x.mounted&&x.flight.finite&&x.flight.instances>50&&x.flight.triangles<80000&&x.flight.draws<=8&&
+  x.corners.every(p=>p.x>0&&p.x<x.frame.width&&p.y>0&&p.y<x.frame.height))))
+ throw new Error('Authored 3D route, continuous world or camera framing missing: '+JSON.stringify(results.flightWorlds));
 if(Object.keys(results.worldStageImpact).length!==6||
  !Object.values(results.worldStageImpact).every(x=>x.phase==='action'&&x.impact>.8&&x.fragments>=4))
  throw new Error('One-time environmental catastrophe invisible at impact moment: '+JSON.stringify(results.worldStageImpact));

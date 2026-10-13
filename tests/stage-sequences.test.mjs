@@ -14,7 +14,7 @@ test('six world stories have eighteen separately authored one-shot environmental
  assert.match(s,/buildEpicSet\(stage,act\)/);
  assert.match(s,/animateEpicSet\(c,g.stage,c.act,phase\)/);
  assert.match(s,/elapsed=clock-beat/);
- assert.match(s,/travel=46-elapsed\*6.5/);
+ assert.match(s,/episodeFlightPose\(g.stage,c.act,elapsed\)/);
  assert.match(s,/easeReveal\(\(elapsed\+4\)\/3\)/);
  assert.doesNotMatch(s,/Math\.random\(|wrap\(|\bmod\(/);
  assert.match(s,/loops:0/);
