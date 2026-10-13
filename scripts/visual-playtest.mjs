@@ -480,27 +480,33 @@ await rich.page.evaluate(()=>{
 });
 await scene(rich.page,'v44-glacier-landmark-fully-arrived',170);
 
-results.sharedSceneryRemoval=await rich.page.evaluate(()=>{
- const {game:g,view}=window.__nova;
- const samples=[];
- for(let stage=0;stage<6;stage++){
+results.sharedSceneryRemoval=[];
+for(let stage=0;stage<6;stage++){
+ await rich.page.evaluate(stage=>{
+  const {game:g}=window.__nova;
   g.start('campaign','normal',stage,'striker');g.invulnerable=900;g.shotTimer=900;
   g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];
   g.sectorMission.started=true;g.waveIndex=999;g.schedule=[];
-  for(const progress of[.25,.70]){
+ },stage);
+ for(const progress of[.25,.70]){
+  const sample=await rich.page.evaluate(({stage,progress})=>{
+   const {game:g,view}=window.__nova;
    g.time=[64,74,82,78,82,86][stage]*progress;g.visualTime=g.time;g.enemies=[];g.bullets=[];
    g.update(1/60,{x:0,y:0,focus:false});view.draw(g,.016,16.7);
    view.event({type:'fieldcollapse',x:0,y:7.5,size:4});
-   for(let frame=0;frame<8;frame++)view.draw(g,.05,16.7);
+   view.draw(g,.6,16.7);
    let mounted=0;view.scene.traverse(o=>{
     if(o.name.startsWith('real-gameplay-hangar-')||['real-enemy-launch-bays','left-reactive-wall','right-reactive-wall','event-reactive-world-machinery'].includes(o.name))mounted++;
    });
-   samples.push({stage,progress,mounted,enemies:g.enemies.length,launched:g.worldAlive.launched,
-    hangars:view.getDiagnostics().worldAliveScene.hangars,walls:view.getDiagnostics().scenic.reactiveWallUnits});
-  }
+   return {stage,progress,mounted,enemies:g.enemies.length,launched:g.worldAlive.launched,
+    hangars:view.getDiagnostics().worldAliveScene.hangars,walls:view.getDiagnostics().scenic.reactiveWallUnits};
+  },{stage,progress});
+  results.sharedSceneryRemoval.push(sample);
+  // Let the software GPU finish each pair of draws before switching worlds.
+  await rich.page.waitForTimeout(160);
  }
- return samples;
-});
+}
+console.log('NOVA_SIDE_REMOVAL:'+JSON.stringify(results.sharedSceneryRemoval));
 await scene(rich.page,'v711-launch-and-events-without-shared-boxes',200);
 
 // Test the real two-finger input path while the WebGL camera is banking.
