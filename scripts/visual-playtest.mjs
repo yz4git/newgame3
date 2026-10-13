@@ -200,6 +200,7 @@ results.worldRebuild={};
 results.cinematicLayers={};
 results.worldStageEpisodes={};
 results.worldStageImpact={};
+results.filmWorlds={};
 for(let stage=0;stage<6;stage++){
  await rich.page.evaluate(stage=>{
   const {game:g,view}=window.__nova;
@@ -229,6 +230,12 @@ for(let stage=0;stage<6;stage++){
   const d=window.__nova.view.getDiagnostics().stageSequences;
   const episode=d.activePhases?.find(x=>x.phase==='action'&&x.impact>.8);
   return {stage:d.stage,id:episode?.id,phase:episode?.phase,impact:episode?.impact??0,fragments:episode?.fragments??0};
+ });
+ results.filmWorlds[stage]=await rich.page.evaluate(()=>{
+  const {view,game:g}=window.__nova,d=view.getDiagnostics();
+  view.event({type:'explode',x:-3,y:3,size:2});
+  view.draw(g,.45,16.7);
+  return {film:d.film,geometry:d.stageSequences.cinematic,detonations:view.getDiagnostics().detonations};
  });
  await scene(rich.page,'world-unique-impact-'+String(stage+1).padStart(2,'0'),160);
  await rich.page.evaluate(stage=>{
@@ -485,6 +492,9 @@ if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw n
 if(results.gpu.view==='View'&&(results.glare.nearWhiteFraction>.14||results.glare.visibleCoreScale.some(v=>v>1.08)||results.glare.visibleCoreOpacity.some(v=>v>.43)))throw new Error('Facility core light still obscures the 180ms playfield: '+JSON.stringify(results.glare));
 if(!results.explosionUnobstructed.stageCueHidden||!results.explosionUnobstructed.centerBannerCompact)throw new Error('Facility explosion obscured by stage radio or oversized banner');
 if(!results.controls.moved||!results.controls.weaponChanged||!results.controls.usedBomb||!results.multitouch.focus||!results.multitouch.moved)throw new Error('Functional mobile and dual-touch control regression');
+if(new Set(Object.values(results.filmWorlds).map(x=>x.film?.look)).size!==6||
+ !Object.values(results.filmWorlds).every(x=>x.geometry.solidMeshes>20&&x.geometry.triangles<30000&&x.detonations.fire>0&&x.detonations.draws===3&&x.film.exposure<.95))
+ throw new Error('Cinematic solid geometry, stage lighting or pooled detonation missing: '+JSON.stringify(results.filmWorlds));
 if(Object.keys(results.worldStageImpact).length!==6||
  !Object.values(results.worldStageImpact).every(x=>x.phase==='action'&&x.impact>.8&&x.fragments>=4))
  throw new Error('One-time environmental catastrophe invisible at impact moment: '+JSON.stringify(results.worldStageImpact));

@@ -5,6 +5,8 @@ import {distanceReveal,easeReveal} from './scenery-transitions.ts';
 import {worldClock} from './motion.ts';
 import {stageSpectaclePose} from './stage-spectacle-timeline.ts';
 import {StageSpectacleParticles} from './stage-spectacle-particles.ts';
+import {cinematicBox,weatheredRock,finishCinematicChapter} from './cinematic-detail.ts';
+import {EMPTY_FILM_CUE,type FilmCue} from './film-lighting.ts';
 
 /** Three ONE-TIME encounters for each campaign world, not modulo-animated props.
  * A separate physical choreography accompanies the actual backgrounds.
@@ -23,10 +25,10 @@ const clamp=(x:number,a=0,b=1)=>Math.max(a,Math.min(b,x));
 type RestPose={x:number;y:number;z:number;rx:number;ry:number;rz:number;sx:number;sy:number;sz:number;index:number;};
 type Chapter={root:T.Group;moving:T.Group;secondary:T.Group;still:T.Group;materials:T.Material[];id:string;act:number;particles:StageSpectacleParticles;rests:Map<T.Object3D,RestPose>;};
 const add=(g:T.Group,m:T.Material,x:number,y:number,z:number,w:number,h:number,d:number)=>{
- const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);g.add(mesh);return mesh;
+ const mesh=new T.Mesh(cinematicBox(w,h,d),m);mesh.position.set(x,y,z);g.add(mesh);return mesh;
 };
 const gem=(g:T.Group,m:T.Material,x:number,y:number,z:number,sx:number,sy:number,sz:number,seed=0)=>{
- const mesh=new T.Mesh(new T.IcosahedronGeometry(1,0),m);
+ const mesh=new T.Mesh(weatheredRock(seed),m);
  mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.rotation.z=seed*.36;g.add(mesh);return mesh;
 };
 const cylinder=(g:T.Group,m:T.Material,x:number,y:number,z:number,r:number,h:number,segments=12)=>{
@@ -55,9 +57,9 @@ function construct(stage:number,act:number):Chapter{
   [0x4c3430,0x906046,0x91563b,0x352a2b]
  ][stage];
  const materials=[
-  new T.MeshStandardMaterial({color:shades[0],metalness:.14,roughness:.86,transparent:true,depthWrite:false}),
-  new T.MeshStandardMaterial({color:shades[1],metalness:.26,roughness:.76,transparent:true,depthWrite:false}),
-  new T.MeshStandardMaterial({color:shades[2],metalness:.11,roughness:.83,transparent:true,depthWrite:false}),
+  new T.MeshStandardMaterial({color:shades[0],metalness:stage===3||stage===4?.08:.50,roughness:.66,transparent:true,depthWrite:true}),
+  new T.MeshStandardMaterial({color:shades[1],metalness:stage===3||stage===4?.12:.65,roughness:.42,transparent:true,depthWrite:true}),
+  new T.MeshStandardMaterial({color:shades[2],metalness:.25,roughness:.57,transparent:true,depthWrite:true}),
   new T.MeshBasicMaterial({color:shades[3],transparent:true,opacity:.6,depthWrite:false,toneMapped:true})
  ];
  const [dark,plate,accent,glimmer]=materials;
@@ -228,6 +230,17 @@ function construct(stage:number,act:number):Chapter{
    for(let k=0;k<6;k++)gem(secondary,accent,(k-3)*.9,-2.7+(k%3)*1.2,-4.8,.45,.7,.4,k);
   }
  }
+ finishCinematicChapter(stage,act,still,moving,secondary,materials);
+ if(stage===1&&act===1){
+  // The radar turns around its bearing, not the world origin. Rotating
+  // a -5 m offset around zero used to swing metal through the bullet plane.
+  const pivot=new T.Vector3(.4,1,-5.2);moving.userData.pivot=pivot;
+  for(const part of moving.children)part.position.sub(pivot);
+ }
+ // Preserve palette values; crowd adaptation must not accumulate darkness.
+ for(const mat of materials)if(mat instanceof T.MeshStandardMaterial){
+  mat.userData.filmColor=mat.color.clone();mat.userData.filmEmission=mat.emissiveIntensity;
+ }
  const particles=new StageSpectacleParticles(stage,act);
  root.add(particles.root);
  const rests=new Map<T.Object3D,RestPose>();
@@ -245,6 +258,7 @@ export class StageSequences3D{
  private stage=-1;
  private activeIds:string[]=[];
  private activePhases:{id:string;phase:string;impact:number;fragments:number}[]=[];
+ private cue:FilmCue={...EMPTY_FILM_CUE};
  constructor(){this.root.name='stage-authored-nonrepeating-cinematics';}
  private setStage(stage:number){
   if(this.stage===stage)return;
@@ -259,12 +273,12 @@ export class StageSequences3D{
    this.chapters.push(chapter);
   }
  }
- draw(g:Game,dt:number,reduced=false,performance=false){
+ draw(g:Game,dt:number,reduced=false,performance=false,readability=0){
   this.setStage(g.stage);
+  this.activeIds=[];this.activePhases=[];this.cue={...EMPTY_FILM_CUE};
   this.root.visible=g.mode==='campaign'&&g.state!=='result';
   if(!this.root.visible)return;
   const duration=STAGES[g.stage].duration,clock=worldClock(g);
-  this.activeIds=[];this.activePhases=[];
   for(const c of this.chapters){
    const beat=duration*timing[c.act],elapsed=clock-beat;
    // One slow physical pass per event, no cycling, teleportation or RNG.
@@ -275,11 +289,17 @@ export class StageSequences3D{
    this.activeIds.push(c.id);
    const t=Math.max(0,elapsed),phase=stageSpectaclePose(g.stage,c.act,elapsed);
    const gesture=phase.action,fallout=phase.fallout,impact=phase.impact;
-   c.root.position.set([-.9,1.5,-.6][c.act],y,-.4);
+   // Place the machinery above the terrain's -5 m deck, but below all
+   // projectile/actor planes. The old -0.4 origin buried its thick hulls.
+   c.root.position.set([-.9,1.5,-.6][c.act],y,1.85);
    c.root.rotation.set(0,0,Math.sin(t*.09+g.stage)*.025);
-   c.root.scale.setScalar((performance?.84:1)*(.82+.18*gesture));
+   c.root.scale.setScalar(.92+.14*gesture);
    for(const mat of c.materials){
-    mat.opacity=(mat instanceof T.MeshBasicMaterial ? .60 : 1)*opacity*.80;
+    mat.opacity=(mat instanceof T.MeshBasicMaterial ? .42 : 1)*opacity;
+    if(mat instanceof T.MeshStandardMaterial){
+     mat.color.copy(mat.userData.filmColor).multiplyScalar(1-readability*.24);
+     mat.emissiveIntensity=mat.userData.filmEmission*(1-readability*.50);
+    }
    }
    c.moving.scale.setScalar(1);c.secondary.scale.setScalar(1);
    c.moving.rotation.set(0,0,0);
@@ -324,6 +344,7 @@ export class StageSequences3D{
      c.secondary.scale.setScalar(.75+fallout*.3);
      break;
    }
+   if(c.moving.userData.pivot)c.moving.position.add(c.moving.userData.pivot);
    // Individually articulated members deform the setpiece. Always restore
    // each original pose before evaluation: deterministic seek/restart behavior.
    for(const [object,rest]of c.rests){
@@ -362,12 +383,14 @@ export class StageSequences3D{
      object.rotation.z+=side*fallout*.055;
     }
    }
-   c.particles.draw(phase,opacity,performance,reduced);
+   c.particles.draw(phase,opacity,performance,reduced,readability);
    const fx=c.particles.diagnostics();
    this.activePhases.push({id:c.id,phase:phase.phase,impact:phase.impact,fragments:fx.fragments});
+   if(opacity>this.cue.weight)this.cue={impact,anticipation:phase.anticipation,afterglow:phase.afterglow,elapsed,weight:opacity};
    }
   }
  impactPulse(){return Math.max(0,...this.activePhases.map(x=>x.impact));}
+ filmCue(){return this.cue;}
  soundMoments(){return this.activePhases.filter(x=>x.phase==='warning'||(x.phase==='action'&&x.impact>.5));}
- diagnostics(){return {stage:this.stage,activeEpisodes:this.activeIds,activePhases:this.activePhases,availableIds:STAGE_SEQUENCE_IDS[this.stage],stageSpecific:true,loops:0};}
+ diagnostics(){let solidMeshes=0,triangles=0;this.root.traverse(o=>{if(o instanceof T.Mesh){if(!Array.isArray(o.material)&&o.material.depthWrite)solidMeshes++;triangles+=(o.geometry.index?.count??o.geometry.getAttribute('position').count)/3;}});return {stage:this.stage,activeEpisodes:this.activeIds,activePhases:this.activePhases,availableIds:STAGE_SEQUENCE_IDS[this.stage],stageSpecific:true,loops:0,cinematic:{solidMeshes,triangles,beveled:true,attachedDetails:true,filmCue:this.cue}};}
 }

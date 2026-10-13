@@ -14,14 +14,17 @@ export class StageSpectacleParticles{
  readonly root=new T.Group();
  private fragments:T.InstancedMesh;
  private wash:T.InstancedMesh;
+ private fronts:T.Mesh<T.TorusGeometry,T.MeshBasicMaterial>[]=[];
  private cracks:T.Group;
  private crackBars:T.Mesh[]=[];
  private materials:T.Material[]=[];
- private last={fragments:0,wash:0,light:0};
- constructor(private stage:number,private act:number){
+ private last={fragments:0,wash:0,fronts:0,light:0};
+ private stage:number;private act:number;
+ constructor(stage:number,act:number){
+  this.stage=stage;this.act=act;
   this.root.name='physical-stage-impact-'+stage+'-'+act;
-  const shardMat=new T.MeshStandardMaterial({color:HAZE[stage],roughness:.77,metalness:stage===2||stage===5?.39:.06,transparent:true,opacity:.72,depthWrite:false});
-  const plumeMat=new T.MeshBasicMaterial({color:HAZE[stage],toneMapped:true,transparent:true,opacity:.20,depthWrite:false});
+  const shardMat=new T.MeshStandardMaterial({color:HAZE[stage],roughness:.47,metalness:stage===2||stage===5?.64:.12,transparent:true,opacity:.92,depthWrite:true});
+  const plumeMat=new T.MeshStandardMaterial({color:HAZE[stage],roughness:1,metalness:0,transparent:true,opacity:.23,depthWrite:false});
   const crackMat=new T.MeshBasicMaterial({color:CRACK[stage],toneMapped:true,transparent:true,opacity:.24,depthWrite:false});
   this.materials.push(shardMat,plumeMat,crackMat);
   const geometry=stage===3?new T.OctahedronGeometry(1,0)
@@ -30,7 +33,14 @@ export class StageSpectacleParticles{
    :stage===5?new T.TetrahedronGeometry(1,0)
    :stage===2?new T.BoxGeometry(1,1,1):new T.IcosahedronGeometry(1,0);
   this.fragments=new T.InstancedMesh(geometry,shardMat,32);
-  this.wash=new T.InstancedMesh(new T.ConeGeometry(.55,1.6,5,1),plumeMat,20);
+  this.wash=new T.InstancedMesh(new T.IcosahedronGeometry(1,2),plumeMat,20);
+  for(let i=0;i<6;i++){
+   const frontMat=new T.MeshBasicMaterial({color:CRACK[stage],transparent:true,opacity:0,depthWrite:false,toneMapped:true});
+   const front=new T.Mesh(new T.TorusGeometry(1,.042,6,36,Math.PI*1.42),frontMat);
+   front.name='physical-pressure-front-'+i;front.visible=false;this.fronts.push(front);this.root.add(front);this.materials.push(frontMat);
+  }
+  this.wash.name='lit-rolling-impact-clouds';
+  this.fragments.castShadow=true;this.fragments.receiveShadow=true;
   for(const inst of [this.fragments,this.wash]){
    inst.frustumCulled=false;inst.count=0;inst.instanceMatrix.setUsage(T.DynamicDrawUsage);this.root.add(inst);
   }
@@ -41,7 +51,7 @@ export class StageSpectacleParticles{
   }
   this.root.add(this.cracks);
  }
- draw(pose:Pose,envelope:number,performance=false,reduced=false){
+ draw(pose:Pose,envelope:number,performance=false,reduced=false,readability=0){
   const {t,anticipation,action,impact,fallout,afterglow}=pose;
   const beat=5.8,quality=performance?.60:1;
   const pressure=clamp((anticipation*.55+impact*.75+afterglow*.15)*envelope);
@@ -59,9 +69,9 @@ export class StageSpectacleParticles{
    b.scale.set(.65,scale*(1.0+action*3.6)*(i%2?.75:1.3),1);
   }
   (warningBars[0]?.material as T.MeshBasicMaterial).opacity=.24*pressure;
-  const fade=envelope*(reduced?.20:1);
+  const fade=envelope*(reduced?.20:1)*(1-clamp(readability)*.65);
   const shardCount=reduced?0:performance?16:32;
-  const streamCount=reduced?0:performance?10:20;
+  const streamCount=reduced?0:performance?8:20;
   let visible=0,clouds=0;
   for(let i=0;i<shardCount;i++){
    // Burst propagates AFTER impact, starting small so not a one-frame pop.
@@ -76,7 +86,7 @@ export class StageSpectacleParticles{
    dummy.position.set(
     Math.cos(angle)*rad+(this.stage===2?Math.sin(i)*.6:0),
     Math.sin(angle)*rad*.78+(upward?Math.sin(Math.PI*fraction)*2.6:falling?-fraction*4.8:-fraction*1.6),
-    -4.7-(i%4)*.48-fraction*(1+(i%3)*.6));
+    -4.5-(i%4)*.36+Math.sin(fraction*Math.PI)*.80-fraction*(1+(i%3)*.6));
    dummy.rotation.set(fraction*i*.15,fraction*i*.24,angle+fraction*(i%2?4:-3));
    const fadeIn=clamp(since/.40),fadeOut=clamp((life-since)/1.15);
    const radius=(.23+hash(i+17)*.59)*fadeIn*fadeOut*fade*quality;
@@ -86,23 +96,40 @@ export class StageSpectacleParticles{
   }
   this.fragments.count=visible;this.fragments.instanceMatrix.needsUpdate=true;
   for(let i=0;i<streamCount;i++){
-   const onset=4.2+(i%5)*.20;
+   const onset=5.3+(i%5)*.20;
    const since=t-onset;
-   const span=4.4+(i%4)*.7;
+   const span=5.4+(i%4)*.7;
    if(since<=0||since>=span)continue;
    const u=clamp(since/span),a=i*2.399+this.act*1.3;
-   const h=this.stage===1?6.0:this.stage===3?3.8:this.stage===5?4.7:2.8;
-   dummy.position.set(Math.cos(a)*(1.8+(i%3)*1.25)+Math.sin(t*.35+i)*u,
-    Math.sin(a)*2.3+u*h*(this.stage===3?-1:1),-6.6+(i%3)*.20);
-   dummy.rotation.set(this.stage===4?.5:0,Math.sin(a)*.35,a*.32);
-   const w=(.5+.5*Math.sin(u*Math.PI))*(.26+(i%4)*.11)*fade*quality;
-   dummy.scale.set(w*(this.stage===4?2:.8),w*(2.8+(i%3)*1.3),w*.80);
+   const h=this.stage===1?4.5:this.stage===3?3.8:this.stage===5?4.0:2.6;
+   // Billows roll out from the pressure front, then drift and cool. All
+   // lobes remain behind the gameplay plane, with normals lit by scene lights.
+   const radius=1.1+u*(2.2+(i%3)*.42),curl=Math.sin(u*4.4+i)*.65;
+   dummy.position.set(Math.cos(a)*radius+u*.7,
+    Math.sin(a)*radius+u*h*(this.stage===3?-1:1)+curl,-5.4+(i%3)*.22+Math.sin(u*Math.PI)*.65);
+   dummy.rotation.set(u*1.3+a,u*.6,a+u*.8);
+   const grow=clamp(since/.65)*clamp((span-since)/1.8);
+   const w=(.26+u*.65)*grow*(.7+(i%4)*.15)*fade*quality;
+   dummy.scale.set(w*(this.stage===4?1.4:1),w*(this.stage===1?1.65:1.18),w*.60);
    dummy.updateMatrix();this.wash.setMatrixAt(clouds++,dummy.matrix);
   }
   this.wash.count=clouds;this.wash.instanceMatrix.needsUpdate=true;
-  (this.fragments.material as T.MeshStandardMaterial).opacity=.70*fade;
-  (this.wash.material as T.MeshBasicMaterial).opacity=(this.stage===1?.16:.12)*fade;
-  this.last={fragments:visible,wash:clouds,light:pressure};
+  let fronts=0;
+  for(let i=0;i<this.fronts.length;i++){
+   const front=this.fronts[i];front.visible=false;
+   if(reduced||i>=(performance?2:6))continue;
+   const age=t-beat-i*.14;
+   if(age<=0||age>=2.5)continue;
+   const radius=.85+age*(this.stage===1?3.6:2.7);
+   front.position.set(0,0,-4.7-i*.28);
+   front.rotation.set(.18+Math.sin(i)*.12,.08*Math.cos(i),i*1.7+age*.12);
+   const strength=clamp(age/.2)*clamp((2.5-age)/1.6)*fade;
+   front.scale.set(radius,radius*(this.stage===1?.66:.88),1.8);
+   front.material.opacity=.15*strength;front.visible=strength>.002;fronts+=Number(front.visible);
+  }
+  (this.fragments.material as T.MeshStandardMaterial).opacity=.90*envelope;
+  (this.wash.material as T.MeshStandardMaterial).opacity=(this.stage===1?.16:.24)*fade;
+  this.last={fragments:visible,wash:clouds,fronts,light:pressure};
  }
  diagnostics(){return this.last;}
  dispose(){

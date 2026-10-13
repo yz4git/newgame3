@@ -40,9 +40,9 @@ test('showpiece geometry is finite, different by stage and does not change gamep
  const [scenes,fx]=await Promise.all(['stage-sequences','stage-spectacle-particles'].map(s=>readFile('app/'+s+'.ts','utf8')));
  assert.match(scenes,/stageSpectaclePose\(g.stage,c.act,elapsed\)/);
  assert.match(scenes,/object.position.set\(rest.x,rest.y,rest.z\)/);
- assert.match(scenes,/c.particles.draw\(phase,opacity,performance,reduced\)/);
+ assert.match(scenes,/c.particles.draw\(phase,opacity,performance,reduced,readability\)/);
  assert.match(fx,/new T.InstancedMesh\(geometry,shardMat,32\)/);
- assert.match(fx,/new T.InstancedMesh\(new T.ConeGeometry\(\.55,1\.6,5,1\),plumeMat,20\)/);
+ assert.match(fx,/new T.InstancedMesh\(new T.IcosahedronGeometry\(1,2\),plumeMat,20\)/);
  assert.match(fx,/this.fragments.count=visible/);
  assert.match(fx,/this.wash.count=clouds/);
  for(const code of [scenes,fx])assert.doesNotMatch(code,/Math.random\(|PlaneGeometry|SpriteMaterial|scene.add\(new T.PointLight/);

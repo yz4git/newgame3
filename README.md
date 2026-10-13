@@ -1,3 +1,40 @@
+## NOVA STRIKE 5.0 — CINEMATIC WORLDS (2026-10-13)
+
+World Rebuild's eighteen unique setpieces now have solid depth, machined
+edges, attached mechanical detail and coordinated film lighting:
+
+- **Solid physical silhouettes:** the old permanently 80%-transparent bodies
+  now become opaque on approach, write depth, receive/cast shadows and sit
+  above the background deck. Chamfered armor catches the moving key light.
+  Rigid details merge by material; all three sets in each world total fewer
+  than 30,000 unique geometry triangles.
+- **Attached, stage-specific detail:** ore-grabber hydraulics, pressure-hull
+  ribs and a smooth submarine hull, citadel bearings and inset metalwork,
+  crystal fractures, curved roots around stepped relic stone, and aligned
+  forge pistons. Radar motion pivots at its physical bearing. All eighteen
+  articulated sets are checked to stay behind the player/projectile plane.
+- **Six film lighting setups:** copper/cobalt space, silver storm water,
+  tungsten steel, polar blue, filtered jungle gold, and ember-lit foundry.
+  Existing key, hemisphere and rim lights are coordinated with anticipation
+  and impact; atmospheric depth fog starts behind the fighting plane.
+  No extra shadow lights or render targets are introduced.
+- **Layered environmental impact:** broken 3D pressure fronts fade separately,
+  lit billowing clouds curl outward, and substantial metal/ice/rock fragments
+  travel through depth. Crowded fire suppresses ancillary FX and dims scenic
+  material highlights; performance and reduced-motion settings remain active.
+- **Rebuilt combat explosions:** a fixed pool of eight detonations renders
+  ignition, cooling fire lobes and drifting smoke in three instanced draws.
+  These replace the old two faceted flash balls, with bounded warm cores and
+  no new full-screen white flash. Existing destruction audio stays synchronized.
+- **Measured camera movement:** the scene's action drives a small push and
+  tilt, inside the existing gameplay zoom/roll caps. Touch raycasts use the
+  same camera. Paused frames are stable; reduced motion removes the movement.
+
+Classic graphics, campaign rules, collision, score and saved progress are
+unchanged. Versioned JS and the PWA cache update through the normal build.
+Validation: typecheck, regression tests, production build, and the existing
+GitHub Actions iPhone-size WebGL/Canvas gameplay capture.
+
 ## NOVA STRIKE 4.1 — LIVING RAIL DISTRICTS (2026-10-11)
 
 The left/right backgrounds were too repetitive even after the 3D texture

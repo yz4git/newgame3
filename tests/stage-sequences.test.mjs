@@ -39,7 +39,7 @@ test('finite terrain and bespoke chapters dissolve instead of appearing on a sin
  assert.match(f,/this\.reveal\(m,distanceReveal\(m\.position\.y,15,52\)\)/);
  assert.match(f,/const transparent=true,depthWrite=false/);
  assert.match(f,/this\.prepareReveal\(terrain as T\.Group\)/);
- assert.match(s,/mat\.opacity=\(mat instanceof T\.MeshBasicMaterial \? \.60 : 1\)\*opacity\*\.80/);
+ assert.match(s,/mat\.opacity=\(mat instanceof T\.MeshBasicMaterial \? \.42 : 1\)\*opacity/);
  assert.match(s,/this\.root\.visible=g\.mode==='campaign'/);
  assert.match(r,/private stageSequences=usesRebuiltGraphics\(\)\?new StageSequences3D\(\):null/);
  assert.match(r,/this\.stageSequences\?\.draw\(game,dt/);
