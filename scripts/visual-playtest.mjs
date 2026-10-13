@@ -586,7 +586,13 @@ if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.
 if(!results.flightControls?.moved||!results.flightControls.focus||results.flightControls.projection!=='PerspectiveCamera'||!results.flightPauseStable)
  throw new Error('Banking WebGL flight input or paused camera changed: '+JSON.stringify({controls:results.flightControls,pause:results.flightPauseStable}));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==2)throw new Error('Large base destruction must physically animate both sides of dock walls: '+JSON.stringify(results.scenicResponse));
-if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&r.worldAlive.structureCount===0&&r.worldAlive.hangars===0&&r.visibleHangars===0))throw new Error('Repeating structures or linked hangars broken: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
+// Route captures now advance through both authored launch windows. One or
+// two real tactical bays may still be withdrawing when the snapshot is taken.
+// Retired repeating towers must stay absent and bay geometry remains bounded.
+if(!Object.entries(results.worldRebuild).every(([stage,r])=>r.worldAlive?.stage===Number(stage)&&
+ r.worldAlive.structureCount===0&&r.worldAlive.hangars>=0&&r.worldAlive.hangars<=2&&
+ r.visibleHangars===r.worldAlive.hangars))
+ throw new Error('Repeated scenery or unbounded tactical bay geometry: '+JSON.stringify(Object.values(results.worldRebuild).map(r=>r.worldAlive)));
 if(results.worldAliveLaunch?.game?.launched!==2||results.worldAliveLaunch?.actualEnemyCount!==2||results.worldAliveLaunch?.scene?.hangars!==1||results.worldAliveLaunch?.visibleHangars<1)throw new Error('4.0 hangar must spawn TWO real enemies from the 3D entrance: '+JSON.stringify(results.worldAliveLaunch));
 if(results.worldAliveBreach?.game?.baysOpen?.[1]!==false||results.worldAliveBreach?.game?.destroyed?.[1]!==true)throw new Error('4.0 strategic facility blast failed to close the physical right-side hangar: '+JSON.stringify(results.worldAliveBreach));
 if(!results.worldAliveBoss?.scene?.bossVault||results.worldAliveBoss?.scene?.reactorFaces!==1||results.worldAliveBoss.game.wingBroken[0]!==true||results.worldAliveBoss.oldBossRings!==0)throw new Error('4.0 boss vault / one wing or excessive old rings obscure HUD: '+JSON.stringify(results.worldAliveBoss));
