@@ -281,6 +281,14 @@ for(let stage=0;stage<6;stage++){
  }
  results.flightWorlds[stage]=flightSamples;
 
+ if(stage===4){
+  await rich.page.evaluate(()=>{
+   const {game:g,view}=window.__nova;
+   g.time=82*.385;g.visualTime=g.time;view.draw(g,.016,16.7);
+  });
+  await scene(rich.page,'v8-canopy-exposed-waterfall',80);
+ }
+
  results.cinematicLayers[stage]=await rich.page.evaluate(()=>{
   const {view}=window.__nova;
   const detail=view.getDiagnostics().volumetric;

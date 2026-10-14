@@ -27,7 +27,8 @@ use animated physical vertices/normals; glacial water is frozen. The shared
 rectangular launch docks and event walls removed in 7.1.1 remain absent.
 Camera fitting, touch rays, pausing, reduced motion and campaign rules retain
 their existing behavior. Regression coverage audits actual terrain topology,
-geometry envelopes and camera inversion; browser review compares all six worlds.
+geometry envelopes, camera inversion and unobstructed river-facing waterfalls;
+browser review compares all six worlds and the exposed waterfall approach.
 
 ## NOVA STRIKE 7.1.1 — REMOVE SHARED SIDE BOXES (2026-10-14)
 

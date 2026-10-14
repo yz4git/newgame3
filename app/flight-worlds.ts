@@ -5,7 +5,7 @@ import {worldClock} from './motion.ts';
 import {flightFrame,flightCentre,type FlightFrame} from './flight-route.ts';
 import {cinematicBox,weatheredRock} from './cinematic-detail.ts';
 import {shadeSolid,flowSurface} from './physical-surface.ts';
-import {stageTerrain,WORLD_IDENTITIES,WORLD_COLOURS} from './stage-terrain.ts';
+import {stageTerrain,WORLD_IDENTITIES,WORLD_COLOURS,FOREST_FALLS,forestRiverEdge} from './stage-terrain.ts';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 const dummy=new T.Object3D(),a=new T.Vector3(),b=new T.Vector3(),up=new T.Vector3(0,1,0);
@@ -256,9 +256,10 @@ export class FlightWorlds3D{
    }
   }else if(stage===4){
    for(let i=0;i<4;i++){
-    const y=length*[.19,.39,.61,.81][i],x=flightCentre(stage,y)+(i%2?11:-11);
-    add(rocks,x,y+4.6,-36,8.2,3.6,11,c[1],.13);
-    for(const side of[-1,1])add(rocks,x+side*5,y+4.8,-38,4,4,8,c[1],side*.41);
+    const y=length*FOREST_FALLS[i],side=i%2?1:-1;
+    const x=flightCentre(stage,y)+side*(forestRiverEdge(y,side)+3.2);
+    add(rocks,x,y,-36,4.0,6.0,11,c[1],side*.13);
+    for(const offset of[-1,1])add(rocks,x+side*3,y+offset*5.8,-38,4,4,8,c[1],offset*.41);
    }
    for(let arch=0;arch<3;arch++){
     const y=length*[.15,.47,.76][arch],x=flightCentre(stage,y),points:number[][]=[];
@@ -303,8 +304,8 @@ export class FlightWorlds3D{
     const x=base[i*3],y=base[i*3+1],z=base[i*3+2];
     if(mask.getX(i)===0){
      const phase=z*.61-(reduced?0:clock)*1.9+x*.11,ripple=Math.sin(phase)*.12,slope=Math.cos(phase)*.12*.61;
-     positions.setXYZ(i,x,y+ripple,z);
-     a.set(baseNormals[i*3],baseNormals[i*3+1],baseNormals[i*3+2]-slope*baseNormals[i*3+1]).normalize();
+     positions.setXYZ(i,x+ripple,y,z);
+     a.set(baseNormals[i*3],baseNormals[i*3+1],baseNormals[i*3+2]-slope*baseNormals[i*3]).normalize();
     }else{
      const wave=flowSurface(x,y,clock,g.stage,reduced,surfaceSample);
      positions.setXYZ(i,x,y,z+wave.height);a.set(-wave.dx,-wave.dy,1).normalize();

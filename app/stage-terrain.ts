@@ -20,6 +20,8 @@ export const WORLD_COLOURS=[
  [0x21191c,0x493d38,0xa8825e,0x30242b,0x912907,0xff752b]
 ] as const;
 const noise=(n:number)=>{const x=Math.sin(n*127.13+17.7)*43758.5453;return x-Math.floor(x);};
+export const FOREST_FALLS=[.19,.39,.61,.81] as const;
+export const forestRiverEdge=(y:number,side:number)=>5.5+Math.sin(y*.072+side)*2.2;
 
 function geometry(vertices:number[],indices:number[],colors:number[]){
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
@@ -38,11 +40,11 @@ function bank(stage:number,length:number,side:number,c:readonly number[]){
  const v:number[]=[],rgb:number[]=[],idx:number[]=[],rows=90,cols=10;
  for(let row=0;row<=rows;row++)for(let col=0;col<=cols;col++){
   const y=-85+(length+190)*row/rows,u=col/cols;
-  const edge=stage===3?8+Math.sin(y*.055)*2.8+noise(row*.41+side)*2:5.5+Math.sin(y*.072+side)*2.2;
+  const edge=stage===3?8+Math.sin(y*.055)*2.8+noise(row*.41+side)*2:forestRiverEdge(y,side);
   const x=flightCentre(stage,y)+side*(edge+Math.pow(u,.8)*67);
   const height=stage===3?10+noise(row*.68+col*7)*18:3+noise(row*.31+col*9)*10;
   let terrace=0;
-  if(stage===4)for(const at of[.19,.39,.61,.81])terrace=Math.max(terrace,11*Math.exp(-(((y-length*at)/8)**2+(u/.15)**2)));
+  if(stage===4)for(const at of FOREST_FALLS)terrace=Math.max(terrace,11*Math.exp(-(((y-length*at)/8)**2+(u/.15)**2)));
   const z=stage===3?-37+height*(.32+Math.sin(u*Math.PI*.65)*.68):-37+height*Math.sin(u*Math.PI*.68)+terrace;
   v.push(x,y,z);
   const color=new T.Color(stage===3?c[1]:c[3]);
@@ -79,12 +81,15 @@ function mound(x:number,y:number,rx:number,ry:number,seed:number,c:readonly numb
  return geometry(v,idx,rgb);
 }
 
-function waterfall(x:number,y:number,seed:number){
+function waterfall(y:number,bankSide:number,seed:number){
  const v:number[]=[],rgb:number[]=[],idx:number[]=[],uv:number[]=[],mask:number[]=[],rows=14,cols=4;
  for(const side of[-1,1])for(let row=0;row<=rows;row++)for(let col=0;col<=cols;col++){
-  const t=row/rows,xx=x+(col/cols-.5)*(6.8-t*1.3);
-  v.push(xx,y+Math.sin(t*Math.PI)*1.2+side*.22,-26-t*22);
-  const color=new T.Color(row>11?0xb6e0d6:0x60b0ac);color.multiplyScalar(.87+noise(seed+row+col)*.13);
+  const t=row/rows,yy=y+(col/cols-.5)*(8.2-t*1.3);
+  // The falling volume follows the exposed river-facing cliff. Its whole
+  // height must sit in front of the bank rather than below the bank's top.
+  const xx=flightCentre(4,yy)+bankSide*(forestRiverEdge(yy,bankSide)-1.4-t*1.0)+side*.22;
+  v.push(xx,yy,-26-t*22);
+  const color=new T.Color(row>11?0xc4eee5:0x7bcbbd);color.multiplyScalar(.87+noise(seed+row+col)*.13);
   rgb.push(color.r,color.g,color.b);uv.push(col/cols,t);mask.push(0);
  }
  const face=(rows+1)*(cols+1);
@@ -102,8 +107,8 @@ function flow(stage:number,length:number,c:readonly number[]){
  let g:T.BufferGeometry=new T.PlaneGeometry(205,length+205,40,120);
  const base=stage===3?-56:stage===5?-51:-48;g.translate(0,length/2,base);
  const p=g.getAttribute('position'),rgb=new Float32Array(p.count*3),mask=new Float32Array(p.count).fill(1);
- const dark=new T.Color(stage===5?0x682007:c[4]);
- const light=new T.Color(stage===5?0xf87921:stage===1?0x498eaa:stage===3?0x88b9c6:0x5b9481);
+ const dark=new T.Color(stage===5?0x682007:stage===4?0x165f59:c[4]);
+ const light=new T.Color(stage===5?0xf87921:stage===1?0x498eaa:stage===3?0x88b9c6:0x76b6a9);
  for(let i=0;i<p.count;i++){
   const x=p.getX(i),y=p.getY(i);
   let vein=Math.max(0,Math.sin(x*.11+Math.sin(y*.055)*2.1)*Math.sin(y*.17+x*.035));
@@ -112,11 +117,11 @@ function flow(stage:number,length:number,c:readonly number[]){
  }
  g.setAttribute('color',new T.BufferAttribute(rgb,3));g.setAttribute('flowMask',new T.BufferAttribute(mask,1));
  if(stage===4){
-  const parts=[g];for(let i=0;i<4;i++){const y=length*[.19,.39,.61,.81][i],x=flightCentre(stage,y)+(i%2?11:-11);parts.push(waterfall(x,y,17+i));}
+  const parts=[g];for(let i=0;i<FOREST_FALLS.length;i++)parts.push(waterfall(length*FOREST_FALLS[i],i%2?1:-1,17+i));
   const joined=mergeGeometries(parts,false);if(!joined)throw new Error('Waterfall geometry mismatch');for(const p of parts)p.dispose();g=joined;
  }
  const m=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,metalness:stage===1?.62:stage===5?.12:.24,
-  roughness:stage===1?.23:stage===3?.31:.39,side:T.DoubleSide,emissive:stage===5?0xb12e08:0,emissiveIntensity:stage===5?.42:0});
+  roughness:stage===1?.23:stage===3?.31:stage===4?.28:.39,side:T.DoubleSide,emissive:stage===5?0xb12e08:stage===4?0x143d36:0,emissiveIntensity:stage===5?.42:stage===4?.12:0});
  const mesh=new T.Mesh(g,m);mesh.name=stage===1?'open-pelagic-water':stage===3?'fractured-frozen-chasm-floor':stage===4?'rainforest-river-and-waterfalls':'molten-caldera-surface';mesh.receiveShadow=true;
  mesh.userData.flowPositions=new Float32Array(g.getAttribute('position').array);
  mesh.userData.flowNormals=new Float32Array(g.getAttribute('normal').array);return mesh;

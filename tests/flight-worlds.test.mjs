@@ -71,6 +71,29 @@ test('flight direction varies by place, quietens under pressure and stays stable
  assert.ok(Math.min(...FLIGHT_ROUTES[3].map(k=>k.pitch))<=-15&&Math.max(...FLIGHT_ROUTES[3].map(k=>k.pitch))>=12);
 });
 
+test('forest waterfalls have exposed faces visible from the authored flight camera',()=>{
+ const world=new FlightWorlds3D(),g=new Game(),camera=new T.PerspectiveCamera(50,390/844,.1,260);
+ fitCinemaCamera(camera,390,844);g.start('campaign','normal',4);
+ for(const progress of[.19,.39,.61,.81]){
+  g.time=STAGES[4].duration*progress;world.draw(g);
+  poseCinemaCamera(camera,filmFrame(4,g.time,EMPTY_FILM_CUE),0,1,0,world.cameraFrame());
+  world.root.updateMatrixWorld(true);
+  const water=world.root.getObjectByName('rainforest-river-and-waterfalls');
+  const positions=water.geometry.getAttribute('position'),mask=water.geometry.getAttribute('flowMask');
+  const banks=world.root.children.filter(x=>x.name.includes('river-bank-'));
+  let samples=0,exposed=0;
+  for(let i=0;i<positions.count;i++){
+   if(mask.getX(i)!==0||Math.abs(positions.getY(i)-g.time*4.4)>4||positions.getZ(i)<-40||positions.getZ(i)>-31)continue;
+   const point=new T.Vector3().fromBufferAttribute(positions,i).applyMatrix4(water.matrixWorld),screen=point.clone().project(camera);
+   if(Math.abs(screen.x)>.98||Math.abs(screen.y)>.98)continue;
+   const ray=new T.Raycaster(camera.position,point.clone().sub(camera.position).normalize());
+   const blocked=ray.intersectObjects(banks,false).some(hit=>hit.distance<point.distanceTo(camera.position)-.05);
+   samples++;if(!blocked)exposed++;
+  }
+  assert.ok(samples>10&&exposed>samples*.55,`waterfall buried in its bank at ${progress}: ${exposed}/${samples} exposed`);
+ }
+});
+
 test('hostile salvo pressure eases the lens back and pausing retains the current bank',()=>{
  const world=new FlightWorlds3D(),g=new Game();g.start('campaign','normal',2);g.time=82*.34;
  world.draw(g,false,false,0,1/60);const full=world.diagnostics().bank;
