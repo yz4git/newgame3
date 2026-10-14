@@ -27,9 +27,10 @@ jobs:
           npm ci
           npm install --no-save playwright@1.56.1
           npx playwright install --with-deps chromium
-      - name: Start Vite browser test server
+      - name: Build and serve the published production bundle
         run: |
-          nohup npm run dev -- --host 127.0.0.1 > /tmp/nova-vite.log 2>&1 &
+          npm run build
+          nohup npm exec -- vite preview --host 127.0.0.1 --port 5173 > /tmp/nova-vite.log 2>&1 &
           for i in {1..30}; do if curl -fsS http://127.0.0.1:5173/ >/dev/null; then exit 0; fi; sleep 2; done
           cat /tmp/nova-vite.log
           exit 1

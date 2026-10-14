@@ -142,12 +142,12 @@ browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-webg
 const rich=await setup({width:390,height:844},{renderer:'webgl'});
 // This is an actual hardware-API 3D review. Never mistake Canvas fallback for
 // successfully checking the rebuilt scene.
-if(await rich.page.evaluate(()=>window.__nova.view.constructor.name)!=='View')throw new Error('World Rebuild GPU review fell back to Canvas; gameplay visuals were NOT verified');
+if(!await rich.page.evaluate(()=>['WebGL 2','WebGPU'].includes(window.__nova.view.getDiagnostics().engine)))throw new Error('World Rebuild GPU review fell back to Canvas; gameplay visuals were NOT verified');
 await rich.page.locator('#start-button').click();
 await rich.page.waitForFunction(()=>window.__nova?.game.state==='playing');
 await rich.page.evaluate(()=>{const g=window.__nova.game;g.invulnerable=900;g.shotTimer=1000;g.time=64*.095;g.encounterSeen={stage:true,mini:true};});
 await scene(rich.page,'08-gpu-or-fallback-battle',1000);
-results.gpu=await rich.page.evaluate(()=>({view:window.__nova.view.constructor.name,diagnostics:window.__nova.view.getDiagnostics()}));
+results.gpu=await rich.page.evaluate(()=>({view:'View',diagnostics:window.__nova.view.getDiagnostics()}));
 await rich.page.evaluate(()=>{
  const g=window.__nova.game;
  g.time=64*.095;g.nodes=[];g.enemies=[];g.bullets=[];
@@ -623,7 +623,7 @@ await compatibility.page.locator('#pause-button').click();
 await compatibility.page.locator('#pause-help-button').click();
 await compatibility.page.locator('.manual').evaluate(e=>e.scrollTop=e.scrollHeight);
 results.compatibility=await compatibility.page.evaluate(()=>({
- engine:window.__nova.view.constructor.name,state:window.__nova.game.state,weapon:window.__nova.game.weapon,bombs:window.__nova.game.bombs,
+ engine:window.__nova.view.getDiagnostics().engine,state:window.__nova.game.state,weapon:window.__nova.game.weapon,bombs:window.__nova.game.bombs,
  label:document.getElementById('graphics-version').textContent,help:!document.getElementById('help-screen').hidden,
  scroll:document.querySelector('.manual').scrollTop
 }));
@@ -696,7 +696,7 @@ if(phone.marker.projectionError>1e-8||Math.abs(phone.marker.scale-.23)>1e-6||pho
  throw new Error('Visible hit point disagrees with the collision plane: '+JSON.stringify(phone.marker));
 if(phone.diamond.count<1||phone.diamond.color[0]<phone.diamond.color[1]*2)
  throw new Error('Enemy diamond lost its attack color to the white core pass: '+JSON.stringify(phone.diamond));
-if(results.compatibility?.engine!=='CanvasView'||results.compatibility.state!=='paused'||results.compatibility.weapon!=='laser'||
+if(results.compatibility?.engine!=='Canvas 2D'||results.compatibility.state!=='paused'||results.compatibility.weapon!=='laser'||
  results.compatibility.bombs!==2||!results.compatibility.help||results.compatibility.scroll<50||!results.compatibility.resumed)
  throw new Error('No-GPU compatibility controls or help navigation failed: '+JSON.stringify(results.compatibility));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==0)throw new Error('Facility events restored retired shared rectangular walls: '+JSON.stringify(results.scenicResponse));

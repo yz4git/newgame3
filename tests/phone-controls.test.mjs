@@ -7,6 +7,19 @@ import {playerMarker,positionPlayerMarker} from '../app/player-marker.ts';
 import {fitCinemaCamera,poseCinemaCamera} from '../app/cinema-camera.ts';
 import {flightFrame} from '../app/flight-route.ts';
 import {filmFrame,EMPTY_FILM_CUE} from '../app/film-lighting.ts';
+import {isWebGPUBackend} from '../app/render-backend.ts';
+
+test('published class-name mangling cannot reject a working WebGPU backend',()=>{
+ for(const forceWebGL of[false,true]){
+  const renderer=new T.WebGPURenderer({canvas:{},forceWebGL}),backend=renderer.backend;
+  const type=backend.constructor,former=type.name;
+  try{
+   Object.defineProperty(type,'name',{value:'r',configurable:true});
+   assert.equal(backend.constructor.name.includes('WebGPU'),false);
+   assert.equal(isWebGPUBackend(backend),!forceWebGL,'real Three backends retain their capability flag after class names are shortened');
+  }finally{Object.defineProperty(type,'name',{value:former,configurable:true});}
+ }
+});
 
 test('a camera bank between finger events cannot introduce drag motion',()=>{
  for(const [w,h]of[[390,844],[375,667],[430,932]]){

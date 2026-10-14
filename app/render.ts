@@ -29,6 +29,7 @@ import {filmFrame,EMPTY_FILM_CUE} from './film-lighting.ts';
 import {orbitalMoon,WORLD_IDENTITIES} from './stage-terrain.ts';
 import {fitCinemaCamera,poseCinemaCamera} from './cinema-camera.ts';
 import {playerMarker,positionPlayerMarker} from './player-marker.ts';
+import {isWebGPUBackend} from './render-backend.ts';
 import {CinematicDetonations} from './cinematic-detonations.ts';
 import {FlightWorlds3D} from './flight-worlds.ts';
 // Recurring decorative side rails removed from the playable scene.
@@ -134,7 +135,7 @@ export class View {
       const initializing=renderer.init();let timeout:ReturnType<typeof setTimeout>|undefined;
       try{
       await Promise.race([initializing,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('GPU initialization timeout')),7000);})]);
-      if(!renderer.backend.constructor.name.includes('WebGPU'))throw new Error('No WebGPU adapter');
+      if(!isWebGPUBackend(renderer.backend))throw new Error('No WebGPU adapter');
       this.engine='WebGPU';
       const scenePass=pass(this.scene,this.camera),output=scenePass.getTextureNode('output');
       this.pipeline=new T.RenderPipeline(renderer,output.add(bloom(output,usesRebuiltGraphics()?.20:.52,usesRebuiltGraphics()?.66:.43,usesRebuiltGraphics()?.78:1.15)));

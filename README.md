@@ -15,10 +15,15 @@ and compared the six-stage WebGL captures. Fixed the problems found:
   preserving the colored body and dark outline against bright ice.
 - A failed modern renderer is disposed only after successful initialization.
   Unavailable WebGL enters Canvas without retrying a rejected init promise.
+- WebGPU selection uses the backend capability flag. Published minification
+  changes constructor names and previously rejected a working WebGPU context,
+  which could leave the same canvas unavailable to the subsequent WebGL path.
 
 Regression checks replay a camera change during real two-finger input, compare
 marker geometry with actual collision outcomes, inspect actual GPU projectile
 colors and notice bounds, and boot the full no-GPU UI through help and resume.
+The browser workflow now serves the production build, including minified code,
+instead of Vite's development modules; renderer checks use stable diagnostics.
 Visual verification uses Chromium with phone-sized viewports and WebGL; it does
 not claim an actual iPhone Safari hardware performance measurement.
 
