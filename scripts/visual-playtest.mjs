@@ -13,8 +13,18 @@ async function scene(page,name,delay=650){
  console.log('NOVA_SHOT:'+name+':'+picture.byteLength+' bytes');
  return path;
 }
-async function setup(viewport,{renderer='canvas',visual='rebuilt'}={}){
+async function setup(viewport,{renderer='canvas',visual='rebuilt',blockGPU=false}={}){
  const context=await browser.newContext({viewport,deviceScaleFactor:1,isMobile:true,hasTouch:true,locale:'ja-JP',reducedMotion:'no-preference'});
+ if(blockGPU)await context.addInitScript(()=>{
+  // Reproduce the public cloud browser's unavailable GPU APIs without
+  // changing the working WebGL context used by the main visual review.
+  Object.defineProperty(navigator,'gpu',{configurable:true,value:{requestAdapter:async()=>null}});
+  const original=HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext=function(type,...options){
+   if(['webgl','webgl2','webgpu','experimental-webgl'].includes(type))return null;
+   return original.call(this,type,...options);
+  };
+ });
  const page=await context.newPage();
  page.on('pageerror',e=>errors.push('PAGEERROR '+e.message));
  page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE '+msg.text());});
@@ -546,6 +556,51 @@ results.flightPause=await rich.page.evaluate(()=>window.__nova.view.camera.matri
 results.flightPauseStable=JSON.stringify(pausedCamera)===JSON.stringify(results.flightPause);
 await rich.page.evaluate(()=>window.__nova.game.resume());
 
+// Replay a small touch movement across a large change in camera pose.
+// Both event endpoints must be interpreted by the current camera.
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;g.start('campaign','normal',2);
+ g.time=82*.16;g.visualTime=g.time;g.invulnerable=900;g.shotTimer=900;
+ g.schedule=[];g.waveIndex=999;g.nodes=[];g.enemies=[];g.bullets=[];
+ g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];g.sectorMission.started=true;
+ view.draw(g,.016,16.7);
+});
+await rich.page.waitForTimeout(120);
+const driftBefore=await rich.page.evaluate(()=>({x:window.__nova.game.player.x,y:window.__nova.game.player.y}));
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[bankPoint]});
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;g.time=82*.34;g.visualTime=g.time;view.draw(g,.016,16.7);
+});
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[t1(bankPoint.x+2,bankPoint.y-2,1)]});
+await rich.page.waitForTimeout(300);
+results.cameraDrag=await rich.page.evaluate(before=>{
+ const p=window.__nova.game.player;return {dx:p.x-before.x,dy:p.y-before.y};
+},driftBefore);
+await bankCDP.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+
+// Bright ice is the hard case for the actual diamond instance colors and
+// the hit point. Trigger the real launch event and review its live DOM card.
+await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova;g.start('campaign','normal',3);
+ g.time=78*.34;g.visualTime=g.time;g.invulnerable=0;g.shotTimer=900;
+ g.schedule=[];g.waveIndex=999;g.nodes=[];g.enemies=[];g.bullets=[];
+ g.encounterSeen={stage:true,mini:true};g.battlefield.seen=[true,true];g.sectorMission.started=true;
+ for(let i=-3;i<=3;i++)g.projectile(i*1.8,4+(i%2)*2,0,-3,true,1,false,0xff487e,{shape:'diamond'});
+ g.emit('worldlaunch',{text:'GLACIER HANGAR / LAUNCH'});view.draw(g,.016,16.7);
+});
+await rich.page.waitForFunction(()=>document.getElementById('message').classList.contains('show')&&document.getElementById('message-title').textContent==='敵機発進');
+results.phoneReview=await rich.page.evaluate(()=>{
+ const {game:g,view}=window.__nova,card=document.getElementById('message'),title=document.getElementById('message-title');
+ const rect=card.getBoundingClientRect(),hud=document.getElementById('hud').getBoundingClientRect(),frame=document.getElementById('frame').getBoundingClientRect();
+ const marker=view.scene.getObjectByName('player-hit-point');
+ const visual=marker.position.clone().project(view.camera),physical=marker.position.clone().set(g.player.x,g.player.y,1).project(view.camera);
+ return {notice:{top:rect.top-frame.top,bottom:rect.bottom-frame.top,height:rect.height,hudBottom:hud.bottom-frame.top,frameHeight:frame.height,
+  tactical:card.classList.contains('tactical'),title:title.textContent,titleHeight:title.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(title).lineHeight),cueHidden:document.getElementById('stage-cue').hidden},
+  marker:{position:marker.position.toArray(),player:[g.player.x,g.player.y,1],scale:marker.scale.x,projectionError:visual.distanceTo(physical),depthTest:marker.children[1].material.depthTest},
+  diamond:{count:view.diamonds.count,color:Array.from(view.diamonds.instanceColor.array.slice(0,3))}};
+});
+await scene(rich.page,'v801-polar-projectiles-and-notice',80);
+
 const classic=await setup({width:390,height:844},{renderer:'canvas',visual:'classic'});
 results.classic=await classic.page.evaluate(()=>({
  visual:window.__nova.view.getDiagnostics().visualStyle,
@@ -553,6 +608,28 @@ results.classic=await classic.page.evaluate(()=>({
 }));
 await scene(classic.page,'world-rebuild-classic-preserved',450);
 await classic.context.close();
+await rich.context.close();
+
+// Failed GPU initialization must enter a usable compatibility game without
+// leaking the modern renderer's rejected promise through dispose().
+const compatibility=await setup({width:390,height:844},{renderer:'auto',blockGPU:true});
+await compatibility.page.locator('#start-button').click();
+await compatibility.page.waitForFunction(()=>window.__nova.game.state==='playing');
+await compatibility.page.locator('#weapon-button').click();
+await compatibility.page.locator('#nova-button').click();
+await compatibility.page.locator('#pause-button').click();
+await compatibility.page.locator('#pause-help-button').click();
+await compatibility.page.locator('.manual').evaluate(e=>e.scrollTop=e.scrollHeight);
+results.compatibility=await compatibility.page.evaluate(()=>({
+ engine:window.__nova.view.constructor.name,state:window.__nova.game.state,weapon:window.__nova.game.weapon,bombs:window.__nova.game.bombs,
+ label:document.getElementById('graphics-version').textContent,help:!document.getElementById('help-screen').hidden,
+ scroll:document.querySelector('.manual').scrollTop
+}));
+await scene(compatibility.page,'v801-no-gpu-manual-and-controls',200);
+await compatibility.page.locator('#help-back').click();
+await compatibility.page.locator('#resume-button').click();
+results.compatibility.resumed=await compatibility.page.evaluate(()=>window.__nova.game.state==='playing');
+await compatibility.context.close();
 
 results.errors=errors;
 console.log('NOVA_PROGRESS:'+JSON.stringify({controls:results.controls,titleLayout:results.titleLayout,smallLayout:results.smallLayout,gpu:results.gpu.view,errors}));
@@ -606,6 +683,19 @@ if(!Object.entries(results.worldRebuild).every(([stage,x])=>!results.cinematicLa
 if(results.scenicPeace?.traffic!==0||results.scenicPeace?.machines!==0||results.scenicPeace?.farWeather<(results.scenicPeace?.quality==='PERFORMANCE'?12:20))throw new Error('Quiet scenery restored retired structures or lost its depth particles: '+JSON.stringify(results.scenicPeace));
 if(!results.flightControls?.moved||!results.flightControls.focus||results.flightControls.projection!=='PerspectiveCamera'||!results.flightPauseStable)
  throw new Error('Banking WebGL flight input or paused camera changed: '+JSON.stringify({controls:results.flightControls,pause:results.flightPauseStable}));
+if(!results.cameraDrag||Math.hypot(results.cameraDrag.dx,results.cameraDrag.dy)>.35)
+ throw new Error('Camera movement leaked into the two-pixel touch movement: '+JSON.stringify(results.cameraDrag));
+const phone=results.phoneReview;
+if(!phone?.notice.tactical||phone.notice.title!=='敵機発進'||phone.notice.height>70||phone.notice.top<phone.notice.hudBottom||
+ phone.notice.bottom>phone.notice.frameHeight*.4||phone.notice.titleHeight>phone.notice.lineHeight*1.1||!phone.notice.cueHidden)
+ throw new Error('Launch notice overlaps combat or wraps its short Japanese title: '+JSON.stringify(phone));
+if(phone.marker.projectionError>1e-8||Math.abs(phone.marker.scale-.23)>1e-6||phone.marker.depthTest)
+ throw new Error('Visible hit point disagrees with the collision plane: '+JSON.stringify(phone.marker));
+if(phone.diamond.count<1||phone.diamond.color[0]<phone.diamond.color[1]*2)
+ throw new Error('Enemy diamond lost its attack color to the white core pass: '+JSON.stringify(phone.diamond));
+if(results.compatibility?.engine!=='CanvasView'||results.compatibility.state!=='paused'||results.compatibility.weapon!=='laser'||
+ results.compatibility.bombs!==2||!results.compatibility.help||results.compatibility.scroll<50||!results.compatibility.resumed)
+ throw new Error('No-GPU compatibility controls or help navigation failed: '+JSON.stringify(results.compatibility));
 if(results.scenicResponse?.cue!=='facility'||results.scenicResponse?.reactiveWallUnits!==0)throw new Error('Facility events restored retired shared rectangular walls: '+JSON.stringify(results.scenicResponse));
 // Neither normal route snapshots nor actual launch windows may mount the
 // former shared rectangular dock/wall models, even as hidden objects.

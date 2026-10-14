@@ -11,6 +11,7 @@ import {FacilityDemolitionMotion,isFacilityDemolition,drawFacilityDemolitionCanv
 import {CanvasCombatEffects} from './canvas-combat.ts';
 import {drawAirCanvas} from './air-effects.ts';
 import {drawThreatsCanvas,drawEncounterActorsCanvas,drawBossShieldCanvas,encounterDiagnostics} from './encounter-view.ts';
+import {PLAYER_BALANCE} from './player-balance.ts';
 
 // Compatibility view for browsers where all GPU contexts are unavailable.
 // It shares the same fixed-step combat, controls, scores and progression.
@@ -119,7 +120,7 @@ export class CanvasView {
     const playerVisible=title||g.hull>0;
     this.playerTint=g.shipClass==='falcon'?'#89bcff':g.shipClass==='bulwark'?'#ffc18e':'#65dcff';this.playerSkinIndex=g.shipClass==='falcon'?1:g.shipClass==='bulwark'?2:0;
     if(playerVisible)this.ship('player',title?Math.sin(g.visualTime*.5)*.4:p.x,title?1.9:p.y+depart*34,pose,title?2:1,false,g.visualTime);
-    if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){this.circle(p.x,p.y,.09,'#e8ffff');c.strokeStyle='#ddf6ff';c.lineWidth=.04;c.beginPath();c.arc(p.x,p.y,.23,0,Math.PI*2);c.stroke();if(g.invulnerable>0&&g.time>2.6){c.save();c.globalAlpha=.48+.17*Math.sin(g.visualTime*12);c.lineWidth=.055;c.strokeStyle='#97f7ff';c.beginPath();c.arc(p.x,p.y-.25,1.05+Math.sin(g.visualTime*11)*.10,0,Math.PI*2);c.stroke();c.restore();}}
+    if(!title&&g.hull>0&&state!=='transition'&&g.state!=='result'){const radius=PLAYER_BALANCE.hitRadius[g.difficulty];this.circle(p.x,p.y,radius*1.42,'#03101e');this.circle(p.x,p.y,radius,'#e8ffff');this.circle(p.x,p.y,radius*.76,'#163b4a');this.circle(p.x,p.y,radius*.34,'#e8ffff');if(g.invulnerable>0&&g.time>2.6){c.save();c.globalAlpha=.48+.17*Math.sin(g.visualTime*12);c.lineWidth=.055;c.strokeStyle='#97f7ff';c.beginPath();c.arc(p.x,p.y-.25,1.05+Math.sin(g.visualTime*11)*.10,0,Math.PI*2);c.stroke();c.restore();}}
     if(!title&&g.power===4)for(const s of[-1,1]){this.circle(p.x+s*1.45,p.y-.15,.25,'#aedce8');this.circle(p.x+s*1.45,p.y-.05,.13,'#87f9ff');}
     if(active&&playerVisible){const y=p.y+depart*34,length=(1.3+Math.sin(g.visualTime*36)*.15)*pose.thrust;for(const s of[-1,1]){c.save();c.translate(p.x+s*.5,y-1.65);c.scale(.12,length);canvasGlow(c,0,-.5,.75,'#57d6ff',.8);c.restore();}}
     for(const q of this.cascades)q.at-=dt;const due=this.cascades.filter(q=>q.at<=0);this.cascades=this.cascades.filter(q=>q.at>0);for(const q of due)this.event({type:'explode',x:q.x,y:q.y,size:q.size});

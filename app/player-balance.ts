@@ -5,6 +5,7 @@ export const WEAPON_BALANCE={
  homing:{interval:.145,baseDamage:1.65,levelDamage:.10,lockMultiplier:1.20},
 } as const;
 export const PLAYER_BALANCE={
+ hitRadius:{casual:.17,normal:.23,expert:.23},
  overdriveMultiplier:1.35,
  satelliteDamage:.8,satelliteEvery:2,
  novaBossDamage:60,novaPartDamage:35,novaMinibossDamage:35,

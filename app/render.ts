@@ -28,6 +28,7 @@ import {StageSequences3D} from './stage-sequences.ts';
 import {filmFrame,EMPTY_FILM_CUE} from './film-lighting.ts';
 import {orbitalMoon,WORLD_IDENTITIES} from './stage-terrain.ts';
 import {fitCinemaCamera,poseCinemaCamera} from './cinema-camera.ts';
+import {playerMarker,positionPlayerMarker} from './player-marker.ts';
 import {CinematicDetonations} from './cinematic-detonations.ts';
 import {FlightWorlds3D} from './flight-worlds.ts';
 // Recurring decorative side rails removed from the playable scene.
@@ -122,31 +123,35 @@ export class View {
     this.starData=new Float32Array(200*4);for(let i=0;i<200;i++){this.starData[i*4]=(Math.random()-.5)*48;this.starData[i*4+1]=(Math.random()-.5)*75;this.starData[i*4+2]=-8-Math.random()*16;this.starData[i*4+3]=.02+Math.random()*.065;}
     this.stars.frustumCulled=false;this.scene.add(this.stars);
     this.ring=new T.Mesh(new T.TorusGeometry(1,.025,5,48),new T.MeshBasicMaterial({color:0x70faff,transparent:true,opacity:0,toneMapped:false}));this.ring.position.z=1.2;this.scene.add(this.ring);
-    this.indicator=new T.Group();
-    // Small dark border around the hit point: makes the white/cyan reticle
-    // remain trackable above pale glaciers and metallic structures.
-    const contrast=new T.Mesh(new T.RingGeometry(.255,.345,24),new T.MeshBasicMaterial({color:0x03101e,transparent:true,opacity:.92,depthWrite:false,toneMapped:false}));this.indicator.add(contrast);
-    const hit=new T.Mesh(new T.RingGeometry(.19,.27,20),glow(0xffffff,1.3));this.indicator.add(hit);
-    const dot=new T.Mesh(new T.CircleGeometry(.08,10),glow(0xa4f6ff,1.7));this.indicator.add(dot);this.scene.add(this.indicator);
+    this.indicator=playerMarker();this.scene.add(this.indicator);
     this.setTheme(0);
   }
   async init(forceWebGL=false){
     let modern=false;
-    if(!forceWebGL&&'gpu'in navigator)try{
+    if(!forceWebGL&&'gpu'in navigator){
       const renderer=new T.WebGPURenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});
       this.renderer=renderer;
-      await Promise.race([renderer.init(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('GPU initialization timeout')),7000))]);
+      const initializing=renderer.init();let timeout:ReturnType<typeof setTimeout>|undefined;
+      try{
+      await Promise.race([initializing,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('GPU initialization timeout')),7000);})]);
       if(!renderer.backend.constructor.name.includes('WebGPU'))throw new Error('No WebGPU adapter');
       this.engine='WebGPU';
       const scenePass=pass(this.scene,this.camera),output=scenePass.getTextureNode('output');
       this.pipeline=new T.RenderPipeline(renderer,output.add(bloom(output,usesRebuiltGraphics()?.20:.52,usesRebuiltGraphics()?.66:.43,usesRebuiltGraphics()?.78:1.15)));
       modern=true;
-    }catch(error){
+      }catch(error){
       console.warn('Modern renderer fallback',error);
-      try{this.renderer?.dispose();}catch{/* The renderer may not have initialized. */}
+      // Disposing an uninitialized renderer retries its rejected init promise
+      // through setAnimationLoop. Clean up only after a successful init,
+      // including a late success after the timeout has selected WebGL.
+      if(renderer.initialized)await renderer.dispose();
+      else void initializing.then(()=>renderer.dispose()).catch(()=>{});
+      }finally{clearTimeout(timeout);}
     }
     if(!modern){
-      const GL=await import('three');const renderer=new GL.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});this.renderer=renderer;this.engine='WebGL 2';this.pipeline=null;
+      const context=this.canvas.getContext('webgl2',{antialias:true,powerPreference:'high-performance'});
+      if(!context)throw new Error('WebGL 2 is unavailable');
+      const GL=await import('three');const renderer=new GL.WebGLRenderer({canvas:this.canvas,context,antialias:true,powerPreference:'high-performance'});this.renderer=renderer;this.engine='WebGL 2';this.pipeline=null;
       const [{EffectComposer},{RenderPass},{UnrealBloomPass},{OutputPass}]=await Promise.all([import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/RenderPass.js'),import('three/addons/postprocessing/UnrealBloomPass.js'),import('three/addons/postprocessing/OutputPass.js')]);
       this.composer=new EffectComposer(renderer);this.composer.addPass(new RenderPass(this.scene,this.camera));this.composer.addPass(new UnrealBloomPass(new T.Vector2(390,694),usesRebuiltGraphics()?.20:.52,usesRebuiltGraphics()?.66:.43,usesRebuiltGraphics()?.78:1.15));this.composer.addPass(new OutputPass());
     }
@@ -324,8 +329,7 @@ export class View {
     // keep their original world-space radius and positions.
     this.player.scale.setScalar((title?2.0:game.invulnerable>0?1.015+Math.sin(game.visualTime*15)*.025:1.0)*(usesRebuiltGraphics()?1.11:1));this.player.visible=game.hull>0||title;
     // Never hide the craft during invulnerability: on a busy background players must keep visual tracking.
-    this.indicator.position.set(p.x,p.y-.5625,2.8);this.indicator.visible=!title&&game.hull>0&&state!=='transition'&&game.state!=='result';
-    this.indicator.scale.setScalar(game.invulnerable>0&&!title?1.2+Math.sin(game.visualTime*11)*.12:p.focus?1.1:.85);
+    positionPlayerMarker(this.indicator,game);
     for(let i=0;i<2;i++){
       const flame=this.flames[i],side=i===0?-1:1,scale=title?2:1;
       flame.visible=this.player.visible&&(active||title)&&!usesRebuiltGraphics(); // rig owns rebuilt engine thrustflame.position.set(this.player.position.x+side*.496*scale,this.player.position.y-2.03*scale,1.05);
@@ -389,7 +393,7 @@ export class View {
         dummy.position.z=1.27;dummy.scale.set(bullet.shape==='diamond'?0:bullet.shape==='missile'?.22:.27,bullet.shape==='missile'?.64:bullet.shape==='diamond'?.27:.42,.1);dummy.updateMatrix();this.shotRims.setMatrixAt(rimCount++,dummy.matrix);
         dummy.position.z=1.44;dummy.scale.set(.105,.135,.07);dummy.updateMatrix();this.shotCores.setMatrixAt(coreCount,dummy.matrix);this.shotCores.setColorAt(coreCount++,this.shotColor.setHex(0xffe1bf));
       }else{dummy.position.z=1.44;dummy.scale.set(.045,.33,.07);dummy.updateMatrix();this.shotCores.setMatrixAt(coreCount,dummy.matrix);this.shotCores.setColorAt(coreCount++,this.shotColor.setHex(0xbbf5ff));}
-      if(bullet.enemy&&bullet.shape==='diamond'){dummy.position.set(bullet.x,bullet.y,1.34);dummy.rotation.set(0,0,Math.PI/4);dummy.scale.set(.40,.40,.08);dummy.updateMatrix();this.diamonds.setMatrixAt(diamondCount,dummy.matrix);this.diamonds.setColorAt(diamondCount,this.shotColor);dummy.position.z=1.26;dummy.scale.set(.48,.48,.06);dummy.updateMatrix();this.diamondRims.setMatrixAt(diamondCount++,dummy.matrix);}
+      if(bullet.enemy&&bullet.shape==='diamond'){dummy.position.set(bullet.x,bullet.y,1.34);dummy.rotation.set(0,0,Math.PI/4);dummy.scale.set(.40,.40,.08);dummy.updateMatrix();this.diamonds.setMatrixAt(diamondCount,dummy.matrix);this.diamonds.setColorAt(diamondCount,this.shotColor.setHex(bullet.color).multiplyScalar(usesRebuiltGraphics()?1.55:2.4));dummy.position.z=1.26;dummy.scale.set(.48,.48,.06);dummy.updateMatrix();this.diamondRims.setMatrixAt(diamondCount++,dummy.matrix);}
       if(bullet.trail)for(let i=1;i<bullet.trail.length&&trailCount<1800;i++){
         const a=bullet.trail[i-1],b=bullet.trail[i],dx=b.x-a.x,dy=b.y-a.y;
         dummy.position.set((a.x+b.x)/2,(a.y+b.y)/2,1.10);dummy.rotation.set(0,0,-Math.atan2(dx,dy));dummy.scale.set(.18*i/bullet.trail.length,Math.hypot(dx,dy)+.28,1);dummy.updateMatrix();this.trails.setMatrixAt(trailCount++,dummy.matrix);

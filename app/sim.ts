@@ -525,7 +525,7 @@ export class Game {
       if(interceptTerrainShot(this,b))continue;
       if(b.enemy){
         const d=segmentDistance2(b.px,b.py,b.x,b.y,p.x,p.y);
-        const hitRadius=this.difficulty==='casual'?.17:.23;
+        const hitRadius=PLAYER_BALANCE.hitRadius[this.difficulty];
         if(d<(hitRadius+b.radius*.65)**2){if(this.invulnerable<=0){b.dead=true;this.hitPlayer();if(this.state!=='playing')return;}}
         else if(!b.grazed&&d<1.1**2&&this.invulnerable<=0){b.grazed=true;this.grazes++;this.energy=Math.min(100,this.energy+1.1);this.chainTime=Math.max(this.chainTime,1.2);this.addScore(30*this.multiplier);this.emit('graze',{x:p.x,y:p.y});}
       }else{

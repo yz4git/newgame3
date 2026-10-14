@@ -12,6 +12,7 @@ import {fieldDamagePhase} from './battlefield.ts';
 import {fieldPresentation,fieldRewardLabel} from './field-clarity.ts';
 import {BOSS_FORM_NAMES} from './boss-evolution.ts';
 import {zoneAt,stageDistance} from './bg-map.ts';
+import {pointerDragDelta} from './touch-controls.ts';
 
 const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 const game=new Game(),audio=new AudioEngine();let canvas=el<HTMLCanvasElement>('game');
@@ -44,7 +45,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-visual]').forEach(button=>{
     location.replace(next.href);
   });
 });
-el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — FLIGHT CINEMA 8.0.0';
+el('graphics-version').textContent=currentVisualStyle()==='classic'?'N/S — CLASSIC 2.9.3':'N/S — FLIGHT CINEMA 8.0.1';
 selectDifficulty(difficulty);el('sound-button').textContent=audio.muted?'SOUND OFF':'SOUND ON';
 function clearPopups(){for(const p of popups)p.element.remove();popups.length=0;}
 function clearInput(){keys.clear();pointerId=null;target=undefined;focusPointer=null;padButtons=[];el('focus-button').classList.remove('held');}
@@ -56,7 +57,7 @@ function screens(){
 }
 function showMessage(title:string,caption:string,seconds=2.3,danger=false){
   el('message-title').textContent=title;el('message-caption').textContent=caption;
-  el('message').classList.toggle('facility',title.startsWith('施設破壊成功'));el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR|◆ DESTROY TARGET)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
+  el('message').classList.toggle('facility',title.startsWith('施設破壊成功'));el('message').classList.toggle('danger',danger);el('message').classList.toggle('tactical',/^(敵機発進|PHASE \d+|MIDBOSS BREAK|FACILITY ESCAPED \/ 破壊失敗|SECTOR OPERATION|MISSION COMPLETE|MISSION FAILED|BOSS EVOLUTION|PHASE TRANSFORMATION|BATTLEFIELD CHAIN|ALERT ESCALATED|SALVAGE CORRIDOR|DANGER CORRIDOR|◆ DESTROY TARGET)$/.test(title));el('message').classList.add('show');messageUntil=performance.now()+seconds*1000;
 }
 function toast(text:string){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+1900;}
 function start(mode:Mode){
@@ -99,11 +100,12 @@ actionButton('audio-toggle',()=>{void audio.unlock().catch(()=>{});audio.toggle(
 for(const bus of ['master','music','effects'] as SoundBus[])el<HTMLInputElement>('volume-'+bus).addEventListener('input',e=>{audio.setVolume(bus,Number((e.target as HTMLInputElement).value)/100);el('level-'+bus).textContent=Math.round(audio.volumes[bus]*100)+'%';});
 document.querySelectorAll<HTMLButtonElement>('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>selectDifficulty(b.dataset.difficulty as Difficulty)));
 function bindCanvas(){canvas.addEventListener('pointerdown',e=>{
-  if(game.state!=='playing'||pointerId!==null)return;e.preventDefault();pointerId=e.pointerId;lastPointer=view.pointerToWorld(e.clientX,e.clientY);target={x:game.player.x,y:game.player.y};canvas.setPointerCapture(e.pointerId);el('touch-tip').hidden=true;
+  if(game.state!=='playing'||pointerId!==null)return;e.preventDefault();pointerId=e.pointerId;lastPointer={x:e.clientX,y:e.clientY};target={x:game.player.x,y:game.player.y};canvas.setPointerCapture(e.pointerId);el('touch-tip').hidden=true;
 });
 canvas.addEventListener('pointermove',e=>{
-  if(e.pointerId!==pointerId||!target)return;e.preventDefault();const p=view.pointerToWorld(e.clientX,e.clientY);
-  target.x=Math.max(-W,Math.min(W,target.x+p.x-lastPointer.x));target.y=Math.max(BOTTOM,Math.min(TOP,target.y+p.y-lastPointer.y));lastPointer=p;
+  if(e.pointerId!==pointerId||!target)return;e.preventDefault();const current={x:e.clientX,y:e.clientY};
+  const delta=pointerDragDelta(lastPointer,current,(x,y)=>view.pointerToWorld(x,y));
+  target.x=Math.max(-W,Math.min(W,target.x+delta.x));target.y=Math.max(BOTTOM,Math.min(TOP,target.y+delta.y));lastPointer=current;
 });
 function release(e:PointerEvent){if(e.pointerId===pointerId){pointerId=null;target=undefined;}}
 canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);}
@@ -183,7 +185,14 @@ function updateUI(now:number){
   const bossFormLabel=el('boss-form');bossFormLabel.hidden=!boss||boss.form==='standard';
   if(boss){bossFormLabel.textContent=BOSS_FORM_NAMES[boss.form];bossFormLabel.classList.toggle('overcharged',boss.form==='overcharged');el('boss-pattern').textContent=game.attackName();el('boss-hud').classList.toggle('exposed',boss.rest);el('boss-name').textContent=STAGES[game.stage].boss;el('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(boss.hp/boss.maxHp*100))+'%';el('parts-status').textContent=boss.parts.map((p,i)=>(i===0?'L':'R')+' '+(p>0?'ACTIVE':'DESTROYED')).join(' / ')+(game.mode==='campaign'?' / '+Math.max(0,Math.ceil(90-boss.encounterTime))+'s':'');}
   else if(mini){const guarded=game.nodes.some(n=>n.attach==='mini'&&!n.dead);el('boss-hud').classList.toggle('exposed',!guarded);el('boss-name').textContent=ENCOUNTERS[game.stage].mini;el('boss-pattern').textContent=guarded?'ESCORT SHIELD / 護衛を壊すと本体が露出':'MIDBOSS / 集中射撃で突破';el('boss-fill').style.width=Math.max(0,mini.hp/mini.maxHp*100)+'%';el('boss-percent').textContent=Math.max(0,Math.ceil(mini.hp/mini.maxHp*100))+'%';el('parts-status').textContent=(guarded?'ESCORT ACTIVE':'CORE EXPOSED')+' / 撤退まで '+Math.max(0,Math.ceil((22-mini.age)/GAME_SPEED))+'s';}
-  const priorityTarget=game.sectorMission.active||game.nodes.some(n=>n.attach==='field'&&!n.dead)||game.battlefield.collapses.some(c=>c.age<2.65);const cue=priorityTarget?null:stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
+  const message=el('message'),tacticalNotice=now<messageUntil&&message.classList.contains('tactical');
+  const priorityTarget=game.sectorMission.active||game.nodes.some(n=>n.attach==='field'&&!n.dead)||game.battlefield.collapses.some(c=>c.age<2.65);const cue=priorityTarget||tacticalNotice?null:stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
+  if(tacticalNotice){
+    const hud=el('hud'),bossHud=el('boss-hud');
+    const bottom=Math.max(hud.offsetTop+hud.offsetHeight,bossHud.hidden?0:bossHud.offsetTop+bossHud.offsetHeight);
+    message.style.setProperty('--notice-top',(bottom+9)+'px');
+  }
+  el('toast').classList.toggle('suppressed',tacticalNotice);
   const panel=el('stage-cue');panel.hidden=!cue;
   el('cinematic-frame').hidden=!cue&&game.state!=='transition'||cue?.kind==='radio';
   el('sector-strip').hidden=!playing||!!boss||!!mini||priorityTarget;el('sector-strip').style.setProperty('--world-color','#'+stage.color.toString(16).padStart(6,'0'));
@@ -222,7 +231,7 @@ function events(){
     }
     else if(e.type==='fieldrisk')showMessage('FACILITY ESCAPED / 破壊失敗','増援が出現・ボス兵装が強化！',1.7,true);
     else if(e.type==='worldapproach')toast('WORLD ALIVE / '+(e.text||'巨大施設に接近'));
-    else if(e.type==='worldlaunch')showMessage('HANGAR LAUNCH / 敵機発進',e.text||'背景施設から敵編隊が出撃',1.25,true);
+    else if(e.type==='worldlaunch')showMessage('敵機発進',e.text||'背景施設から敵編隊が出撃',1.25,true);
     else if(e.type==='worldbaydisabled')toast('HANGAR SEALED / 出撃阻止・追加敵なし');
     else if(e.type==='worldbayhold')toast('HANGAR STAND DOWN / 混戦のため出撃見送り');
     else if(e.type==='worldbreach')toast('WORLD GATE DOWN / 格納庫停止');

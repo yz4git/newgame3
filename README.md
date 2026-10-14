@@ -1,3 +1,27 @@
+## NOVA STRIKE 8.0.1 — PHONE PLAY REVIEW (2026-10-15)
+
+Reviewed the published game with real drag, weapon, NOVA, pause and help input,
+and compared the six-stage WebGL captures. Fixed the problems found:
+
+- A stationary touch no longer gains a movement delta when the perspective
+  camera banks between pointer events. Both pixel endpoints use one camera.
+- The dark-edged white hit circle now sits at the actual player collision
+  coordinate and plane. Its radius matches each difficulty and never pulses
+  larger when focusing or invulnerable; Canvas uses the same radius.
+- Brief launch/phase notices sit below the current HUD, with a single short
+  Japanese launch title. Radio panels and secondary toasts yield while the
+  notice is visible, keeping the middle of the battle clear.
+- Diamond enemy shots retain their attack color after the white-core pass,
+  preserving the colored body and dark outline against bright ice.
+- A failed modern renderer is disposed only after successful initialization.
+  Unavailable WebGL enters Canvas without retrying a rejected init promise.
+
+Regression checks replay a camera change during real two-finger input, compare
+marker geometry with actual collision outcomes, inspect actual GPU projectile
+colors and notice bounds, and boot the full no-GPU UI through help and resume.
+Visual verification uses Chromium with phone-sized viewports and WebGL; it does
+not claim an actual iPhone Safari hardware performance measurement.
+
 ## NOVA STRIKE 8.0.0 — SIX DISTINCT WORLDS (2026-10-14)
 
 The campaign's shared two-bank corridor has been replaced with six different
