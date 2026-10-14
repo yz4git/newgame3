@@ -1,3 +1,34 @@
+## NOVA STRIKE 8.0.0 — SIX DISTINCT WORLDS (2026-10-14)
+
+The campaign's shared two-bank corridor has been replaced with six different
+physical terrain layouts and stage-specific architecture:
+
+- **Orbital salvage:** clean vacuum, a lit sculpted moon, irregular asteroid
+  masses, circular hubs, suspended solar wings and tilted habitat rings.
+- **Pelagic fleet:** a broad open sea, separate coastal islands, loading cranes,
+  radar dishes and a ten-ship convoy with pointed hulls and shallow wakes.
+- **Neon citadel:** a solid city foundation, near-central skyscrapers, recessed
+  facades, violet night lighting, marked streets and elevated interchanges.
+- **Polar chasm:** jagged glacial terrain, broken rock faces and snow caps,
+  fractured frozen ground, a scientific outpost and a deeper descent/recovery.
+- **Canopy sanctuary:** dense multi-lobed foliage, woody branching trunks and
+  roots, stepped temples, natural root arches and four thick waterfall volumes.
+- **Crucible caldera:** an open molten lake, irregular circular basalt craters,
+  radial furnace pipework, silos, tapered stacks and annular hot vents.
+
+Sea overflights use low altitude and gentle banking; city flyovers spiral close
+to towers; glacial travel emphasizes descent and climb. The eighteen large
+stage episodes use different transit speeds, angles and depth approaches.
+Six light/fog setups expose each world's own materials. Classic remains available.
+
+Landscape generation remains finite and instanced, below 3,000 instances,
+80,000 triangles and nine draws per world. Waterfall ripples and sea reflections
+use animated physical vertices/normals; glacial water is frozen. The shared
+rectangular launch docks and event walls removed in 7.1.1 remain absent.
+Camera fitting, touch rays, pausing, reduced motion and campaign rules retain
+their existing behavior. Regression coverage audits actual terrain topology,
+geometry envelopes and camera inversion; browser review compares all six worlds.
+
 ## NOVA STRIKE 7.1.1 — REMOVE SHARED SIDE BOXES (2026-10-14)
 
 Removed the two shared decorative layers that repeatedly introduced rectangular

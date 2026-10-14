@@ -3,12 +3,12 @@ import {easeReveal,clamp01} from './scenery-transitions.ts';
 /** Six photographic lighting setups. These only drive the existing lights;
  * no extra shadow maps, postprocess targets, flashes or gameplay time changes. */
 export const FILM_STOCKS=[
- {name:'ECLIPSE / copper and cobalt',key:0xffd5ac,rim:0x6c92e5,sky:0x95b7d8,ground:0x18202c,fog:0x131c32,exposure:.88,fill:.78,rimPower:2.1,azimuth:-19},
- {name:'PELAGIC / storm silver',key:0xe0f0ff,rim:0x40c9d4,sky:0x9bc7d7,ground:0x183641,fog:0x163d51,exposure:.86,fill:.84,rimPower:1.8,azimuth:17},
- {name:'CITADEL / tungsten and steel',key:0xffc591,rim:0x629af0,sky:0x829fc9,ground:0x182333,fog:0x111e36,exposure:.87,fill:.76,rimPower:2.2,azimuth:-17},
- {name:'BOREALIS / polar blue',key:0xdbefff,rim:0x68c5d7,sky:0xafd7e5,ground:0x1c3b51,fog:0x284355,exposure:.84,fill:.86,rimPower:1.8,azimuth:21},
- {name:'RELIC / filtered gold',key:0xffd39a,rim:0x54baad,sky:0xa0bdae,ground:0x233b2c,fog:0x1b302b,exposure:.90,fill:.78,rimPower:2.0,azimuth:-22},
- {name:'CRUCIBLE / ember and smoke',key:0xffbb86,rim:0x819ccc,sky:0xb49c91,ground:0x3a2520,fog:0x291c20,exposure:.85,fill:.72,rimPower:2.1,azimuth:18}
+ {name:'ECLIPSE / hard vacuum',key:0xffd8b1,rim:0x778fe5,sky:0x617dab,ground:0x101525,fog:0x090f20,exposure:.88,fill:.63,rimPower:2.0,azimuth:-26,near:112,far:236},
+ {name:'PELAGIC / sea daylight',key:0xfff1da,rim:0x6ed1dd,sky:0xb5dbe2,ground:0x17455a,fog:0x356b83,exposure:.88,fill:.94,rimPower:1.65,azimuth:22,near:104,far:220},
+ {name:'CITADEL / violet night',key:0xc9d9ff,rim:0x9e7ddb,sky:0x7286b8,ground:0x161529,fog:0x10112c,exposure:.88,fill:.72,rimPower:2.4,azimuth:-18,near:91,far:192},
+ {name:'BOREALIS / arctic white',key:0xf0f7ff,rim:0x85d5ec,sky:0xc2e6ec,ground:0x2d526a,fog:0x6b99ac,exposure:.86,fill:1.02,rimPower:1.6,azimuth:25,near:96,far:212},
+ {name:'RELIC / canopy gold',key:0xffd699,rim:0x4f9781,sky:0xa5c08c,ground:0x25392a,fog:0x254c38,exposure:.89,fill:.81,rimPower:1.8,azimuth:-24,near:82,far:168},
+ {name:'CRUCIBLE / lava uplight',key:0xffbf88,rim:0xf46d35,sky:0xa3919d,ground:0x782b17,fog:0x33161b,exposure:.85,fill:.65,rimPower:2.3,azimuth:18,near:96,far:190}
 ] as const;
 
 export interface FilmCue {impact:number;anticipation:number;afterglow:number;elapsed:number;weight:number;}
@@ -31,6 +31,6 @@ export function filmFrame(stage:number,time:number,cue:FilmCue,pressure=0,reduce
   keyY:17+stage%3*2,keyZ:25,
   lensPush:push*.018,lensLift:push*3.2,
   lensSide:reduced?0:Math.sin(cue.elapsed*.21+stage*.85)*push*2.8,
-  fogNear:88,fogFar:190
+  fogNear:stock.near,fogFar:stock.far
  };
 }

@@ -26,6 +26,7 @@ import {ScenicChoreography3D} from './scenic-choreography.ts';
 import {WorldAliveScene} from './world-alive-scene.ts';
 import {StageSequences3D} from './stage-sequences.ts';
 import {filmFrame,EMPTY_FILM_CUE} from './film-lighting.ts';
+import {orbitalMoon,WORLD_IDENTITIES} from './stage-terrain.ts';
 import {fitCinemaCamera,poseCinemaCamera} from './cinema-camera.ts';
 import {CinematicDetonations} from './cinematic-detonations.ts';
 import {FlightWorlds3D} from './flight-worlds.ts';
@@ -180,27 +181,16 @@ export class View {
         const sky=new T.Mesh(new T.SphereGeometry(82,24,12),
           new T.MeshBasicMaterial({color:0x0c1426,side:T.BackSide,depthWrite:false,toneMapped:true}));
         sky.name='deep-3d-nebula-sky';sky.position.set(0,0,-19);this.atmosphere.add(sky);
-        // Real depth-layered nebular dust/asteroid formations rather than a
-        // panoramic 2D nebula picture stretched over the background sphere.
-        const dust=new T.InstancedMesh(new T.IcosahedronGeometry(1,1),
-          new T.MeshStandardMaterial({color:0x45556e,metalness:.08,roughness:.91,transparent:true,opacity:.14,depthWrite:false}),48);
-        dust.name='3d-nebular-distance-clouds';dust.frustumCulled=false;
-        const instance=new T.Object3D();
-        for(let i=0;i<48;i++){
-          const a=i*2.39996,r=9+(i%9)*3.3;
-          instance.position.set(Math.sin(a)*r,((i*17)%91)-45,-18-(i%6)*7.2);
-          instance.rotation.set(i*.3,i*.13,a);
-          const size=1.5+(i%5)*.90;instance.scale.set(size,size*.67,size*1.48);
-          instance.updateMatrix();dust.setMatrixAt(i,instance.matrix);
-        }
-        dust.instanceMatrix.needsUpdate=true;this.atmosphere.add(dust);
+        // Clean vacuum, a lit physical moon and scattered rock silhouettes.
+        // The previous near-camera dust masses obscured the empty space.
+        this.atmosphere.add(orbitalMoon());
       }else{
         const sky=new T.Mesh(new T.PlaneGeometry(46,76),new T.MeshBasicMaterial({map:terrainMaps.nebula,color:0xd6d9e8,toneMapped:false}));sky.position.set(0,0,-36);this.atmosphere.add(sky);
       }
     }
     this.key.color.setHex(theme.sun);this.key.intensity=theme.light;
-    this.stars.visible=theme.environment==='asteroids'||theme.environment==='fortress';
-    this.scene.background=new T.Color(theme.sky);
+    this.stars.visible=theme.environment==='asteroids'||!usesRebuiltGraphics()&&theme.environment==='fortress';
+    this.scene.background=new T.Color(usesRebuiltGraphics()?WORLD_IDENTITIES[stage].sky:theme.sky);
   }
   event(e:GameEvent){
     this.volumetric?.event(e);
@@ -378,6 +368,7 @@ export class View {
     }
     if(!title){dummy.position.set(p.x+.15,p.y+.7,-2.95);dummy.rotation.set(0,0,0);dummy.scale.set(3.8,2.8,1);dummy.updateMatrix();this.shadows.setMatrixAt(shadowCount++,dummy.matrix);}
     this.shadows.count=shadowCount;this.shadows.instanceMatrix.needsUpdate=true;
+    this.shadows.visible=!usesRebuiltGraphics()||game.stage!==0;
     this.markers.count=markerCount;this.markers.instanceMatrix.needsUpdate=true;this.aimLines.count=lineCount;this.aimLines.instanceMatrix.needsUpdate=true;
     const lockIds=new Set(game.locks.map(l=>l.id));
     for(const[id,m]of this.lockMarkers)if(!lockIds.has(id)){this.scene.remove(m);m.traverse(o=>{if(o instanceof T.Mesh){o.geometry.dispose();(o.material as T.Material).dispose();}});this.lockMarkers.delete(id);}

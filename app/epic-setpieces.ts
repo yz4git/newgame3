@@ -12,10 +12,10 @@ export type EpicSet={still:T.Group;moving:T.Group;secondary:T.Group;materials:T.
 const PALETTES=[
  [0x202b3e,0x586778,0x9a8265,0x517b99,0xffa45f],
  [0x132d3e,0x4c7080,0x8c9c9c,0x284a60,0x4dceeb],
- [0x1b2539,0x4d6077,0x929497,0x2c425c,0xffbd78],
+ [0x11172c,0x354b76,0x8eabc0,0x2b254e,0xa194f0],
  [0x20405a,0x5c9cb5,0xb9d7db,0x365e7e,0x89d8ed],
- [0x263b35,0x667c67,0x9f9e7d,0x405e4b,0x86dab5],
- [0x302729,0x655650,0xa18065,0x584644,0xff813c]
+ [0x20362c,0x657855,0xb3b18c,0x4b3a25,0x70c5a2],
+ [0x231c22,0x4b3b35,0xb18a60,0x37242a,0xff7624]
 ] as const;
 const box=(g:T.Object3D,m:T.Material,x:number,y:number,z:number,w:number,h:number,d:number)=>{
  const mesh=new T.Mesh(cinematicBox(w,h,d),m);mesh.position.set(x,y,z);g.add(mesh);return mesh;
@@ -223,9 +223,9 @@ export function buildEpicSet(stage:number,act:number):EpicSet{
   // A real, thick canyon wall, with stratified fractures and tilted summits.
   for(const side of[-1,1])for(let i=0;i<5;i++){
    const ice=joint(act===1?'avalanche':'ice-fault',i+(side>0?5:0),side*(12+(i%2)*2),(i-2)*8,-10);
-   solid(ice,i%2?metal:natural,[[-5,-5],[3,-6],[5,3],[1,8],[-4,5]],-5,9+(i%3));
-   solid(ice,trim,[[-4,-3],[1,-5],[3,2],[-1,5],[-4,3]],5+(i%3),.45);
-   for(let j=0;j<3;j++)beam(ice,metal,[-4,-3+j*2,5],[2,1+j*2,5],.065);
+   rock(ice,i%2?metal:natural,0,0,0,5.8,8.4,5.4+(i%3),31+i+side*7,2);
+   rock(ice,trim,-.7,1.5,4.2,4.5,6.0,1.9,51+i,1);
+   for(let j=0;j<3;j++)beam(ice,metal,[-4,-3+j*2,4.7],[2,1+j*2,5.3],.060);
   }
   if(act===0){for(let i=0;i<6;i++){const shard=joint('ice-split',i,(i-2.5)*2.3,0,-6);rock(shard,metal,0,0,0,2,7,4,17+i,1);}}
   else if(act===1){

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {orbitalMoon} from '../app/stage-terrain.ts';
 const source=name=>readFile('app/'+name+'.ts','utf8');
 
 test('World Rebuild background waterways are side-walled volumetric 3D geometry with no painted image',async()=>{
@@ -36,8 +37,11 @@ test('Space sky is a physical 3D distance field, not a static image background',
  const s=await source('render');
  const sky=s.slice(s.indexOf("if(theme.environment==='asteroids')"),s.indexOf('this.key.color.setHex'));
  assert.match(sky,/new T\.SphereGeometry\(82,24,12\)/);
- assert.match(sky,/3d-nebular-distance-clouds/);
- assert.match(sky,/new T\.InstancedMesh\(new T\.IcosahedronGeometry/);
+ assert.match(sky,/this\.atmosphere\.add\(orbitalMoon\(\)\)/);
+ const moon=orbitalMoon();moon.geometry.computeBoundingBox();
+ assert.ok(moon.geometry.getAttribute('position').count>500);
+ assert.ok(moon.geometry.boundingBox.max.z-moon.geometry.boundingBox.min.z>1.9);
+ assert.equal(moon.material.map,null);assert.equal(moon.material.vertexColors,true);
  assert.doesNotMatch(sky.slice(sky.indexOf('if(usesRebuiltGraphics())'),sky.indexOf('}else{')),/map:terrainMaps\.nebula/);
  assert.match(sky,/new T\.PlaneGeometry\(46,76\)/); // Classic remains intact
 });

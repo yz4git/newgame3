@@ -78,7 +78,7 @@ export class StageSequences3D{
    c.root.visible=opacity>.002&&!reduced;
    if(!c.root.visible)continue;
    const phase=stageSpectaclePose(g.stage,c.act,elapsed),flight=episodeFlightPose(g.stage,c.act,elapsed);
-   c.root.position.set(flight.x,flight.y,-c.ceiling-1.15);
+   c.root.position.set(flight.x,flight.y,-c.ceiling-1.15+flight.depth);
    c.root.rotation.set(flight.rx,flight.ry,flight.rz);
    animateEpicSet(c,g.stage,c.act,phase);
    for(const mat of c.materials){

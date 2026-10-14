@@ -16,7 +16,7 @@ test('moving surface normals follow the physical slope, including the performanc
  }
  const world=new FlightWorlds3D(),g=new Game();g.start('campaign','normal',1);g.time=25;
  world.draw(g,false,true);
- const surface=world.root.getObjectByName('deep-continuous-river-surface');
+ const surface=world.root.getObjectByName('open-pelagic-water');
  const p=surface.geometry.getAttribute('position'),n=surface.geometry.getAttribute('normal');
  for(let i=0;i<p.count;i+=131){
   const wave=flowSurface(p.getX(i),p.getY(i),25,1),normal=new T.Vector3(n.getX(i),n.getY(i),n.getZ(i));

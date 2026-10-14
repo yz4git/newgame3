@@ -17,7 +17,7 @@ export function shadeSolid(geometry:T.BufferGeometry,amount=.24){
 /** Analytic surface normals give small waves an actual moving reflection in
  * WebGL and WebGPU without shaders, images, normal maps or extra passes. */
 export function flowSurface(x:number,y:number,time:number,stage:number,reduced=false,out={height:0,dx:0,dy:0}){
- const clock=reduced?0:time,scale=stage===5?.58:stage===3?.24:1;
+ const clock=reduced||stage===3?0:time,scale=stage===5?.58:stage===3?.12:1;
  const a=x*.23+y*.13-clock*.84,b=x*-.11+y*.31+clock*.58;
  const c=x*.47+y*.39-clock*1.14;
  const height=scale*(Math.sin(a)*.34+Math.sin(b)*.20+Math.sin(c)*.055);
@@ -29,7 +29,7 @@ export function flowSurface(x:number,y:number,time:number,stage:number,reduced=f
 /** Sculpted basalt: broad cheeks, inset eye sockets, a projecting nose and
  * an angular jaw. Every change in depth is part of the physical stone mesh. */
 export function guardianFace(){
- const vertices:number[]=[],uvs:number[]=[],indices:number[]=[],nx=14,ny=18;
+ const vertices:number[]=[],uvs:number[]=[],indices:number[]=[],nx=20,ny=26;
  const bump=(x:number,y:number,cx:number,cy:number,sx:number,sy:number)=>Math.exp(-(((x-cx)/sx)**2+((y-cy)/sy)**2));
  for(let row=0;row<=ny;row++)for(let col=0;col<=nx;col++){
   const y=-8+row/ny*19,u=col/nx*2-1;

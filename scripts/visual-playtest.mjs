@@ -270,7 +270,7 @@ for(let stage=0;stage<6;stage++){
    g.time=[64,74,82,78,82,86][stage]*progress;g.visualTime=g.time;
    g.enemies=[];g.bullets=[];view.draw(g,.016,16.7);
   },{stage,progress});
-  await scene(rich.page,`v7-flight-${stage+1}-${Math.round(progress*100)}`,80);
+  await scene(rich.page,`v8-flight-${stage+1}-${Math.round(progress*100)}`,80);
   flightSamples.push(await rich.page.evaluate(()=>{
    const {view}=window.__nova;
    const corners=[[-10.2,-14.4],[10.2,-14.4],[-10.2,14.8],[10.2,14.8]].map(([x,y])=>view.worldToScreen(x,y));
@@ -575,6 +575,10 @@ if(Object.keys(results.flightWorlds).length!==6||!Object.values(results.flightWo
   x.mounted&&x.flight.finite&&x.flight.instances>50&&x.flight.instances<3000&&x.flight.details>0&&x.flight.triangles<80000&&x.flight.draws<=9&&
   x.corners.every(p=>p.x>0&&p.x<x.frame.width&&p.y>0&&p.y<x.frame.height))))
  throw new Error('Authored 3D route, continuous world or camera framing missing: '+JSON.stringify(results.flightWorlds));
+const actualWorlds=Object.values(results.flightWorlds).map(samples=>samples[1].flight);
+if(new Set(actualWorlds.map(x=>x.identity)).size!==6||new Set(actualWorlds.map(x=>x.topology)).size!==6||
+ !actualWorlds.every((x,stage)=>x.terrain.filter(name=>/cliff-|river-bank-/.test(name)).length===([3,4].includes(stage)?2:0)))
+ throw new Error('Six stages reverted to a shared corridor topology: '+JSON.stringify(actualWorlds));
 if(Object.keys(results.worldStageImpact).length!==6||
  !Object.values(results.worldStageImpact).every(x=>x.phase==='action'&&x.impact>.8&&x.fragments>=4))
  throw new Error('One-time environmental catastrophe invisible at impact moment: '+JSON.stringify(results.worldStageImpact));

@@ -26,7 +26,7 @@ test('all six authored flights keep the entire corridor visible and touch rays e
 });
 
 test('continuous worlds are finite, substantial, behind combat and bounded in GPU draws',()=>{
- const world=new FlightWorlds3D(),g=new Game();
+ const world=new FlightWorlds3D(),g=new Game(),topologies=new Set();
  for(let stage=0;stage<6;stage++){
   g.start('campaign','normal',stage);g.time=STAGES[stage].duration*.34;world.draw(g);
   const d=world.diagnostics(),bounds=new T.Box3().setFromObject(world.root);
@@ -36,6 +36,14 @@ test('continuous worlds are finite, substantial, behind combat and bounded in GP
   assert.ok(bounds.max.z<-.75,`scenery crosses gameplay plane: ${stage}/${bounds.max.z}`);
   assert.ok(bounds.max.y-bounds.min.y>400);
   assert.equal(d.textureCards,0);assert.equal(d.finite,true);
+  topologies.add(d.topology);
+  const banks=world.root.children.filter(x=>/cliff-|river-bank-/.test(x.name));
+  assert.equal(banks.length,stage===3||stage===4?2:0,'four worlds must have no shared two-bank corridor');
+  if(stage===0)assert.ok(world.root.children.every(x=>x.isInstancedMesh),'space remains empty between floating objects');
+  if(stage===1)assert.ok(world.root.getObjectByName('separate-coastal-islands')&&world.root.getObjectByName('open-pelagic-water'));
+  if(stage===2){const floor=world.root.getObjectByName('solid-city-foundation');floor.geometry.computeBoundingBox();assert.ok(floor.geometry.boundingBox.max.z-floor.geometry.boundingBox.min.z>=7);}
+  if(stage===4){const river=world.root.getObjectByName('rainforest-river-and-waterfalls'),mask=river.geometry.getAttribute('flowMask');assert.ok(Array.from(mask.array).includes(0),'waterfall volumes are present in the physical water geometry');}
+  if(stage===5)assert.ok(world.root.getObjectByName('radial-basalt-calderas')&&world.root.getObjectByName('molten-caldera-surface'));
   const before=g.snapshot(),geometry=world.root.children.map(x=>x.geometry);
   world.root.updateMatrix();const paused=world.root.matrix.clone();
   g.state='paused';g.resumeState='playing';world.draw(g);world.root.updateMatrix();
@@ -43,19 +51,24 @@ test('continuous worlds are finite, substantial, behind combat and bounded in GP
   assert.deepEqual(world.root.children.map(x=>x.geometry),geometry);
   g.state='playing';assert.deepEqual(g.snapshot(),before);
  }
+ assert.equal(topologies.size,6);
 });
 
 test('flight direction varies by place, quietens under pressure and stays stable with reduced motion',()=>{
  assert.equal(new Set(FLIGHT_ROUTES.map(x=>x.map(k=>k.name).join('/'))).size,6);
  for(let stage=0;stage<6;stage++){
   const time=STAGES[stage].duration*.34,full=flightFrame(stage,time),quiet=flightFrame(stage,time,1),reduced=flightFrame(stage,time,0,true);
-  assert.ok(Math.abs(full.bank)>.4&&Math.abs(full.eyeX)>=9);
+  assert.ok(Math.abs(full.bank)>.1&&Math.abs(full.eyeX)>=3);
   assert.ok(Math.abs(quiet.bank)<Math.abs(full.bank));
   assert.ok(reduced.bank===0&&reduced.eyeX===0&&reduced.eyeY===0&&reduced.eyeZ===0);
   const epsilon=1e-4;
   const left=flightFrame(stage,time-epsilon),right=flightFrame(stage,time+epsilon);
   assert.ok(Math.abs(left.bank-right.bank)<1e-4&&Math.abs(left.eyeX-right.eyeX)<1e-3);
  }
+ const banks=FLIGHT_ROUTES.map(keys=>Math.max(...keys.map(k=>Math.abs(k.bank))));
+ assert.ok(banks[1]<banks[0]*.5,'open-sea overflight uses gentle banks');
+ assert.ok(banks[3]<banks[2]*.6,'glacial descent emphasizes altitude instead of city-style spirals');
+ assert.ok(Math.min(...FLIGHT_ROUTES[3].map(k=>k.pitch))<=-15&&Math.max(...FLIGHT_ROUTES[3].map(k=>k.pitch))>=12);
 });
 
 test('hostile salvo pressure eases the lens back and pausing retains the current bank',()=>{
