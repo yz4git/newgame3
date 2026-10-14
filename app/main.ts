@@ -188,8 +188,8 @@ function updateUI(now:number){
   const message=el('message'),tacticalNotice=now<messageUntil&&message.classList.contains('tactical');
   const priorityTarget=game.sectorMission.active||game.nodes.some(n=>n.attach==='field'&&!n.dead)||game.battlefield.collapses.some(c=>c.age<2.65);const cue=priorityTarget||tacticalNotice?null:stageCue(game),stage=STAGES[game.stage],playing=game.state==='playing';
   if(tacticalNotice){
-    const hud=el('hud'),bossHud=el('boss-hud');
-    const bottom=Math.max(hud.offsetTop+hud.offsetHeight,bossHud.hidden?0:bossHud.offsetTop+bossHud.offsetHeight);
+    const cards=['hud','boss-hud','field-objective'].map(id=>el(id)).filter(card=>!card.hidden);
+    const bottom=Math.max(...cards.map(card=>card.offsetTop+card.offsetHeight));
     message.style.setProperty('--notice-top',(bottom+9)+'px');
   }
   el('toast').classList.toggle('suppressed',tacticalNotice);

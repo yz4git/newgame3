@@ -85,11 +85,13 @@ await page.evaluate(()=>{
  const g=window.__nova.game;g.enemies=[];g.bullets=[];g.nodes=[];g.battlefield.seen=[false,false];
  g.encounterSeen={stage:true,mini:true};g.time=64*.095;g.shotTimer=1000;
 });
+await page.waitForFunction(()=>!document.getElementById('field-objective').hidden&&document.getElementById('message').classList.contains('tactical'));
 await scene(page,'04-strategic-facility',500);
 results.facilityHUD=await page.evaluate(()=>{
  const box=document.getElementById('field-objective');
  const field=window.__nova.game.nodes.find(n=>n.attach==='field'&&!n.dead);
- return {visible:!box.hidden,name:document.getElementById('field-objective-name').textContent,
+ const notice=document.getElementById('message').getBoundingClientRect(),objective=box.getBoundingClientRect();
+ return {visible:!box.hidden,name:document.getElementById('field-objective-name').textContent,noticeTop:notice.top,objectiveBottom:objective.bottom,
  health:document.getElementById('field-objective-health-text').textContent,fieldHp:field?.hp??null,cardWidth:Math.round(box.getBoundingClientRect().width)};
 });
 await page.evaluate(()=>{
@@ -646,6 +648,7 @@ if(results.gpu.view==='View'){
   throw new Error('Shared rectangular scenery returned or actual reinforcement waves changed: '+JSON.stringify(results.sharedSceneryRemoval));
 }
 if(!results.facilityHUD.visible||!results.facilityHUD.name||results.facilityHUD.cardWidth<140)throw new Error('Strategic facility identification must be legible on iPhone');
+if(results.facilityHUD.noticeTop<results.facilityHUD.objectiveBottom)throw new Error('Tactical notice overlaps the strategic objective card: '+JSON.stringify(results.facilityHUD));
 if(results.gpu.view==='View'&&(results.facilityGeometry.models!==12||results.facilityGeometry.visible<1||results.facilityGeometry.worldScale<1.1))throw new Error('Real physical world facility models missing from GPU scene');
 if(results.gpu.view==='View'&&(!results.gpuDetonationEarly.coreVisible||results.gpuDetonationEarly.visibleRings<2||results.gpuDetonationLate.visibleRings<1))throw new Error('Facility 3D core/rings too faint at 50ms or 400ms');
 if(results.gpu.view==='View'&&results.gpuDemolition.obsoleteOpaqueTori>0)throw new Error('Legacy opaque 3D metal rings must never obscure the playfield');
