@@ -32,6 +32,7 @@ import {playerMarker,positionPlayerMarker} from './player-marker.ts';
 import {isWebGPUBackend} from './render-backend.ts';
 import {CinematicDetonations} from './cinematic-detonations.ts';
 import {FlightWorlds3D} from './flight-worlds.ts';
+import {bossEscapeFrame} from './boss-finish.ts';
 // Recurring decorative side rails removed from the playable scene.
 
 const boxGeometry=new T.BoxGeometry(1,1,1);
@@ -315,7 +316,7 @@ export class View {
     }this.stars.instanceMatrix.needsUpdate=true;
     const p=game.player;
     const pose=playerPose(game);this.playerAnimation=state==='transition'?'depart':pose.mode;
-    const depart=state==='transition'?smooth((3.5-game.transitionTime)/3.5):game.state==='result'&&game.won&&game.boss?.dead?1:0;
+    const depart=state==='transition'?bossEscapeFrame(game.transitionTime).departure:game.state==='result'&&game.won&&game.boss?.dead?1:0;
     this.player.position.set(title?Math.sin(this.epoch*.5)*.5:p.x,title?1.9+Math.sin(this.epoch)*.25:p.y+depart*34,1.0);
     this.player.rotation.y+=(pose.bank-this.player.rotation.y)*(dt>0?1-Math.exp(-dt*9):0);
     this.player.rotation.z=title?Math.sin(this.epoch*.7)*.035:pose.roll;
@@ -429,11 +430,10 @@ export class View {
     const kinetic=!!this.colossal&&!reduce&&game.state!=='paused';
     const invade=kinetic&&!!this.invasion;
     const bossEntry=game.boss&&!game.boss.dead&&game.boss.age<2.3?1-game.boss.age/2.3:0;
-    const warp=game.state==='transition'?1:0;
+    const warp=game.state==='transition'?bossEscapeFrame(game.transitionTime).departure:0;
     const intro=invade&&game.state==='playing'&&game.time<6?Math.sin(Math.PI*game.time/6)**2:0;
-    // The 3D tunnel's dramatic 20-degree barrel motion happens only during
-    // non-interactive stage change. Live combat remains within 0.060 radians.
-    const warpRoll=warp?Math.sin(this.epoch*1.65)*Math.min(INVASION_BUDGET.maxWarpRoll,mix.cameraRollCap):0;
+    // Acceleration and banking wait for the initial rupture to finish.
+    const warpRoll=warp?Math.sin(this.epoch*1.65)*Math.min(INVASION_BUDGET.maxWarpRoll,mix.cameraRollCap)*warp:0;
     const combatRoll=Math.max(-mix.cameraRollCap,Math.min(mix.cameraRollCap,
       -game.player.vx*.0021+Math.sin(this.epoch*1.2)*intro*.038));
     const targetRoll=kinetic?(invade?(warp?warpRoll:combatRoll):Math.max(-COLOSSAL_BUDGET.maxRollRadians,

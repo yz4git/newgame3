@@ -2,6 +2,7 @@ import * as T from 'three/webgpu';
 import type {Game,GameEvent} from './sim.ts';
 import type {FxMix} from './fx-director.ts';
 import {INVASION_BUDGET as LIMIT,INVASION_FEATURES} from './invasion-spec.ts';
+import {bossEscapeFrame} from './boss-finish.ts';
 
 const TAU=Math.PI*2;
 const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
@@ -36,7 +37,7 @@ export class InvasionDirector {
  private edges=new T.MeshStandardMaterial({color:0x9ab9c9,metalness:.53,roughness:.41});
  private warning=new T.MeshBasicMaterial({color:0xb2d9e7,transparent:true,opacity:.24,depthWrite:false,toneMapped:true});
  private rails:T.InstancedMesh;
- private gate:T.InstancedMesh;
+ private escapeStreaks:T.InstancedMesh;
  private shock:T.InstancedMesh;
  private platelets:T.InstancedMesh;
  private battleships:Capital[]=[];
@@ -53,7 +54,7 @@ export class InvasionDirector {
  private lastPlay=false;
  private flyoverStrength=0;
  private currentCue:Interval={name:'none',strength:0};
- private get counted(){return this.rails.count+this.gate.count+this.shock.count+this.platelets.count;}
+ private get counted(){return this.rails.count+this.escapeStreaks.count+this.shock.count+this.platelets.count;}
  constructor(){
   this.root.name='invasion-director-v34';
   this.dock.name='trench-run-architecture';
@@ -68,7 +69,8 @@ export class InvasionDirector {
    o.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(o);return o;
   };
   this.rails=inst('trench-running-giant-lattice',box,this.metal,LIMIT.trenchBeams,this.dock);
-  this.gate=inst('rotating-multipass-hyperspace-portal',torus,this.edges,LIMIT.hyperRings,this.travel);
+  this.escapeStreaks=inst('tapered-world-space-escape-trails',new T.CylinderGeometry(.025,.06,1,4),
+   new T.MeshBasicMaterial({color:0xaecbdf,transparent:true,opacity:0,depthWrite:false,toneMapped:true}),LIMIT.escapeStreaks,this.travel);
   this.shock=inst('inward-mechanical-collapse-shockframes',torus,this.warning,LIMIT.ruptureRings,this.fractures);
   this.platelets=inst('physical-rupture-metal-shards',box,this.alloy,LIMIT.debris,this.fractures);
   for(let i=0;i<LIMIT.dreadnoughts;i++){
@@ -257,22 +259,24 @@ export class InvasionDirector {
     col.rotation.z=a;col.scale.set(.55,7.5,.55);
    }
   }
-  // True depth-staged "hyperspace" coils during the otherwise non-interactive transition.
+  // A single, finite acceleration pass. The old dozen opaque tori appeared
+  // immediately on boss death and piled up over the reactor like steel hoops.
+  const escape=bossEscapeFrame(g.transitionTime);
   this.travel.visible=transition&&!reduced;
   if(mix&&!mix.showWarpArchitecture)this.travel.visible=false;
   count=0;
-  if(this.travel.visible){
-   for(let i=0;i<LIMIT.hyperRings;i++){
-    const u=mod(i*.17+clock*.36,1);
-    const z=-38+u*35;
-    const radius=2.5+u*10.0;
-    dummy.position.set(Math.sin(clock*.35+i)*.4,Math.cos(clock*.2+i)*.6,z);
-    dummy.rotation.set(clock*.15+i*.07,Math.sin(clock*.13+i)*.28,clock*(i%2?.26:-.22));
-    dummy.scale.set(radius,radius*(.85+.08*Math.cos(i)),1);
-    dummy.updateMatrix();this.gate.setMatrixAt(count++,dummy.matrix);
+  if(this.travel.visible&&escape.streaks>0){
+   for(let i=0;i<(performance?LIMIT.escapeStreaks/2:LIMIT.escapeStreaks);i++){
+    const side=i%2?1:-1,u=hash(i+201);
+    dummy.position.set(side*(8+hash(i+211)*12)*(1+escape.departure*.14),
+     28-u*56-escape.departure*(8+hash(i+221)*12),-6-hash(i+231)*15);
+    dummy.rotation.set(.1,0,-side*.12);
+    dummy.scale.set(1,.35+escape.departure*(2.2+hash(i+241)*2.6),1);
+    dummy.updateMatrix();this.escapeStreaks.setMatrixAt(count++,dummy.matrix);
    }
   }
-  this.gate.count=count;this.gate.instanceMatrix.needsUpdate=true;
+  (this.escapeStreaks.material as T.MeshBasicMaterial).opacity=escape.streaks*.18;
+  this.escapeStreaks.count=count;this.escapeStreaks.instanceMatrix.needsUpdate=true;
   if(dt>0){
    for(const burst of this.detonations)burst.age+=dt;
    for(const p of this.shards){
@@ -313,6 +317,6 @@ export class InvasionDirector {
  diagnostics(){return {features:INVASION_FEATURES.length,stage:this.stage,cue:this.currentCue.name,
   cueStrength:this.currentCue.strength,meshInstances:this.counted,openingStrength:this.flyoverStrength,
   dreadnoughts:this.battleships.filter(s=>s.root.visible).length,
-  bossStructure:this.bossCore.visible,legacyBossBands:this.bossBands.filter(r=>this.bossCore.visible&&r.visible).length,travelRings:this.gate.count,ruptures:this.detonations.length,
+  bossStructure:this.bossCore.visible,legacyBossBands:this.bossBands.filter(r=>this.bossCore.visible&&r.visible).length,travelStreaks:this.escapeStreaks.count,ruptures:this.detonations.length,
   armorFragments:this.platelets.count,budgets:LIMIT};}
 }

@@ -7,7 +7,7 @@ test('Invasion director is a meaningful, bounded next 3D chapter',()=>{
  assert.ok(F.length>=20);
  assert.equal(new Set(F).size,F.length);
  assert.ok(B.dreadnoughts<=2 && B.trenchBeams<=48 && B.bossPetals<=16);
- assert.ok(B.hyperRings<=12 && B.ruptures<=3 && B.debris<=80);
+ assert.ok(B.escapeStreaks<=24 && B.ruptures<=3 && B.debris<=80);
  assert.ok(B.maxGameplayRoll<=.06 && B.maxWarpRoll<=.40);
  assert.ok(B.maxBossZoom<=1.11 && B.maxWarpZoom<=1.23);
 });

@@ -1,3 +1,17 @@
+## NOVA STRIKE 8.0.2 — BOSS FINISH (2026-10-15)
+
+Boss death no longer immediately covers the wreck with twelve opaque,
+overlapping hyperspace hoops. The initial reactor rupture and physical
+armour breakup get a clear beat before the player accelerates away. Sparse,
+tapered world-space trails replace the torus tunnel; the existing 3.5-second
+transition and all combat rules are unchanged. The camera and ship follow
+one shared transition curve. Auxiliary finish waves are cleared on boss death,
+including the NOVA event emitted after a killing blow in the same step.
+
+The production browser review captures actual shot and NOVA kills in every
+stage at six successive times, checks pause and reduced motion, and verifies
+both next-stage progression and final victory in WebGL and Canvas.
+
 ## NOVA STRIKE 8.0.1 — PHONE PLAY REVIEW (2026-10-15)
 
 Reviewed the published game with real drag, weapon, NOVA, pause and help input,

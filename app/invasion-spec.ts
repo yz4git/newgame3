@@ -16,7 +16,7 @@ export const INVASION_FEATURES=[
  'high-impact entry camera lens sequence',
  'boss-entry dolly choreography',
  'full barrel roll during noninteractive warp',
- 'layered 3D hyperspace ring tunnel',
+ 'finite tapered 3D escape trails',
  'real 3D material breakup on boss kill',
  'metallic world fracture shockframes',
  'deep tumbling structural debris',
@@ -25,7 +25,7 @@ export const INVASION_FEATURES=[
 ] as const;
 export const INVASION_BUDGET={
  dreadnoughts:2,trenchBeams:48,bossPetals:16,
- hyperRings:12,ruptures:3,ruptureRings:9,
+ escapeStreaks:24,ruptures:3,ruptureRings:9,
  debris:80,bossDebris:32,fieldDebris:22,
  maxGameplayRoll:.060,maxWarpRoll:.38,maxBossZoom:1.10,maxWarpZoom:1.22
 } as const;

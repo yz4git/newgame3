@@ -1,4 +1,5 @@
 import type {Game,GameEvent} from './sim.ts';
+import {bossEscapeFrame} from './boss-finish.ts';
 
 /** Central visual priority, strictly separate from collision/game state. */
 export type FxMoment='ambient'|'combat'|'facility'|'nova'|'boss'|'boss-finish'|'warp';
@@ -61,7 +62,7 @@ export class FxDirector {
   const bulletPressure=Math.max(0,Math.min(1,(hostileShots-FX_MIX_LIMITS.sceneryFadeStartBullets)/(FX_MIX_LIMITS.sceneryFadeFullBullets-FX_MIX_LIMITS.sceneryFadeStartBullets)));
   const enemyPressure=Math.max(0,Math.min(1,(g.enemies.filter(e=>!e.dead).length-3)/10));
   const readability=(g.state==='playing')?Math.min(1,Math.max(bulletPressure,enemyPressure,boss?.42:0)):0;
-  const moment:FxMoment=g.state==='transition'?'warp':
+  const moment:FxMoment=g.state==='transition'?(bossEscapeFrame(g.transitionTime).departure>0?'warp':'boss-finish'):
     active&&this.cue!.kind==='boss-finish'?'boss-finish':
     boss?'boss':active?this.cue!.kind:
     g.state==='playing'?'combat':'ambient';

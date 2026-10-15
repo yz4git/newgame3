@@ -716,7 +716,7 @@ if(new Set(Object.values(results.cinematicLayers).map(x=>x.heroMotion)).size!==6
  !Object.values(results.cinematicLayers).every(x=>x.realWorldRoot&&x.heroActuators>=4&&x.chapterIds?.length===3&&new Set(x.chapterIds).size===3&&x.chapterActuators?.every(v=>v>0)&&x.detail&&x.detail.motes>0&&x.detail.flybys===0))
  throw new Error('Stage identity is reused, incomplete, or obscures combat: '+JSON.stringify(results.cinematicLayers));
 if(!results.cinematicBoss.invasion?.bossStructure||results.cinematicBoss.volumetric?.bossHalos!==0)throw new Error('Boss ring ownership regression: '+JSON.stringify(results.cinematicBoss));
-if(results.cinematicWarp.invasion?.travelRings<8||results.cinematicWarp.volumetric?.warpRings!==0)throw new Error('Single-owner 3D warp tunnel invisible or overlapping: '+JSON.stringify(results.cinematicWarp));
+if(results.cinematicWarp.invasion?.travelStreaks<16||results.cinematicWarp.volumetric?.warpRings!==0)throw new Error('Single-owner 3D escape trails invisible or overlapping: '+JSON.stringify(results.cinematicWarp));
 if(results.cinematicBlast.mechanical?.panels<6||results.cinematicBlast.mechanical?.reactors<1||results.cinematicBlast.invasion?.armorFragments<8)throw new Error('Multi-stage physical boss breakup invisible: '+JSON.stringify(results.cinematicBlast));
 if(Object.values(results.cinematicLayers).some(x=>x.detail.instances>420||x.detail.fragments>90||x.detail.contrails>48))throw new Error('3D cinematic budgets exceeded');
 if(errors.length)throw new Error('Browser console/page errors: '+JSON.stringify(errors));
