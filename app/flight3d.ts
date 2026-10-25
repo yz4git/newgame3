@@ -61,6 +61,7 @@ class GroundFlight {
  private levelEvent=0;private checkpoint=false;private rescueFinished=false;private rescueCount=0;private gateBonus=false;
  private laneX=0;private laneY=1.2;private cameraPanX=0;private yaw=0;private targetYaw=0;private velocity=74;
  private boostHeld=false;private brakeHeld=false;private padBoost=false;private padBrake=false;private leftBank=false;private rightBank=false;private keys=new Set<string>();
+ private bankTapLeft=-9;private bankTapRight=-9;
  private heat=0;private overheated=false;private charge=0;private fireHeld=false;private shotDelay=0;
  private lockedTarget:Target|null=null;private lockCandidate:Target|null=null;private lockTimer=0;
  private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;private respawnBlink=false;
@@ -131,7 +132,8 @@ class GroundFlight {
    if(!this.playing||this.pointer!==e.pointerId)return;e.preventDefault();
    const x=(e.clientX-this.pX)/Math.max(1,this.canvas.clientWidth);
    const y=(e.clientY-this.pY)/Math.max(1,this.canvas.clientHeight);
-   if(this.mission.mode==='corridor')this.laneX=railMoveTarget(this.laneX,x*97);
+   const fastTurn=x<0&&this.leftBank||x>0&&this.rightBank;
+   if(this.mission.mode==='corridor')this.laneX=railMoveTarget(this.laneX,x*97*(fastTurn?1.7:1));
    else this.laneX=clamp(this.laneX+x*30,-9.4,9.4);
    this.laneY=clamp(this.laneY-y*29,RAIL_Y_MIN,RAIL_Y_MAX);
    this.pX=e.clientX;this.pY=e.clientY;
@@ -166,7 +168,17 @@ class GroundFlight {
    const fresh=!this.keys.has(k)&&!e.repeat;this.keys.add(k);
    if(k==='p'||k==='escape'){if(this.playing)this.pause();else if(this.stage==='pause')this.resume();}
    if(!fresh)return;
-   if(k===' '||k==='f')this.fireDown();if(k==='q')this.barrel(-1);if(k==='e')this.barrel(1);
+   if(k===' '||k==='f')this.fireDown();
+   if(k==='q'){
+    this.leftBank=true;
+    if(this.time-this.bankTapLeft<.34)this.barrel(-1);
+    this.bankTapLeft=this.time;
+   }
+   if(k==='e'){
+    this.rightBank=true;
+    if(this.time-this.bankTapRight<.34)this.barrel(1);
+    this.bankTapRight=this.time;
+   }
    if(k==='r')this.flip(false);if(k==='u')this.flip(true);if(k==='m')this.dropBomb();
    if(k==='enter'&&['title','route','pause','gameover','ending'].includes(this.stage)){
     if(this.stage==='pause')this.resume();else if(this.stage==='route')this.advance();else this.startCampaign();
@@ -175,6 +187,8 @@ class GroundFlight {
   window.addEventListener('keyup',e=>{
    const k=e.key.toLowerCase();this.keys.delete(k);
    if((k===' '||k==='f')&&!this.keys.has(' ')&&!this.keys.has('f'))this.fireUp();
+   if(k==='q')this.leftBank=false;
+   if(k==='e')this.rightBank=false;
   });
   window.addEventListener('blur',()=>{this.keys.clear();this.padBoost=this.padBrake=this.boostHeld=this.brakeHeld=false;if(this.playing)this.pause();});
  }
@@ -237,6 +251,7 @@ class GroundFlight {
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
   this.invulnerable=resume?2.3:4.2;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
   this.laneX=0;this.laneY=2;this.cameraPanX=0;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
+  this.leftBank=this.rightBank=false;this.bankTapLeft=this.bankTapRight=-9;
   this.player.position.set(0,2,resume?(id===0?-STAGE1.checkpoint:-this.missionTime*75):0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
   this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
@@ -521,7 +536,8 @@ class GroundFlight {
   const k=this.keys;
   const ix=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
   const iy=Number(k.has('w')||k.has('arrowup'))-Number(k.has('s')||k.has('arrowdown'));
-  this.laneX=this.mission.mode==='corridor'?railMoveTarget(this.laneX,ix*dt*34):clamp(this.laneX+ix*dt*14,-9.4,9.4);
+  const sharpTurn=ix<0&&this.leftBank||ix>0&&this.rightBank;
+  this.laneX=this.mission.mode==='corridor'?railMoveTarget(this.laneX,ix*dt*34*(sharpTurn?1.7:1)):clamp(this.laneX+ix*dt*14*(sharpTurn?1.65:1),-9.4,9.4);
   this.laneY=clamp(this.laneY+iy*dt*13,RAIL_Y_MIN,RAIL_Y_MAX);
   const accelerating=(this.boostHeld||this.padBoost||k.has('shift'))&&!this.overheated;
   const braking=(this.brakeHeld||this.padBrake||k.has('control')||k.has('b'))&&!this.overheated&&!accelerating;
