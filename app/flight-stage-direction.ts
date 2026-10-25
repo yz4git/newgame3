@@ -87,3 +87,8 @@ export function contextualManeuver(climbing:boolean,boost:boolean,brake:boolean,
  if(brake&&allRange)return 'uturn';
  return null;
 }
+
+/** Secret route is obtained only if the rescued ally survives all seven arches. */
+export function hiddenCourseUnlocked(rescued:boolean,allyAlive:boolean,passedGates:number,totalGates=7){
+ return rescued&&allyAlive&&passedGates>=totalGates;
+}
