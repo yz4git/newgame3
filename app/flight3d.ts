@@ -43,7 +43,7 @@ class Nova64 {
  private previous:Phase='combat';
  private mission:Mission=MISSIONS[0];
  private route:number[]=[0];
- private score=0;private hits=0;private shield=100;private maxShield=100;private lives=3;private bombs=3;private laser=1;
+ private score=0;private hits=0;private missionHits=0;private missionDamage=0;private shield=100;private maxShield=100;private lives=3;private bombs=3;private laser=1;
  private rings=0;private damage=0;private weaponHeat=0;private charge=0;private charging=false;private invulnerable=0;
  private missionTime=0;private waveIndex=0;private waves:Beat[]=[];
  private checkpoint=false;private restartTime=0;private gateShortcut=false;
@@ -181,7 +181,7 @@ class Nova64 {
   this.startCampaign();
  }
  private startCampaign(){
-  this.startAudio();this.score=0;this.hits=0;this.shield=100;this.maxShield=100;this.lives=3;this.bombs=3;this.laser=1;
+  this.startAudio();this.score=0;this.hits=0;this.missionHits=0;this.missionDamage=0;this.shield=100;this.maxShield=100;this.lives=3;this.bombs=3;this.laser=1;
   this.rings=0;this.damage=0;this.route=[0];this.friends=[];
   this.enterMission(0);
  }
@@ -205,6 +205,7 @@ class Nova64 {
  }
  private enterMission(id:number,checkpoint=false){
   this.clearDynamic();this.mission=MISSIONS[id];
+  if(!checkpoint){this.missionHits=0;this.missionDamage=0;}
   this.waveIndex=0;this.waves=scriptWaves(this.mission);
   this.missionTime=checkpoint?21:0;
   this.checkpoint=checkpoint;this.gateShortcut=false;this.bossPhaseSeen=1;this.hitFlash=0;this.cameraShake=0;
@@ -360,7 +361,7 @@ class Nova64 {
   this.enemies.forEach(e=>{this.scene.remove(e.mesh);disposeFlightVisual(e.mesh,true);});this.enemies=[];
   const mesh=createFlightShip(0xb04b63,true,this.mission.scene);
   const ahead=this.mission.mode==='all-range'?
-   this.ship.position.clone().add(this.forward().multiplyScalar(90)):
+   new T.Vector3(Math.sin(this.mission.id)*70,5,Math.cos(this.mission.id)*70):
    this.ship.position.clone().add(new T.Vector3(0,2,-150));
   mesh.position.copy(ahead);
   this.scene.add(mesh);
@@ -419,15 +420,15 @@ class Nova64 {
   const p=e.mesh.position.clone();
   this.explosion(p,e.boss?10:e.elite?4.5:2.2);
   this.scene.remove(e.mesh);disposeFlightVisual(e.mesh,true);
-  if(e.boss){this.boss=null;this.score+=800;this.hits+=e.points;this.missionClear();return;}
+  if(e.boss){this.boss=null;this.score+=800;this.hits+=e.points;this.missionHits+=e.points;this.missionClear();return;}
   const idx=this.enemies.indexOf(e);if(idx>=0)this.enemies.splice(idx,1);
-  this.hits+=e.points;this.score+=e.points*100;
+  this.hits+=e.points;this.missionHits+=e.points;this.score+=e.points*100;
   if(e.elite&&seed(this.hits+this.time)>.38)this.spawnRing(this.bombs<2?'bomb':'laser');
   this.sound(168,.12,.025);
  }
  private takeHit(points=22){
   if(this.invulnerable>0||!this.isPlaying())return;
-  this.shield=Math.max(0,this.shield-points);this.damage+=points;this.invulnerable=1.5;
+  this.shield=Math.max(0,this.shield-points);this.damage+=points;this.missionDamage+=points;this.invulnerable=1.5;
   this.hitFlash=.7;this.cameraShake=.58;this.sound(115,.35,.07,'sawtooth');
   this.explosion(this.ship.position,2.5);
   if(this.shield<=55&&!this.ship.userData.brokenWing){
@@ -450,7 +451,7 @@ class Nova64 {
   this.state='clear';
   this.sound(790,.5,.052);
   this.score+=Math.floor(this.shield)*10+this.friends.filter(a=>a.hp>0).length*400;
-  const grade=missionGrade(this.hits,this.damage,this.friends.filter(a=>a.hp>0).length);
+  const grade=missionGrade(this.missionHits,this.missionDamage,this.friends.filter(a=>a.hp>0).length);
   try{const best=Number(localStorage.getItem('nova64-best')||'0');if(this.hits>best)localStorage.setItem('nova64-best',String(this.hits));}catch{/**/}
   $('bosswrap').hidden=true;
   if(this.mission.next.length===0){
@@ -462,10 +463,10 @@ class Nova64 {
   $('overlay').hidden=false;$('controls').hidden=true;
   $('overlay-title').textContent='MISSION ACCOMPLISHED';
   $('overlay-kicker').textContent='MISSION '+(this.mission.id+1)+' / '+this.mission.name;
-  $('overlay-info').innerHTML='HITS '+this.hits+' / GRADE '+grade+'<br>残存部隊 '+this.friends.filter(x=>x.hp>0).length+' / 2<br>次の作戦空域を選択';
+  $('overlay-info').innerHTML='MISSION HITS '+this.missionHits+' / TOTAL '+this.hits+' / GRADE '+grade+'<br>残存部隊 '+this.friends.filter(x=>x.hp>0).length+' / 2<br>次の作戦空域を選択';
   $('action').hidden=true;$('route-panel').hidden=false;
   const possible=this.mission.next;
-  const automatic=routeSelection(this.mission,this.hits,this.friends.filter(x=>x.hp>0).length,this.gateShortcut);
+  const automatic=routeSelection(this.mission,this.missionHits,this.friends.filter(x=>x.hp>0).length,this.gateShortcut);
   const a=MISSIONS[possible[0]],b=possible[1]===undefined?null:MISSIONS[possible[1]];
   $('route-a').textContent=a.name+' / '+a.description;
   $('route-b').hidden=!b;
@@ -623,7 +624,7 @@ class Nova64 {
    s.mesh.position.addScaledVector(s.velocity,dt);s.life-=dt;
    if(s.friendly){
     const hazard=this.hazards.find(h=>segment(from,s.mesh.position,h.mesh.position,h.radius+s.radius));
-    if(hazard){this.explosion(hazard.mesh.position,4);this.scene.remove(hazard.mesh);disposeFlightVisual(hazard.mesh,true);this.hazards.splice(this.hazards.indexOf(hazard),1);this.hits+=1;s.life=0;}
+    if(hazard){this.explosion(hazard.mesh.position,4);this.scene.remove(hazard.mesh);disposeFlightVisual(hazard.mesh,true);this.hazards.splice(this.hazards.indexOf(hazard),1);this.hits+=1;this.missionHits+=1;s.life=0;}
     if(s.life>0)for(const e of candidates){
      if(e.hp>0&&segment(from,s.mesh.position,e.mesh.position,e.radius+s.radius)){
       const blast=e.mesh.position.clone();
@@ -715,7 +716,7 @@ class Nova64 {
  }
  private updateHUD(){
   $('sector').textContent='MISSION '+String(this.mission.id+1).padStart(2,'0')+' / '+this.mission.name;
-  $('score').textContent=String(this.hits).padStart(3,'0');
+  $('score').textContent=String(this.missionHits).padStart(3,'0');
   $('points').textContent=String(this.score).padStart(7,'0');
   $('shield-fill').style.width=String(clamp(this.shield/this.maxShield*100,0,100))+'%';
   $('shield-value').textContent=String(Math.round(this.shield))+'/'+this.maxShield;
