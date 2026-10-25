@@ -409,10 +409,10 @@ class GroundFlight {
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
   this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,points:80,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
-  if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'巨大歩行兵器が起動！発光する装甲のコアを狙え！':'大型空中母艦、接近！真正面の動力コアを撃て！',4);
+  if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'大型空中母艦が接近！発光する動力コアを狙え！':'巨大歩行兵器が起動！脚部と背後の装甲が弱点だ！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
-  this.comms('NOVA COMMAND','大型敵接近！発光した中枢を狙え！',4);
+  if(this.mission.id!==0)this.comms('NOVA COMMAND','大型敵接近！発光した中枢を狙え！',4);
   this.notice('WARNING / '+this.mission.boss,3);this.sound(135,.55,.06);
  }
  private enemyShoot(e:Target){
@@ -741,17 +741,48 @@ class GroundFlight {
   this.updatePlayer(dt);
   if(!this.playing)return;
   if(this.stage==='combat'){
-   while(this.waveIndex<this.waves.length&&this.missionTime>=this.waves[this.waveIndex].at)this.spawnWave();
-   if(this.mission.id===0){
-    if(this.missionTime>=18&&!this.rescueFinished&&this.rescueCount===0&&this.levelEvent===0){this.levelEvent=1;this.spawnRescue();}
-    if(this.missionTime>=38&&this.levelEvent===1){this.levelEvent=2;if(!this.rescueFinished)this.comms('NOVA CONTROL','援護機は離脱した。別ルート条件を失った。',2.4);}
+   // Distance-synchronized first-stage beats: varying boost/brake no longer
+   // makes the checkpoint, rescue and route arches occur out of order.
+   const opening=this.mission.id===0;
+   const distance=-this.player.position.z;
+   const scriptClock=opening?distanceToScriptSeconds(this.player.position.z):this.missionTime;
+   while(this.waveIndex<this.waves.length&&scriptClock>=this.waves[this.waveIndex].at)this.spawnWave();
+   if(opening){
+    if(!this.checkpoint&&distance>=STAGE1.checkpoint){
+     this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);
+     this.notice('CHECKPOINT / REPAIRS',1.8);
+     this.comms('NOVA CONTROL','中継基地を突破！この先の仲間から救援信号を受信。',3.1);
+    }
+    if(distance>=STAGE1.escortEncounter&&this.levelEvent===0){
+     this.levelEvent=1;this.spawnRescue();
+    }
+    if(distance>=STAGE1.escortDeadline&&this.levelEvent===1){
+     this.levelEvent=2;
+     if(!this.rescueFinished)this.comms('NOVA CONTROL','救援信号が途絶えた。特殊ルートは閉鎖された。',2.9);
+    }
+    if(distance>=STAGE1.canyonReveal&&this.openingCue===0){
+     this.openingCue=1;this.comms('VECTA','市街地を離脱。前方は低空峡谷コース！',3.4);
+    }
+    if(distance>=STAGE1.archesPreview&&this.openingCue===1){
+     this.openingCue=2;this.comms('ECHO','川の石橋を連続でくぐれるか？ 進路を見失うな！',3.5);
+    }
+    if(distance>=STAGE1.waterfallApproach&&this.openingCue===2){
+     this.openingCue=3;this.comms('NOVA CONTROL','前方に滝！救援と石橋の達成状況でルートが変化する。',3.5);
+    }
+    if(distance>=STAGE1.waterfallPassage&&this.openingCue===3){
+     this.openingCue=4;
+     if(this.rescueFinished&&this.terrain.gateState.passed===gateCount()){
+      this.gateBonus=true;this.comms('ECHO','よし！後をついてこい。隠し空路へ進む！',3.5);
+     }else this.comms('NOVA CONTROL','通常の迎撃エリアへ進入。大型目標に備えよ。',3);
+    }
+   }else if(!this.checkpoint&&this.missionTime>25){
+    this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);this.notice('CHECKPOINT',1.5);
    }
-   if(!this.checkpoint&&this.missionTime>25){this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);this.notice('CHECKPOINT',1.5);}
-   const crossed=(interval:number)=>(Math.floor(this.missionTime/interval)!==Math.floor((this.missionTime-dt)/interval));
+   const crossed=(interval:number)=>(Math.floor(scriptClock/interval)!==Math.floor((scriptClock-(opening?this.velocity*dt/STAGE1.nominalSpeed:dt))/interval));
    if(crossed(5.6))this.spawnTurret();
    if(crossed(12))this.spawnSupply('ring');
    if(crossed(24))this.spawnSupply(this.laserLevel<3?'laser':'repair');
-   if(this.missionTime>=this.mission.duration)this.spawnBoss();
+   if(opening?distance>=STAGE1.boss:this.missionTime>=this.mission.duration)this.spawnBoss();
   }
   this.updateAllies(dt);
   this.updateEnemies(dt);
@@ -777,8 +808,9 @@ class GroundFlight {
   $('heat-fill').style.width=(this.heat*100).toFixed(1)+'%';
   $('charge-fill').style.width=(Math.min(1,this.charge/LOCK_CHARGE)*100).toFixed(1)+'%';
   $('fire').classList.toggle('ready',this.charge>=LOCK_CHARGE);
+  $('fire').classList.toggle('locked',this.fireHeld&&!!this.lockedTarget);
   $('speed').textContent=Math.round(this.velocity*12)+' km/h';
-  $('progress').style.width=(Math.min(1,this.missionTime/this.mission.duration)*100).toFixed(0)+'%';
+  $('progress').style.width=(missionProgress(-this.player.position.z,this.mission.id===0,this.missionTime,this.mission.duration)*100).toFixed(0)+'%';
   $('friends').textContent=this.allies.map(a=>a.name+' '+(a.hp>0?'◆'.repeat(a.hp):'LOST')).join(' / ');
   $('mode').textContent=this.mission.mode==='all-range'?'ALL-RANGE':'GROUND FLIGHT';
   $('arches').hidden=this.mission.id!==0;
@@ -883,8 +915,11 @@ class GroundFlight {
   const warning=this.playing&&this.mission.mode==='corridor'?railEdgeWarning(this.laneX):0;
   $('edge-left').style.opacity=String(this.laneX<0?warning:0);
   $('edge-right').style.opacity=String(this.laneX>0?warning:0);
+  $('sight-near').classList.toggle('locked',this.fireHeld&&!!this.lockedTarget);
+  $('sight-far').classList.toggle('locked',this.fireHeld&&!!this.lockedTarget);
   const marker=$('target-ring');
-  const e=this.currentTarget;
+  const e=this.fireHeld&&this.charge>.28?this.lockedTarget??this.lockCandidate:null;
+  marker.classList.toggle('locked',!!e&&e===this.lockedTarget);
   if(e&&this.playing&&e.hp>0){
    const ndc=e.position.clone().project(this.camera);
    const visible=ndc.z>0&&ndc.z<1&&Math.abs(ndc.x)<.93&&Math.abs(ndc.y)<.91;
