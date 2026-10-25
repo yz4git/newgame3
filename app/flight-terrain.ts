@@ -100,6 +100,7 @@ export class GroundWorld{
  private allRange=false;
  private groundMaterial=mat(0xffffff,.9);
  private seaMaterial=new T.MeshStandardMaterial({color:0x317b9b,metalness:.42,roughness:.25,transparent:true,opacity:.94,side:T.DoubleSide,depthWrite:true});
+ private waterfallMat=new T.MeshStandardMaterial({color:0x9bdfee,metalness:.15,roughness:.21,transparent:true,opacity:.54,side:T.DoubleSide,depthWrite:false});
  private roadMat=mat(0x2f3a43,.95);
  private roadLine=new T.MeshBasicMaterial({color:0xbdd9df});
  private wallMat=mat(0x8299a7,.49);
@@ -263,10 +264,20 @@ export class GroundWorld{
   }
   if(stage===0&&d>3250&&d<3460){
    const x=center;
-   // A modeled waterfall wall across the water and bridge entrance.
-   item(group,box,this.wallMat,x,3,0,75,28,3);
-   item(group,box,this.seaMaterial,x,-3,3,66,18,.5);
-   for(let n=0;n<8;n++)item(group,box,this.trimMat,x-32+n*9,-8,.6,1.7,9,.5);
+   // A real traversable, translucent waterfall between solid canyon cliffs.
+   // Unlike the old solid cuboid it does not block the chase view or look like a wall.
+   for(const side of [-1,1]){
+    item(group,box,this.stone,x+side*39,-4,0,15,35,12);
+    item(group,ico,this.stone,x+side*35,12,-4,15,10,18);
+   }
+   for(let n=0;n<12;n++){
+    const strip=this.waterfallMat;
+    const width=5+u(n+tileZ)*2.2;
+    item(group,box,strip,x-34+n*6.1,-3.6,0,width,24,.34);
+   }
+   for(let n=0;n<9;n++){
+    item(group,box,this.seaMaterial,x-30+n*7,-15.2,4.5,5.4,.22,5);
+   }
   }
   if(stage===0)for(const gate of this.gates)
    if(Math.abs(gate.z-tileZ)<=HALF-.8)this.makeArch(group,colliders,gate,gate.z-tileZ);
