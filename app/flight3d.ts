@@ -363,45 +363,65 @@ class Flight3D {
     const k = this.keys;
     const dx = Number(k.has('d') || k.has('arrowright')) - Number(k.has('a') || k.has('arrowleft'));
     const dy = Number(k.has('w') || k.has('arrowup')) - Number(k.has('s') || k.has('arrowdown'));
-    this.baseX = clamp(this.baseX + dx * dt * 11, -8.5, 8.5);
-    this.baseY = clamp(this.baseY + dy * dt * 11, -6.5, 8);
-    const accelerating = (this.boostHeld || k.has('shift') || k.has(' ')) && this.boost > 0;
-    this.boost = clamp(this.boost + (accelerating ? -30 : 12) * dt, 0, 100);
+    const steering=clampRail(this.baseX+dx*dt*14,this.baseY+dy*dt*14);
+    this.baseX=steering.x;this.baseY=steering.y;
+    const accelerating=(this.boostHeld||k.has('shift'))&&this.boost>0;
+    const braking=(this.brakeHeld||k.has('k')||k.has('x'))&&this.boost>0&&!accelerating;
+    this.boost=clamp(this.boost+(accelerating?-28:braking?-17:16)*dt,0,100);
     const previousShipPosition=this.craft.position.clone();
-    const speed = accelerating ? boostSpeed() : cruiseSpeed(this.stage);
+    const speed=accelerating?boostSpeed():braking?cruiseSpeed(this.stage)*.48:cruiseSpeed(this.stage);
     this.currentSpeed = speed;
-    this.craft.position.x += (this.baseX - this.craft.position.x) * Math.min(1, dt * 12);
-    this.craft.position.y += (this.baseY - this.craft.position.y) * Math.min(1, dt * 12);
+    const pathCenter=trackCenter(this.stage,this.craft.position.z);
+    const desiredX=pathCenter.x+this.baseX,desiredY=pathCenter.y+this.baseY;
+    this.craft.position.x+=(desiredX-this.craft.position.x)*Math.min(1,dt*11);
+    this.craft.position.y+=(desiredY-this.craft.position.y)*Math.min(1,dt*11);
     this.craft.position.z -= speed * dt;
-    this.craft.rotation.z += (-dx * .18 - (this.baseX - this.craft.position.x) * .055 - this.craft.rotation.z) * Math.min(1, dt * 7);
+    const tilt=-dx*.32-(desiredX-this.craft.position.x)*.09-trackYaw(this.stage,this.craft.position.z)*.4;
+    this.craft.rotation.z+=(tilt-this.craft.rotation.z)*Math.min(1,dt*7);
+    if(this.rollTime>0)this.craft.rotation.z=tilt+this.rollSign*Math.PI*2*(1-this.rollTime/ROLL_DURATION);
     this.craft.rotation.x = -dy * .08;
     this.craft.visible = this.invulnerable <= 0 || Math.sin(this.totalTime * 34) > -.25;
     animateFlightShip(this.craft,this.totalTime,speed/60);
-    this.scenery.forEach((g, i) => {
-      if (g.position.z > this.craft.position.z + 55) g.position.z -= this.scenery.length * 38;
-      if (this.stage === 0) g.rotation.z = Math.sin(this.totalTime * .12 + i) * .014;
+    this.scenery.forEach((g,i)=>{
+      if(g.position.z>this.craft.position.z+55)g.position.z-=this.scenery.length*38;
+      const p=trackCenter(this.stage,g.position.z);
+      g.position.x=p.x;g.position.y=p.y;g.rotation.y=trackYaw(this.stage,g.position.z);
+      if(this.stage===0)g.rotation.z=Math.sin(this.totalTime*.12+i)*.014;
     });
-    if (!this.boss && this.sectorTime >= 45) {
-      for (const enemy of this.enemies) this.scene.remove(enemy.mesh);
-      this.enemies = []; this.spawnFoe(true);
-    } else if (!this.boss && this.sectorTime < 45) {
-      this.spawnDelay -= dt;
-      if (this.spawnDelay <= 0) { this.spawnFoe(); this.spawnDelay = Math.max(.85, 1.65 - this.stage * .12); }
+    if(!this.boss&&this.sectorTime>=STAGE_DURATION){
+      for(const enemy of this.enemies){this.scene.remove(enemy.mesh);disposeFlightVisual(enemy.mesh,true);}
+      this.enemies=[];this.spawnFoe(true);
+    }else if(!this.boss){
+      while(this.waveIndex<this.waves.length&&this.sectorTime>=this.waves[this.waveIndex].at){
+        const wave=this.waves[this.waveIndex++];
+        for(let i=0;i<wave.count;i++){
+          const lane=formationOffset(wave.kind,i,wave.count,this.sectorTime);
+          this.spawnFoe(false,lane,wave.support&&i===Math.floor(wave.count/2));
+        }
+        if(this.waveIndex===1||this.waveIndex===5||this.waveIndex===9)
+          this.alert(['ENEMY FORMATION INBOUND','TIGHT PASSAGE / STAY ALERT','LAST WAVE — GUARDIAN AHEAD'][this.waveIndex===1?0:this.waveIndex===5?1:2],1.75);
+      }
     }
-    this.laserDelay -= dt;
-    if (this.laserDelay <= 0) { this.fireLasers(); this.laserDelay = .105; }
+    this.lockTarget=this.findLock();
+    if(this.fireHeld){
+      this.charge=Math.min(CHARGE_MAX,this.charge+dt);
+      this.laserDelay-=dt;
+      if(this.charge<CHARGE_SECONDS&&this.laserDelay<=0){this.fireLasers();this.laserDelay=.115;}
+    }
     const foes = this.boss ? [...this.enemies, this.boss] : [...this.enemies];
     for (const foe of foes) {
       const foePrevious=foe.mesh.position.clone();
       if (foe.boss) {
         foe.mesh.position.z += (this.craft.position.z - 105 - foe.mesh.position.z) * Math.min(1, dt * 2.3);
-        foe.mesh.position.x = Math.sin(this.sectorTime * .65) * 4.5;
-        foe.mesh.position.y = 1.5 + Math.sin(this.sectorTime * .87) * 2.4;
+        const p=trackCenter(this.stage,foe.mesh.position.z);
+        foe.mesh.position.x=p.x+Math.sin(this.sectorTime*.65)*5;
+        foe.mesh.position.y=p.y+1.5+Math.sin(this.sectorTime*.87)*2.5;
         foe.mesh.rotation.z = Math.sin(this.sectorTime * 1.1) * .11;
       } else {
         foe.mesh.position.z += (21 + this.stage * 3) * dt;
-        foe.mesh.position.x = clamp(foe.x + Math.sin(this.sectorTime * 1.7 + foe.phase) * 1.7, -8, 8);
-        foe.mesh.position.y = foe.y + Math.sin(this.sectorTime * 2.1 + foe.phase) * 1.2;
+        const p=trackCenter(this.stage,foe.mesh.position.z);
+        foe.mesh.position.x=p.x+clamp(foe.x+Math.sin(this.sectorTime*1.7+foe.phase)*1.35,-10,10);
+        foe.mesh.position.y=p.y+foe.y+Math.sin(this.sectorTime*2.1+foe.phase)*1.05;
         foe.mesh.rotation.z = Math.sin(this.sectorTime * 2.1 + foe.phase) * .25;
         if (foe.mesh.position.z > this.craft.position.z + 12) {
           this.scene.remove(foe.mesh);disposeFlightVisual(foe.mesh,true); this.enemies.splice(this.enemies.indexOf(foe), 1); continue;
@@ -426,12 +446,26 @@ class Flight3D {
       shot.mesh.position.addScaledVector(shot.velocity, dt); shot.life -= dt;
       let contact: Foe | null = null;
       if (shot.foe) {
-        if (sweptCollision(a,shot.mesh.position,previousShipPosition,this.craft.position,shot.radius+.74)) { this.hitShip(); shot.life = 0; }
+        if(sweptCollision(a,shot.mesh.position,previousShipPosition,this.craft.position,shot.radius+.74)){
+          if(rollDeflects(this.rollTime)){
+            this.shotsReflected++;this.score+=75;this.vfx.burst(shot.mesh.position,.45,0x89dfff);this.sfx(460,.07);
+          }else this.hitShip();
+          shot.life=0;
+        }
       } else {
         for (const e of foes) {
           if (e.hp > 0 && hitSegment(a, shot.mesh.position, e.mesh.position, shot.radius + e.radius)) { contact = e; break; }
         }
-        if (contact) { this.damageFoe(contact, shot.power); shot.life = 0; }
+        if(contact){
+          const impact=contact.mesh.position.clone();
+          this.damageFoe(contact,shot.power);
+          if(shot.bomb){
+            this.explode(impact,6);
+            for(const other of foes)if(other!==contact&&other.hp>0&&other.mesh.position.distanceTo(impact)<17)
+              this.damageFoe(other,12);
+          }
+          shot.life=0;
+        }
       }
       if (shot.life <= 0 || Math.abs(shot.mesh.position.z - this.craft.position.z) > 195) {
         this.scene.remove(shot.mesh); this.shots.splice(i, 1);
@@ -463,18 +497,25 @@ class Flight3D {
     $('speed').classList.toggle('hypersonic',this.currentSpeed>=boostSpeed());
     $('boost-fill').style.width = this.boost.toFixed(0) + '%';
     $('altitude').textContent = 'ALT ' + Math.round((this.craft.position.y+15)*75).toString().padStart(4,'0') + ' M';
-    $('missile').textContent = this.missileDelay > 0 ? 'MISSILE ' + this.missileDelay.toFixed(1) : 'MISSILE READY';
-    $('progress').style.width = Math.min(100, this.sectorTime / 45 * 100) + '%';
+    $('missile').textContent=this.missileDelay>0?'NOVA '+this.missileDelay.toFixed(1):'NOVA BOMB';
+    $('charge-fill').style.width=Math.round(Math.min(1,this.charge/CHARGE_SECONDS)*100)+'%';
+    $('fire').classList.toggle('charged',this.charge>=CHARGE_SECONDS);
+    $('roll-left').classList.toggle('cooling',this.rollCooldown>0);
+    $('roll-right').classList.toggle('cooling',this.rollCooldown>0);
+    $('combo').textContent='HITS '+this.combo.toString().padStart(3,'0');
+    $('reflect').textContent='REFLECT '+this.shotsReflected;
+    $('progress').style.width = Math.min(100, this.sectorTime / STAGE_DURATION * 100) + '%';
     if (this.boss) $('boss-fill').style.width = Math.max(0, this.boss.hp / this.boss.max * 100) + '%';
   }
   private frame(t: number) {
     const dt = Math.min(.035, Math.max(0, (t - (this.previous || t)) / 1000)); this.previous = t;
     if (this.state === 'playing') this.update(dt);
     const accelerating=this.currentSpeed>=boostSpeed();
-    const desired = new T.Vector3(this.craft.position.x * .64, this.craft.position.y + 5.4, this.craft.position.z + (accelerating ? 18.5 : 16.4));
+    const future=trackCenter(this.stage,this.craft.position.z-78);
+    const desired=new T.Vector3(this.craft.position.x*.83,this.craft.position.y+5.3,this.craft.position.z+(accelerating?19.3:16.8));
     this.camera.position.lerp(desired, Math.min(1, dt * 8 || .09));
     if(this.cameraShake>0){this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.28;this.camera.position.y+=(Math.random()-.5)*this.cameraShake*.27;}
-    this.camera.lookAt(this.craft.position.x * .47, this.craft.position.y * .48 + 1, this.craft.position.z - 43);
+    this.camera.lookAt(future.x+this.baseX*.37,future.y+this.baseY*.4+1,this.craft.position.z-65);
     this.camera.rotateZ(-this.craft.rotation.z*.09);
     const fov = accelerating ? 83 : 71;
     this.camera.fov+=(fov-this.camera.fov)*Math.min(1,dt*4.5);
