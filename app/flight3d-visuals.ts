@@ -365,7 +365,7 @@ export class FlightVfx {
   private dummy = new T.Object3D();
   private particles: { p:T.Vector3;v:T.Vector3;age:number;life:number;color:T.Color;size:number }[] = [];
   private rings: { mesh:T.Mesh;life:number }[] = [];
-  constructor(private mobile: boolean) {
+  constructor(mobile: boolean) {
     const count=mobile?44:74;
     this.streakCapacity=count;
     this.streaks = new T.InstancedMesh(cube, neon(0x8bdfff,.55),count);
