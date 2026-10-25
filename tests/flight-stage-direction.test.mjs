@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  STAGE1,crossedDistance,distanceToScriptSeconds,missionProgress,
- enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone
+ enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver
 } from '../app/flight-stage-direction.ts';
 import {gateCount,gateZ} from '../app/flight-terrain.ts';
 
@@ -55,4 +55,13 @@ test('manual gold ring milestones: every third expands shield, sixth adds ship',
  assert.equal(ringMilestone(6),'life');
  assert.equal(ringMilestone(9),'shield');
  assert.equal(ringMilestone(12),'life');
+});
+
+test('Star Fox contextual maneuvers depend on active pitch and flight mode',()=>{
+ assert.equal(contextualManeuver(true,true,false,false),'loop');
+ assert.equal(contextualManeuver(true,true,false,true),'loop');
+ assert.equal(contextualManeuver(true,false,true,true),'uturn');
+ assert.equal(contextualManeuver(true,false,true,false),null);
+ assert.equal(contextualManeuver(false,true,false,true),null);
+ assert.equal(contextualManeuver(true,true,true,true),'loop');
 });
