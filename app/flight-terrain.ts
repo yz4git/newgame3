@@ -19,7 +19,7 @@ const stoneArch=new T.TorusGeometry(12,2.25,6,22,Math.PI);
 const archRim=new T.TorusGeometry(12,.32,4,22,Math.PI);
 const cylinder=new T.CylinderGeometry(1,1,1,8);
 const COLORS=[
- {earth:0x293e3a,grass:0x526d47,road:0x293b4a,water:0x254a5e,rock:0x626a6d,wall:0x68757b,top:0xa0b0b6,glow:0xffcb83},
+ {earth:0x334c42,grass:0x65754e,road:0x293b4a,water:0x3b819b,rock:0x667576,wall:0x68757b,top:0xa0b0b6,glow:0xffcb83},
  {earth:0x275475,grass:0x377e89,road:0x345060,water:0x15749c,rock:0x729496,wall:0x809fa3,top:0xb4dcdf,glow:0x61f1e0},
  {earth:0x404464,grass:0x4d6071,road:0x222738,water:0x1a3860,rock:0x56617a,wall:0x7c91b0,top:0xa5c2d1,glow:0xc8a3ff},
  {earth:0x779eb1,grass:0xb4cdd4,road:0x557080,water:0x3981a9,rock:0xbed6de,wall:0x9cbcc9,top:0xe1f7ff,glow:0x9beaff},
@@ -102,21 +102,21 @@ export class GroundWorld{
  private sceneId=0;
  private allRange=false;
  private groundMaterial=mat(0xffffff,.9);
- private seaMaterial=new T.MeshStandardMaterial({color:0x317b9b,metalness:.42,roughness:.25,transparent:true,opacity:.94,side:T.DoubleSide,depthWrite:true});
+ private seaMaterial=new T.MeshStandardMaterial({color:0x478fac,metalness:.15,roughness:.56,transparent:true,opacity:.97,side:T.DoubleSide,depthWrite:true});
  private waterfallMat=new T.ShaderMaterial({
   uniforms:{uTime:{value:0}},
   vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
   fragmentShader:'varying vec3 vP; uniform float uTime; void main(){'+
-   'float wave=0.5+0.5*sin(vP.x*0.7+vP.y*0.3+uTime*3.2);'+
-   'float stream=pow(0.5+0.5*sin(vP.y*1.25+vP.x*0.5+uTime*4.9),4.0);'+
-   'float foam=pow(0.5+0.5*sin(vP.x*2.0-vP.y*0.5+uTime*5.6),7.0);'+
-   'vec3 color=mix(vec3(0.18,0.46,0.56),vec3(0.7,0.9,0.97),stream*0.38+foam*0.29);'+
-   'gl_FragColor=vec4(color,0.22+0.20*wave+0.16*foam);}',
+   'float drift=sin(vP.x*.52+sin(vP.y*.13+uTime*.5)*.7);'+
+   'float stream=0.5+0.5*sin(vP.x*1.1+uTime*.6);'+
+   'float foam=pow(0.5+0.5*sin(vP.y*1.45+uTime*4.5+drift),8.0);'+
+   'vec3 color=mix(vec3(.20,.48,.60),vec3(.65,.88,.92),stream*.48+foam*.23);'+
+   'gl_FragColor=vec4(color,.18+.12*stream+.16*foam);}',
   side:T.DoubleSide,transparent:true,depthWrite:false,blending:T.NormalBlending
  });
  private roadMat=mat(0x2f3a43,.95);
  private roadLine=new T.MeshBasicMaterial({color:0xbdd9df});
- private seaFoam=new T.MeshBasicMaterial({color:0x9bc7cc,transparent:true,opacity:.20,depthWrite:false});
+ private seaFoam=new T.MeshBasicMaterial({color:0xa9e4e6,transparent:true,opacity:.26,depthWrite:false});
  private wallMat=mat(0x8299a7,.49);
  private trimMat=mat(0xc0cfd2,.43);
  private emitter=new T.MeshBasicMaterial({color:0x72def6,toneMapped:false});
@@ -182,10 +182,16 @@ export class GroundWorld{
    item(group,box,this.seaMaterial,routeCenter(this.sceneId,z).x,level-.08,0,canal?68:250,.16,TILE+.12);
    // Short, faint strips and irregular orientation read as water reflections
    // rather than the bright straight white stripes seen in the old screenshots.
-   for(let i=0;i<(canal?5:8);i++){
+   for(let i=0;i<(canal?11:12);i++){
     const x=routeCenter(this.sceneId,z).x+(u(i*9+z)-.5)*(canal?52:185);
-    const streak=item(group,box,this.seaFoam,x,level+.033,(u(i*7+z)-.5)*TILE,4+u(i+z+4)*13,.022,.24+u(i+z)*.33);
+    const streak=item(group,box,this.seaFoam,x,level+.033,(u(i*7+z)-.5)*TILE,
+      2.2+u(i+z+4)*9,.018,.12+u(i+z)*.35);
     streak.rotation.y=(u(i+z+99)-.5)*.7;
+   }
+   if(canal)for(const sign of [-1,1])for(let k=0;k<5;k++){
+    const local=-HALF+(k+.5)*TILE/5,wz=z+local;
+    const x=routeCenter(this.sceneId,wz).x+sign*(31.4+u(k+z)*.8);
+    item(group,box,this.seaFoam,x,level+.05,local,2.3,.025,TILE/5*.88);
    }
   }else{
    // Visible physically placed continuous roadway with markings and guardrails.
@@ -261,7 +267,7 @@ export class GroundWorld{
   colliders.push({x:center,y:base+24,z:tileZ,rx:17,ry:1.3,rz:2.5,kind:'bridge'});
  }
  private makeRock(group:T.Group,colliders:Collider[],x:number,zLocal:number,zWorld:number,n:number){
-  const w=4+u(n)*9,h=8+u(n+7)*22,y=heightAt(this.sceneId,x,zWorld)+h*.42;
+  const w=4+u(n)*8,h=6+u(n+7)*15,y=heightAt(this.sceneId,x,zWorld)+h*.42;
   const rock=item(group,ico,this.stone,x,y,zLocal,w,h,w*(.65+u(n+11)*.5));
   rock.rotation.z=(u(n+4)-.5)*.37;
   colliders.push({x,y,z:zWorld,rx:w*.77,ry:h*.7,rz:w*.8,kind:'rock'});
@@ -335,6 +341,22 @@ export class GroundWorld{
    else this.makeRock(group,colliders,x,local,wz,n);
   }
   if(city){
+   // Tiny traffic shapes are foreground scale cues. Their wheels / windshield
+   // move with the course as the player overtakes them, instead of reading as
+   // another empty static highway in the screenshot.
+   for(let i=0;i<3;i++){
+    const sign=i%2===0?1:-1,zl=-30+i*26+u(d+i)*6,wz=tileZ+zl;
+    const xc=routeCenter(0,wz).x+sign*(3.9+u(d+i+3)*1.6),base=heightAt(0,xc,wz);
+    const length=5.2+u(d+i+2)*2.0,bodyHeight=1.5+u(d+i+8)*.5;
+    const shell=item(group,box,i%3===0?this.ceramic:i%3===1?this.oxidized:this.weathered,
+      xc,base+1.5,zl,3.1,bodyHeight,length);
+    shell.rotation.y=(u(d+i+8)-.5)*.07;
+    item(group,box,this.girders,xc,base+2.45,zl+.1,2.25,.64,2.4);
+    item(group,box,this.amber,xc,base+1.5,zl-length*.51,1.9,.28,.17);
+    for(const sx of [-1,1])item(group,box,this.roadMat,xc+sx*1.47,base+.54,zl,.4,.65,length*.58);
+   }
+  }
+  if(city){
    // Low foreground industrial structures keep street detail without placing
    // 50m-tall walls INSIDE the ±44-unit player/camera scrolling envelope.
    // Far towers remain readable in projection and never intersect the camera.
@@ -356,6 +378,18 @@ export class GroundWorld{
    const rubble=item(group,ico,i%3===0?this.oxidized:this.stone,x,y,zl,1.5+u(n+9)*3.5,1.0+u(n+3)*2,2+u(n+6)*3);
    rubble.rotation.z=u(n+8)*Math.PI;
   }
+  if(stage===0&&d>1500&&d<3450){
+   // Layered canyon shelves follow the actual heightfield and emphasize
+   // erosion and elevation instead of isolated oversized stone boulders.
+   for(const sign of [-1,1])for(let tier=0;tier<3;tier++)for(let k=0;k<2;k++){
+    const x=center+sign*(37+tier*11+u(d+tier+k)*3.4);
+    const zl=(k===0?-23:22)+u(d+sign*tier+k)*8,worldZ=tileZ+zl;
+    const y=heightAt(stage,x,worldZ)+.35+tier*.3;
+    const ledge=item(group,box,tier===1?this.weathered:this.stone,x,y,zl,
+     6.5+u(d+tier+k)*3.5,1.1+u(d+tier*k+2)*1.4,22+u(d+k)*12);
+    ledge.rotation.y=(u(d+tier+k*31)-.5)*.22;
+   }
+  }
   if(stage===0&&d>900&&d<1430){
    // The earlier narrow "tower corridor" intersected the moving chase camera.
    // Tower landmarks remain visible out on the flanks, beyond the full rail.
@@ -372,10 +406,9 @@ export class GroundWorld{
     item(group,box,this.stone,x+side*39,-4,0,15,35,12);
     item(group,ico,this.stone,x+side*35,12,-4,15,10,18);
    }
-   for(let n=0;n<12;n++){
-    const strip=this.waterfallMat;
-    const width=5+u(n+tileZ)*2.2;
-    item(group,box,strip,x-34+n*6.1,-3.6,0,width,24,.34);
+   for(let n=0;n<10;n++){
+    // Overlap translucent falls to avoid bright vertical panel gaps/grid bars.
+    item(group,box,this.waterfallMat,x-33+n*7.1,-3.6,0,8.2,24,.22);
    }
    for(let n=0;n<9;n++){
     item(group,box,this.seaMaterial,x-30+n*7,-15.2,4.5,5.4,.22,5);
