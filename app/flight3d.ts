@@ -4,6 +4,8 @@ import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFli
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
 import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
+import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget} from './flight-stage-direction.ts';
+import type {WaveType} from './nova64-rules.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
 /**
@@ -18,7 +20,7 @@ const $=<E extends HTMLElement=HTMLElement>(name:string)=>document.getElementByI
 const P=(p:T.Vector3):V3=>({x:p.x,y:p.y,z:p.z});
 const DIR=(a:T.Vector3,b:T.Vector3)=>b.clone().sub(a).normalize();
 type State=Phase;
-type Target={model:T.Group;position:T.Vector3;hp:number;max:number;radius:number;boss:boolean;ground:boolean;phase:number;age:number;fire:number;points:number;rescue:boolean;seed:number;side:number};
+type Target={model:T.Group;position:T.Vector3;hp:number;max:number;radius:number;boss:boolean;ground:boolean;phase:number;age:number;fire:number;points:number;rescue:boolean;seed:number;side:number;pattern:WaveType;flightIndex:number;birth:T.Vector3};
 type Projectile={mesh:T.Mesh;velocity:T.Vector3;friendly:boolean;homing:boolean;bomb:boolean;damage:number;radius:number;life:number;target:Target|null};
 type Supply={mesh:T.Mesh;kind:'ring'|'laser'|'repair'|'bomb';radius:number};
 type Flash={mesh:T.Mesh;life:number;duration:number};
@@ -55,11 +57,12 @@ class GroundFlight {
  private shield=100;private shieldMax=100;private lives=3;private bombs=3;private laserLevel=1;private rings=0;private damagedWing=false;
  private enemies:Target[]=[];private boss:Target|null=null;private shots:Projectile[]=[];
  private supplies:Supply[]=[];private blasts:Flash[]=[];private allies:Ally[]=[];
- private waves=scriptWaves(this.mission);private waveIndex=0;private missionTime=0;
+ private waves=scriptWaves(this.mission);private waveIndex=0;private missionTime=0;private openingCue=0;
  private levelEvent=0;private checkpoint=false;private rescueFinished=false;private rescueCount=0;private gateBonus=false;
  private laneX=0;private laneY=1.2;private cameraPanX=0;private yaw=0;private targetYaw=0;private velocity=74;
  private boostHeld=false;private brakeHeld=false;private padBoost=false;private padBrake=false;private leftBank=false;private rightBank=false;private keys=new Set<string>();
  private heat=0;private overheated=false;private charge=0;private fireHeld=false;private shotDelay=0;
+ private lockedTarget:Target|null=null;private lockCandidate:Target|null=null;private lockTimer=0;
  private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;private respawnBlink=false;
  private pointer:number|null=null;private pX=0;private pY=0;private gamepadLast:boolean[]=[];
  private currentTarget:Target|null=null;private previousPosition=new T.Vector3();private time=0;private lastFrame=0;
@@ -92,6 +95,7 @@ class GroundFlight {
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
     hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps,
+    checkpoint:this.checkpoint,rescueCount:this.rescueCount,locked:this.lockedTarget!==null,openingCue:this.openingCue,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
     shipNdcX:this.player.position.clone().project(this.camera).x,shipVisible:this.player.visible,
     sightFarX:($('sight-far') as HTMLElement).style.left,
@@ -224,15 +228,16 @@ class GroundFlight {
  private enterMission(id:number,resume=false){
   this.cleanup();
   this.mission=MISSIONS[id];this.setPalette();
-  this.missionTime=resume?22:0;this.missionHits=resume?this.missionHits:0;this.missionDamage=resume?this.missionDamage:0;
+  this.missionTime=resume?(id===0?distanceToScriptSeconds(-STAGE1.checkpoint):22):0;this.missionHits=resume?this.missionHits:0;this.missionDamage=resume?this.missionDamage:0;
   this.waves=scriptWaves(this.mission);
   this.waveIndex=resume?Math.max(0,this.waves.findIndex(w=>w.at>this.missionTime)):0;
   if(this.waveIndex<0)this.waveIndex=this.waves.length;
-  this.checkpoint=resume;this.rescueFinished=false;this.rescueCount=0;this.gateBonus=false;this.levelEvent=0;
+  this.checkpoint=resume;this.rescueFinished=false;this.rescueCount=0;this.gateBonus=false;this.levelEvent=0;this.openingCue=resume?1:0;
+  this.lockedTarget=this.lockCandidate=null;this.lockTimer=0;
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
   this.invulnerable=resume?2.3:4.2;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
   this.laneX=0;this.laneY=2;this.cameraPanX=0;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
-  this.player.position.set(0,2,resume?-this.missionTime*75:0);this.player.rotation.set(0,0,0);
+  this.player.position.set(0,2,resume?(id===0?-STAGE1.checkpoint:-this.missionTime*75):0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
   this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
   this.scene.add(this.terrain.root);
@@ -255,12 +260,14 @@ class GroundFlight {
  private pause(){if(!this.playing)return;this.pausedFrom=this.stage;this.stage='pause';this.fireHeld=false;this.boostHeld=this.brakeHeld=false;this.overlay('PAUSE','MISSION HOLD','ゲーム進行は停止しています。','CONTINUE');}
  private resume(){if(this.stage!=='pause')return;this.stage=this.pausedFrom;this.closeOverlay();}
  private fireDown(){
-  if(!this.playing||this.fireHeld)return;this.fireHeld=true;this.charge=0;this.shotDelay=0;this.fireLasers();
+  if(!this.playing||this.fireHeld)return;this.fireHeld=true;this.charge=0;this.shotDelay=0;
+  this.lockedTarget=this.lockCandidate=null;this.lockTimer=0;
+  this.fireLasers();
  }
  private fireUp(){
   if(!this.fireHeld)return;this.fireHeld=false;
   if(this.playing&&this.charge>=LOCK_CHARGE)this.fireCharge();
-  this.charge=0;
+  this.charge=0;this.lockedTarget=this.lockCandidate=null;this.lockTimer=0;
  }
  private barrel(dir:number){
   if(!this.playing||this.rollCooldown>0)return;
@@ -309,32 +316,31 @@ class GroundFlight {
  }
  private fireLasers(){
   if(!this.playing||this.shotDelay>0)return;
-  const target=this.acquire(),forward=this.aim();
+  const forward=this.aim();
   for(const s of [-1,1]){
    const origin=this.player.position.clone().add(new T.Vector3(s*1.05,-.1,-1.5));
    const aim=forward.clone();
-   if(target)aim.lerp(target.position.clone().sub(origin).normalize(),.12).normalize();
    this.emit(origin,aim.multiplyScalar(360+this.velocity),1+(this.laserLevel>1?1:0),true);
   }
   if(this.laserLevel>=3)this.emit(this.player.position.clone().add(new T.Vector3(0,.3,-1.4)),forward.multiplyScalar(390+this.velocity),2,true);
   this.shotDelay=.12;this.sound(640,.065,.018);
  }
  private fireCharge(){
-  const target=this.acquire(),origin=this.player.position.clone().add(new T.Vector3(0,.2,-1.8));
+  const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null,origin=this.player.position.clone().add(new T.Vector3(0,.2,-1.8));
   const direction=target?target.position.clone().sub(origin).normalize():this.aim();
-  this.emit(origin,direction.multiplyScalar(270+this.velocity),16+this.laserLevel*3,true,true,false,target);
+  this.emit(origin,direction.multiplyScalar(270+this.velocity),16+this.laserLevel*3,true,!!target,false,target);
   this.notice(target?'CHARGE / LOCKED':'CHARGE LASER',.85);this.sound(850,.25,.05);
  }
  private dropBomb(){
   if(!this.playing||this.bombs<=0)return;
   this.bombs--;
-  const target=this.acquire()??this.boss;
+  const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null;
   const origin=this.player.position.clone().add(new T.Vector3(0,-.1,-1.9));
   const direction=target?target.position.clone().sub(origin).normalize():this.aim();
-  this.emit(origin,direction.multiplyScalar(240+this.velocity),46,true,true,true,target);
+  this.emit(origin,direction.multiplyScalar(240+this.velocity),46,true,!!target,true,target);
   this.notice('NOVA BOMB',.8);this.sound(240,.32,.07);
  }
- private makeEnemy(pos:T.Vector3,elite=false,ground=false,rescue=false){
+ private makeEnemy(pos:T.Vector3,elite=false,ground=false,rescue=false,pattern:WaveType='squad',flightIndex=0){
   const model=ground?new T.Group():createFlightShip(elite?0xc59170:enemyColors[this.mission.scene%3],false);
   if(ground){
    const armor=new T.MeshStandardMaterial({color:0x677c83,metalness:.8,roughness:.32,flatShading:true});
@@ -346,7 +352,7 @@ class GroundFlight {
   model.position.copy(pos);this.scene.add(model);
   const hp=ground?7:elite?12:4;
   const enemy:Target={model,position:model.position,hp,max:hp,radius:ground?2.8:elite?3:2.3,age:0,boss:false,ground,phase:seed(this.time*11+pos.z),fire:1.2+seed(pos.x+pos.z)*1.3,
-   points:elite?6:ground?3:1,rescue,seed:seed(pos.z+pos.x)*6,side:0};
+   points:elite?6:ground?3:1,rescue,seed:seed(pos.z+pos.x)*6,side:0,pattern,flightIndex,birth:pos.clone()};
   this.enemies.push(enemy);return enemy;
  }
  private spawnWave(){
@@ -356,7 +362,7 @@ class GroundFlight {
    const f=formation(wave.type,i,wave.count,this.missionTime);
    let pos:T.Vector3;
    if(this.mission.mode==='corridor'){
-    const z=this.player.position.z-118-f.z,route=routeCenter(this.mission.scene,z);
+    const z=this.player.position.z-188-f.z,route=routeCenter(this.mission.scene,z);
     const flank=wave.type==='crossfire'?(i%3-1)*19
      :wave.type==='pincer'?(i%2===0?-27:27)
      :wave.type==='flypast'?(i%2===0?-33:33)
@@ -366,7 +372,7 @@ class GroundFlight {
     const angle=6.28*(i/wave.count)+this.missionTime*.17;
     pos=this.player.position.clone().add(new T.Vector3(Math.cos(angle)*98,f.y,Math.sin(angle)*98));
    }
-   this.makeEnemy(pos,wave.elite&&i===Math.floor(wave.count/2),false,false);
+   this.makeEnemy(pos,wave.elite&&i===Math.floor(wave.count/2),false,false,wave.type,i);
   }
   if(this.mission.id===0&&this.waveIndex===1)this.comms('ECHO','前方に敵編隊。まずは照準に合わせて射撃！',3.2);
   if(wave.elite)this.comms('VECTA','重装甲機を確認。ロックオンで撃破！',2.5);
@@ -384,8 +390,8 @@ class GroundFlight {
   this.rescueCount=3;
   this.comms('ECHO','敵機に追われている！援護をお願い！',3.8);
   for(let i=0;i<3;i++){
-   const z=this.player.position.z-135-i*11,r=routeCenter(0,z);
-   const e=this.makeEnemy(new T.Vector3(r.x+(-1+i)*3.0,r.y+1.6,z),false,false,true);
+   const z=this.player.position.z-205-i*11,r=routeCenter(0,z);
+   const e=this.makeEnemy(new T.Vector3(r.x+(-1+i)*3.0,r.y+1.6,z),false,false,true,'squad',i);
    e.fire=2.4;
   }
  }
@@ -393,7 +399,8 @@ class GroundFlight {
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
   this.enemies=[];
   const specialWalker=this.mission.id===0&&this.rescueFinished&&this.terrain.gateState.passed===gateCount();
-  const model=this.mission.id===0?createFirstStageBoss(specialWalker):createFlightShip(0xac5269,true,this.mission.scene);
+  // Normal route: siege walker. Seven arches and rescue: attack carrier.
+  const model=this.mission.id===0?createFirstStageBoss(!specialWalker):createFlightShip(0xac5269,true,this.mission.scene);
   if(this.mission.id!==0)model.scale.multiplyScalar(1.25);
   const z=this.mission.mode==='corridor'?this.player.position.z-155:Math.cos(this.mission.id)*95;
   const route=routeCenter(this.mission.scene,z);
@@ -401,7 +408,7 @@ class GroundFlight {
   model.rotation.y=Math.PI;
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
-  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&!specialWalker?22:15,points:80,rescue:false,seed:123,side:0};
+  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,points:80,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
   if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'巨大歩行兵器が起動！発光する装甲のコアを狙え！':'大型空中母艦、接近！真正面の動力コアを撃て！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
@@ -409,8 +416,11 @@ class GroundFlight {
   this.notice('WARNING / '+this.mission.boss,3);this.sound(135,.55,.06);
  }
  private enemyShoot(e:Target){
-  const target=this.player.position.clone(),from=e.position.clone();
-  const direction=target.sub(from).normalize();
+  const target=interceptTarget(P(e.position),P(this.player.position),
+    {x:(this.player.position.x-this.previousPosition.x)*30,y:(this.player.position.y-this.previousPosition.y)*30,z:-this.velocity},
+    e.boss?87:70);
+  const from=e.position.clone();
+  const direction=new T.Vector3(target.x,target.y,target.z).sub(from).normalize();
   const phase=e.boss?bossPhase(e.hp,e.max):1;
   const count=e.boss?phase===1?3:phase===2?5:7:1;
   for(let i=0;i<count;i++){
@@ -606,11 +616,14 @@ class GroundFlight {
    }else if(e.ground){
     e.position.y=heightAt(this.mission.scene,e.position.x,e.position.z)+1.2;
    }else if(this.mission.mode==='corridor'){
-    e.position.z+=dt*(16+this.mission.difficulty*3);
-    const r=routeCenter(this.mission.scene,e.position.z);
-    e.position.x+=Math.sin(this.time*1.65+e.phase)*dt*.95;
-    e.position.y=r.y+Math.sin(e.age*2.1+e.phase)*2.6+1.6;
-    e.model.rotation.z=Math.sin(e.age*2+e.phase)*.23;
+    e.position.z+=dt*enemyFlightSpeed(e.pattern);
+    const initial=routeCenter(this.mission.scene,e.birth.z);
+    const current=routeCenter(this.mission.scene,e.position.z);
+    const move=enemyFlightOffset(e.pattern,e.age,e.flightIndex,e.seed);
+    e.position.x=e.birth.x+(current.x-initial.x)+move.x;
+    e.position.y=e.birth.y+(current.y-initial.y)+move.y;
+    e.model.rotation.z=clamp(move.x*.028,-.65,.65);
+    e.model.rotation.x=clamp(-move.y*.023,-.23,.23);
    }else{
     const heading=DIR(e.position,this.player.position);
     e.position.addScaledVector(heading,dt*12);
@@ -639,7 +652,7 @@ class GroundFlight {
   for(let i=this.shots.length-1;i>=0;i--){
    const s=this.shots[i],from=s.mesh.position.clone();
    if(s.homing){
-    const target=s.target&&s.target.hp>0?s.target:this.acquire();
+    const target=s.target&&s.target.hp>0?s.target:null;
     if(target)s.velocity.lerp(DIR(s.mesh.position,target.position).multiplyScalar(this.velocity+290),Math.min(1,dt*5));
    }
    s.mesh.position.addScaledVector(s.velocity,dt);s.life-=dt;
@@ -684,11 +697,16 @@ class GroundFlight {
    const pick=swept(P(this.previousPosition),P(this.player.position),P(p.mesh.position),P(p.mesh.position),p.radius);
    const lost=p.mesh.position.distanceTo(this.player.position)>280;
    if(pick){
-    if(p.kind==='ring'){this.rings++;this.shield=Math.min(this.shieldMax,this.shield+23);if(this.rings%3===0)this.shieldMax=Math.min(140,this.shieldMax+10);}
+    if(p.kind==='ring'){
+     this.rings++;this.shield=Math.min(this.shieldMax,this.shield+23);
+     if(this.rings%6===3){this.shieldMax=Math.min(140,this.shieldMax+20);this.shield=this.shieldMax;this.notice('GOLD RINGS ×3 / SHIELD EXTENDED',1.8);}
+     if(this.rings%6===0){this.lives++;this.notice('GOLD RINGS ×6 / EXTRA SHIP',1.8);}
+    }
     if(p.kind==='laser')this.laserLevel=Math.min(3,this.laserLevel+1);
     if(p.kind==='bomb')this.bombs=Math.min(7,this.bombs+1);
     if(p.kind==='repair'){this.shield=this.shieldMax;this.damagedWing=false;}
-    this.notice('SUPPLY / '+p.kind.toUpperCase(),.85);this.sound(960,.19,.033);this.score+=230;
+    if(p.kind!=='ring'||this.rings%3!==0)this.notice('SUPPLY / '+p.kind.toUpperCase(),.85);
+    this.sound(960,.19,.033);this.score+=230;
    }
    if(pick||lost){
     this.scene.remove(p.mesh);p.mesh.geometry.dispose();(p.mesh.material as T.Material).dispose();this.supplies.splice(i,1);
@@ -714,7 +732,11 @@ class GroundFlight {
   if(this.radioTime<0)$('radio').hidden=true;
   if(this.fireHeld){
    this.charge=Math.min(1.25,this.charge+dt);
-   if(this.charge<LOCK_CHARGE)this.fireLasers();
+   const candidate=this.acquire();
+   if(candidate!==this.lockCandidate){this.lockCandidate=candidate;this.lockTimer=0;}
+   else if(candidate)this.lockTimer+=dt;
+   if(candidate&&this.charge>.28&&this.lockTimer>.18)this.lockedTarget=candidate;
+   if(this.lockedTarget&&this.lockedTarget.hp<=0)this.lockedTarget=null;
   }
   this.updatePlayer(dt);
   if(!this.playing)return;
