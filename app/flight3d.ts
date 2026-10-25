@@ -772,6 +772,14 @@ class GroundFlight {
  private render(dt:number){
   const forward=this.forward();
   const behind=this.player.position.clone().addScaledVector(forward,-15.5).add(new T.Vector3(0,4.3,0));
+  if(this.mission.mode==='corridor'){
+   // Essential rail-shooter camera behaviour: steering moves the Arwing visibly
+   // across the image. The old camera followed 100% of player X/Y, pinning
+   // the plane in the center and making steering feel ineffective.
+   const center=routeCenter(this.mission.scene,this.player.position.z);
+   behind.x=center.x+(this.player.position.x-center.x)*.27;
+   behind.y=center.y+4.3+(this.player.position.y-center.y)*.32;
+  }
   this.camera.position.lerp(behind,Math.min(1,dt*7||.08));
   if(this.cameraShake>0){
    this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.4;
@@ -780,8 +788,8 @@ class GroundFlight {
   const look=this.player.position.clone().addScaledVector(forward,96);
   if(this.mission.mode==='corridor'){
    const center=routeCenter(this.mission.scene,look.z);
-   look.x=center.x+this.laneX*.3;
-   look.y=center.y-4.1+this.laneY*.23;
+   look.x=center.x+this.laneX*.12;
+   look.y=center.y-3.6+this.laneY*.13;
   }else look.y-=3;
   this.camera.lookAt(look);
   this.camera.rotateZ(-this.player.rotation.z*.08);
