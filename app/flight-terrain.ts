@@ -120,7 +120,7 @@ export class GroundWorld{
   this.gateState.passed=0;this.gateState.missed=0;this.gateState.lastCross=-1;
   for(const g of this.gates){g.passed=false;g.missed=false;}
   for(let i=0;i<COUNT;i++){
-   const tileZ=allRange?(-720+i*TILE):z-50-i*TILE;
+   const tileZ=allRange?(-720+i*TILE):z-i*TILE;
    this.addTile(tileZ);
   }
  }
