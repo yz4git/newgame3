@@ -195,6 +195,7 @@ class GroundFlight {
   $('notice').textContent=message;$('notice').classList.add('visible');this.noticeTime=seconds;
  }
  private comms(pilot:string,message:string,seconds=3.3){
+  $('radio').dataset.pilot=pilot;
   $('radio-name').textContent=pilot;$('radio-message').textContent=message;
   $('radio').hidden=false;this.radioTime=seconds;
  }
