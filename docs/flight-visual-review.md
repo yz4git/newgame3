@@ -32,6 +32,7 @@ The `Visual flight gameplay audit` GitHub Actions workflow starts the **producti
 | Speed effects | Bright white streaks everywhere regardless of boost | Lower streak budget in normal flight; boost produces stronger streaks |
 | Phone UI | Button panel and thick HUD obscured much of the landscape | Compact landscape HUD, smaller control surfaces, verified visual phone emulator |
 | Team radio | Abstract N/S letterbox | Procedurally drawn original helmeted pilot portraits, colour-coded radio speakers |
+| First boss | An ordinary enemy fighter with glowing rings, tiny at 90m and no focal weakpoint | Giant original airborne carrier for the normal route, articulated land walker for special route, with glowing reactor target and three changing phases |
 | Start visibility | Opening invulnerability blink hid the player's ship in screenshot | First launch always shows craft; blinking reserved for genuine respawn |
 | Touch input | Unverified multi-touch | Browser audit now dispatches simultaneous steering + FIRE touch sequence |
 
