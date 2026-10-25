@@ -388,7 +388,8 @@ export class FlightVfx {
         .multiplyScalar((7+r(i+size*13)*17)*Math.sqrt(size/2));
       this.particles.push({ p:position.clone(),v,age:0,life:.32+r(i*7+size)*.6,color:new T.Color(i%4===0?0xffffff:color),size:.08+r(i*11+size)*.24 });
     }
-    const mesh=new T.Mesh(new T.RingGeometry(.7,1.05,32),neon(0xffcd9a,.83));
+    // Flash rings must not grow into screen-sized white disks that hide bosses.
+    const mesh=new T.Mesh(new T.RingGeometry(.7,1.05,32),neon(0xffbb86,.24));
     mesh.position.copy(position);this.root.add(mesh);
     this.rings.push({mesh,life:.6});
   }
@@ -425,8 +426,8 @@ export class FlightVfx {
     if(this.sparks.instanceColor) this.sparks.instanceColor.needsUpdate=true;
     for(let i=this.rings.length-1;i>=0;i--){
       const ring=this.rings[i];ring.life-=dt;
-      ring.mesh.scale.setScalar(1+(1-ring.life/.6)*7);
-      (ring.mesh.material as T.MeshBasicMaterial).opacity=Math.max(0,ring.life/.6)*.83;
+      ring.mesh.scale.setScalar(0.65+(1-ring.life/.6)*2.25);
+      (ring.mesh.material as T.MeshBasicMaterial).opacity=Math.max(0,ring.life/.6)*.24;
       if(ring.life<=0){this.root.remove(ring.mesh);ring.mesh.geometry.dispose();(ring.mesh.material as T.Material).dispose();this.rings.splice(i,1);}
     }
   }
