@@ -78,7 +78,7 @@ export function heightAt(scene:number,x:number,z:number){
  if(scene===3)return -16+(side>25?(side-25)*.12:0)+big*.9;
  if(scene===4)return -16+(side>33?(side-33)*.07:0)+big*.8;
  if(scene===5)return -17+(side>42?(side-42)*.045:0)+big*.85;
- return -15.7+Math.max(0,side-25)*.036+big*.55;
+ return -15.7+Math.max(0,side-25)*(scene===0?.092:.036)+big*(scene===0?.83:.55);
 }
 export function waterLevel(scene:number,z:number){
  return scene===1?-16.2:coastZone(scene,z)?-15.35:scene===5?-16.15:-100;
@@ -132,14 +132,14 @@ export class GroundWorld{
   }
  }
  private tileGround(group:T.Group,z:number){
-  const sideCount=this.allRange?37:23,rows=13,verts=[],normals=[],colors=[],indices=[];
+  const sideCount=this.allRange?37:31,rows=13,verts=[],normals=[],colors=[],indices=[];
   const palette=COLORS[this.sceneId];
   const low=new T.Color(palette.earth),green=new T.Color(palette.grass);
   const roadCenter=routeCenter(this.sceneId,z).x;
   for(let j=0;j<rows;j++){
    const lz=HALF-j*TILE/(rows-1),wz=z+lz;
    for(let i=0;i<sideCount;i++){
-    const width=this.allRange?650:270;
+    const width=this.allRange?650:520;
     const x=-width*.5+i*width/(sideCount-1)+roadCenter;
     const h=heightAt(this.sceneId,x,wz);
     verts.push(x,h,lz);
