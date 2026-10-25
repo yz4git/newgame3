@@ -94,6 +94,8 @@ await sleep(500);
 await capture('05a-multitouch-drag-fire');
 await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
 await command('Emulation.setTouchEmulationEnabled',{enabled:false});
+await sleep(950);
+await capture('05b-boss-approach');
 await evaluate("document.getElementById('pause').click()");
 await sleep(300);
 await capture('06-pause');
