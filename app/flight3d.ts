@@ -2,6 +2,7 @@ import * as T from 'three';
 import './flight3d.css';
 import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
+import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
 /**
@@ -58,10 +59,11 @@ class GroundFlight {
  private laneX=0;private laneY=1.2;private yaw=0;private targetYaw=0;private velocity=74;
  private boostHeld=false;private brakeHeld=false;private padBoost=false;private padBrake=false;private leftBank=false;private rightBank=false;private keys=new Set<string>();
  private heat=0;private overheated=false;private charge=0;private fireHeld=false;private shotDelay=0;
- private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;
+ private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;private respawnBlink=false;
  private pointer:number|null=null;private pX=0;private pY=0;private gamepadLast:boolean[]=[];
  private currentTarget:Target|null=null;private previousPosition=new T.Vector3();private time=0;private lastFrame=0;
  private noticeTime=0;private radioTime=0;private cameraShake=0;private damageFlash=0;private audio:AudioContext|null=null;
+ private averageFps=60;
  private bossStage=1;private raf=0;private radar=$<HTMLCanvasElement>('radar');
  constructor(){
   this.renderer=new T.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});
@@ -73,6 +75,7 @@ class GroundFlight {
   this.scene.add(new T.HemisphereLight(0xb6d8ef,0x24342e,2.45));
   const sun=new T.DirectionalLight(0xffedcb,2.75);sun.position.set(-75,110,-45);this.scene.add(sun);
   this.player.rotation.y=0;
+  this.player.scale.setScalar(1.21);
   this.scene.add(this.terrain.root,this.player,this.sky.mesh,this.vfx.root);
   this.scene.add(new T.AmbientLight(0x99bcca,.15));
   this.bind();this.resize();this.setPalette();
@@ -87,8 +90,9 @@ class GroundFlight {
     altitude:this.player.position.y-heightAt(this.mission.scene,this.player.position.x,this.player.position.z),
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
-    hits:this.missionHits,shield:this.shield,boss:this.boss!==null}),
-    start:()=>this.startCampaign(),pause:()=>this.pause()}});
+    hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps}),
+    start:()=>this.startCampaign(),pause:()=>this.pause(),
+    auditSeek:(seconds:number)=>this.auditSeek(seconds)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
  private get playing(){return this.stage==='combat'||this.stage==='boss';}
@@ -192,6 +196,7 @@ class GroundFlight {
   $('notice').textContent=message;$('notice').classList.add('visible');this.noticeTime=seconds;
  }
  private comms(pilot:string,message:string,seconds=3.3){
+  $('radio').dataset.pilot=pilot;
   $('radio-name').textContent=pilot;$('radio-message').textContent=message;
   $('radio').hidden=false;this.radioTime=seconds;
  }
@@ -218,7 +223,7 @@ class GroundFlight {
   if(this.waveIndex<0)this.waveIndex=this.waves.length;
   this.checkpoint=resume;this.rescueFinished=false;this.rescueCount=0;this.gateBonus=false;this.levelEvent=0;
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
-  this.invulnerable=2.4;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
+  this.invulnerable=resume?2.3:4.2;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
   this.laneX=0;this.laneY=2;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
   this.player.position.set(0,2,resume?-this.missionTime*75:0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
@@ -236,7 +241,7 @@ class GroundFlight {
   $('bosswrap').hidden=true;
   this.camera.position.copy(this.player.position).add(new T.Vector3(0,5.6,15));
   this.camera.fov=65;this.camera.updateProjectionMatrix();
-  this.notice('MISSION '+String(id+1).padStart(2,'0')+' / '+this.mission.name,2.8);
+  this.notice('MISSION '+String(id+1).padStart(2,'0')+' / '+this.mission.name,1.8);
   this.comms('NOVA CONTROL',id===0?'海沿いの都市防衛線を突破！ビルと橋を避けて低空を飛べ。':'ミッション開始。地形と敵配置をよく見て進め！',4);
   this.refreshHUD();
  }
@@ -340,7 +345,7 @@ class GroundFlight {
    const f=formation(wave.type,i,wave.count,this.missionTime);
    let pos:T.Vector3;
    if(this.mission.mode==='corridor'){
-    const z=this.player.position.z-172-f.z,route=routeCenter(this.mission.scene,z);
+    const z=this.player.position.z-118-f.z,route=routeCenter(this.mission.scene,z);
     pos=new T.Vector3(route.x+f.x,route.y+f.y+3,z);
    }else{
     const angle=6.28*(i/wave.count)+this.missionTime*.17;
@@ -348,10 +353,11 @@ class GroundFlight {
    }
    this.makeEnemy(pos,wave.elite&&i===Math.floor(wave.count/2),false,false);
   }
+  if(this.mission.id===0&&this.waveIndex===1)this.comms('ECHO','前方に敵編隊。まずは照準に合わせて射撃！',3.2);
   if(wave.elite)this.comms('VECTA','重装甲機を確認。ロックオンで撃破！',2.5);
  }
  private spawnTurret(){
-  const z=this.player.position.z-155,route=routeCenter(this.mission.scene,z);
+  const z=this.player.position.z-112,route=routeCenter(this.mission.scene,z);
   const left=Math.floor(this.missionTime*3)%2===0?-1:1;
   const x=route.x+left*(8+seed(this.missionTime)*5);
   const y=heightAt(this.mission.scene,x,z)+1;
@@ -371,15 +377,17 @@ class GroundFlight {
  private spawnBoss(){
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
   this.enemies=[];
-  const model=createFlightShip(0xac5269,true,this.mission.scene);
-  model.scale.multiplyScalar(1.25);
+  const specialWalker=this.mission.id===0&&this.rescueFinished&&this.terrain.gateState.passed===gateCount();
+  const model=this.mission.id===0?createFirstStageBoss(specialWalker):createFlightShip(0xac5269,true,this.mission.scene);
+  if(this.mission.id!==0)model.scale.multiplyScalar(1.25);
   const z=this.mission.mode==='corridor'?this.player.position.z-155:Math.cos(this.mission.id)*95;
   const route=routeCenter(this.mission.scene,z);
-  model.position.set(this.mission.mode==='corridor'?route.x:Math.sin(this.mission.id)*95,10,z);
+  model.position.set(this.mission.mode==='corridor'?route.x:Math.sin(this.mission.id)*95,this.mission.id===0?7:10,z);
   model.rotation.y=Math.PI;
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
-  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:15,points:80,rescue:false,seed:123,side:0};
+  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&!specialWalker?22:15,points:80,rescue:false,seed:123,side:0};
+  if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'巨大歩行兵器が起動！発光する装甲のコアを狙え！':'大型空中母艦、接近！真正面の動力コアを撃て！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
   this.comms('NOVA COMMAND','大型敵接近！発光した中枢を狙え！',4);
@@ -518,7 +526,7 @@ class GroundFlight {
   this.player.rotation.set(0,this.yaw,lerp(this.player.rotation.z,bank,dt*6));
   if(this.roll>0)this.player.rotation.z=bank+this.rollDir*2*Math.PI*(1-this.roll/ROLL_SECONDS);
   if(this.loopTime>0)this.player.rotation.x=-(1-this.loopTime/SOMERSAULT_SECONDS)*Math.PI*2;
-  this.player.visible=this.invulnerable<=0||Math.sin(this.time*36)>.15;
+  this.player.visible=!this.respawnBlink||this.invulnerable<=0||Math.sin(this.time*36)>.15;
   animateFlightShip(this.player,this.time,accelerating?2.3:1.1);
   this.terrain.step(this.player.position.z,this.mission.mode==='all-range');
   const sample=heightAt(this.mission.scene,this.player.position.x,this.player.position.z);
@@ -539,7 +547,10 @@ class GroundFlight {
  private updateAllies(dt:number){
   for(const a of this.allies){
    if(a.hp<=0){a.mesh.visible=false;continue;}
-   const desired=this.player.position.clone().add(new T.Vector3(a.side*6,-2.8,6));
+   const flyby=clamp(1-this.missionTime/6,0,1);
+   const desired=this.player.position.clone().add(
+     new T.Vector3(a.side*(6+flyby*4),-2.8+flyby*3,6-flyby*36)
+   );
    a.mesh.position.lerp(desired,Math.min(1,dt*2.7));
    a.mesh.rotation.set(0,this.yaw,-a.side*.11+Math.sin(this.time*2+a.side)*.04);
    animateFlightShip(a.mesh,this.time,1);
@@ -597,7 +608,8 @@ class GroundFlight {
      this.enemyShoot(e);e.fire=e.boss?1.35-.12*bossPhase(e.hp,e.max):2+seed(e.phase)*1.6;
     }else e.fire=.5;
    }
-   if(!e.ground)animateFlightShip(e.model,this.time+e.phase,1);
+   if(e.boss&&this.mission.id===0)animateFirstStageBoss(e.model,e.age,bossPhase(e.hp,e.max));
+   else if(!e.ground)animateFlightShip(e.model,this.time+e.phase,1);
    if(!e.boss&&!e.ground&&swept(P(this.previousPosition),P(this.player.position),P(prior),P(e.position),e.radius+1)){
     this.hurt();this.destroyTarget(e,999);
    }
@@ -621,7 +633,14 @@ class GroundFlight {
     for(const target of targets){
      if(target.hp>0&&swept(P(from),P(s.mesh.position),P(target.position),P(target.position),target.radius+s.radius)){
       const position=target.position.clone();
-      this.destroyTarget(target,s.damage);
+      // Radiant guardian core is mechanically meaningful; body armour can be
+      // damaged, but a close/accurate core shot applies a large multiplier.
+      const core=target.boss?target.model.userData.weakpoint as T.Object3D|undefined:undefined;
+      const weakpoint=core?.getWorldPosition(new T.Vector3());
+      const hitCore=!!weakpoint&&swept(P(from),P(s.mesh.position),P(weakpoint),P(weakpoint),4.3+s.radius);
+      const power=core?(hitCore?s.damage*2.7:s.damage*.62):s.damage;
+      this.destroyTarget(target,power);
+      if(hitCore)this.vfx.burst(weakpoint!,2.5,0xffce88);
       if(s.bomb){this.impact(position,13);for(const other of targets)if(other!==target&&other.hp>0&&other.position.distanceTo(position)<32)this.destroyTarget(other,40);}
       consumed=true;break;
      }
@@ -692,7 +711,7 @@ class GroundFlight {
    }
    if(!this.checkpoint&&this.missionTime>25){this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);this.notice('CHECKPOINT',1.5);}
    const crossed=(interval:number)=>(Math.floor(this.missionTime/interval)!==Math.floor((this.missionTime-dt)/interval));
-   if(crossed(7.5))this.spawnTurret();
+   if(crossed(5.6))this.spawnTurret();
    if(crossed(12))this.spawnSupply('ring');
    if(crossed(24))this.spawnSupply(this.laserLevel<3?'laser':'repair');
    if(this.missionTime>=this.mission.duration)this.spawnBoss();
@@ -748,23 +767,49 @@ class GroundFlight {
   mark(this.player.position,'#f5ffff',4);
   context.restore();
  }
+ private auditSeek(seconds:number){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  // Inspection-only: seek physical scenery for reference comparisons without
+  // waiting for a full level. Not enabled in normal gameplay sessions.
+  this.missionTime=clamp(seconds,0,this.mission.duration-.2);
+  this.player.position.z=-this.missionTime*76;
+  const center=routeCenter(this.mission.scene,this.player.position.z);
+  this.player.position.x=center.x+this.laneX;this.player.position.y=center.y+this.laneY;
+  this.previousPosition.copy(this.player.position);
+  this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
+  this.waveIndex=this.waves.findIndex(w=>w.at>this.missionTime);
+  if(this.waveIndex<0)this.waveIndex=this.waves.length;
+  for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
+  this.enemies=[];
+  for(const s of this.shots)this.scene.remove(s.mesh);
+  this.shots=[];
+  this.camera.position.copy(this.player.position).add(new T.Vector3(0,4.1,13.5));
+ }
  private render(dt:number){
   const forward=this.forward();
-  const behind=this.player.position.clone().addScaledVector(forward,-16.4).add(new T.Vector3(0,5.2,0));
+  const behind=this.player.position.clone().addScaledVector(forward,-15.5).add(new T.Vector3(0,4.3,0));
+  if(this.mission.mode==='corridor'){
+   // Essential rail-shooter camera behaviour: steering moves the Arwing visibly
+   // across the image. The old camera followed 100% of player X/Y, pinning
+   // the plane in the center and making steering feel ineffective.
+   const center=routeCenter(this.mission.scene,this.player.position.z);
+   behind.x=center.x+(this.player.position.x-center.x)*.27;
+   behind.y=center.y+4.3+(this.player.position.y-center.y)*.32;
+  }
   this.camera.position.lerp(behind,Math.min(1,dt*7||.08));
   if(this.cameraShake>0){
    this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.4;
    this.camera.position.y+=(Math.random()-.5)*this.cameraShake*.25;
   }
-  const look=this.player.position.clone().addScaledVector(forward,85);
+  const look=this.player.position.clone().addScaledVector(forward,96);
   if(this.mission.mode==='corridor'){
    const center=routeCenter(this.mission.scene,look.z);
-   look.x=center.x+this.laneX*.3;
-   look.y=center.y-3.0+this.laneY*.25;
+   look.x=center.x+this.laneX*.12;
+   look.y=center.y-3.6+this.laneY*.13;
   }else look.y-=3;
   this.camera.lookAt(look);
   this.camera.rotateZ(-this.player.rotation.z*.08);
-  const fov=this.boostHeld?74:this.brakeHeld?59:65;
+  const fov=this.boostHeld?75:this.brakeHeld?56:64;
   this.camera.fov=lerp(this.camera.fov,fov,dt*3.7);this.camera.updateProjectionMatrix();
   const marker=$('target-ring');
   const e=this.currentTarget;
@@ -783,10 +828,19 @@ class GroundFlight {
   this.renderRadar();
  }
  private frame(now:number){
-  const dt=Math.min(.034,Math.max(0,(now-(this.lastFrame||now))/1000));
+  // Real elapsed time instead of a 34ms/frame cap. That old cap slowed the
+  // entire game to ~25% speed on heavy scenes, hiding scheduled enemy waves.
+  const elapsed=Math.min(.25,Math.max(0,(now-(this.lastFrame||now))/1000));
   this.lastFrame=now;
-  if(this.playing){this.currentTarget=this.acquire();this.updateGame(dt);}
-  this.render(dt);
+  if(elapsed>0)this.averageFps=lerp(this.averageFps,1/elapsed,.1);
+  if(this.playing){
+   const steps=Math.max(1,Math.ceil(elapsed/0.034)),dt=elapsed/steps;
+   for(let i=0;i<steps&&this.playing;i++){
+    this.currentTarget=this.acquire();
+    this.updateGame(dt);
+   }
+  }
+  this.render(elapsed);
   this.raf=requestAnimationFrame(t=>this.frame(t));
  }
 }

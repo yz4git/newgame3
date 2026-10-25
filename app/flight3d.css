@@ -86,3 +86,47 @@ button[hidden],[hidden]{display:none!important}
 #flight{touch-action:none}
 .sight-near{border-color:#c9f7da;background:radial-gradient(circle,#abffe525,transparent 72%)}
 @media(max-width:640px){.mission-info{flex-wrap:wrap;gap:3px 7px}.course-info{font-size:8px}.hud-kicker{color:#b7f5ff}}
+
+/* Live Chrome screenshot audit: compact landscape HUD so the playfield dominates. */
+@media (orientation:landscape) and (max-height:500px){
+ .hud{top:max(4px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right))}
+ .hud-kicker{font-size:7px;letter-spacing:.12em}
+ #sector{font-size:9px;margin-top:2px}
+ .mission-info{margin-top:2px;font-size:8px;gap:6px}
+ .hit-count{margin-top:3px;gap:4px}.hit-count strong{font-size:21px}
+ .hit-count>span:first-child{font-size:9px}
+ .wingmen{font-size:7px;margin-top:3px}
+ .hud-right{width:165px;gap:2px}
+ .ship-life{font-size:9px}
+ .meter-label{font-size:8px}.shield-track{height:6px}
+ .weapons{font-size:7px}.heat-heading{font-size:7px}.heat-track{height:4px}
+ #pause{width:24px;height:24px;top:70px;font-size:13px}
+ #controls{bottom:max(4px,env(safe-area-inset-bottom));left:max(6px,env(safe-area-inset-left));right:max(6px,env(safe-area-inset-right));gap:4px;opacity:.88}
+ .thumb-left,.thumb-right{gap:3px}
+ .rolling,.flight-actions,.weapon-actions{gap:3px}
+ #controls button{padding:5px 6px;min-width:45px;min-height:29px;font-size:8px;box-shadow:0 2px 5px #0009}
+ .rolling button{min-width:46px!important;min-height:30px!important;font-size:7px!important}
+ .flight-actions button{min-width:45px!important;min-height:29px!important;font-size:7px!important}
+ .weapon-actions button{min-height:45px!important}
+ #fire{min-width:69px!important;min-height:51px!important;font-size:14px!important;padding:5px!important}
+ #fire small{font-size:6px}.charge-track{width:51px}
+ #bomb{min-width:62px!important;font-size:7px!important;gap:1px}
+ #bomb b{font-size:10px}
+ .help{display:none}
+ #radio{bottom:82px;width:min(230px,36vw);padding:5px;gap:6px;min-height:40px}
+ .comms-face{height:29px;width:30px;font-size:8px}
+ .comms-copy b{font-size:8px}.comms-copy p{font-size:8px;line-height:1.3}
+ .sight{width:29px;height:29px}.sight-far{width:11px;height:11px}
+ #notice{top:18%;font-size:13px}
+}
+
+/* Readable original mission-pilot portraits instead of the old N/S placeholder. */
+.comms-face{position:relative;overflow:hidden;background:linear-gradient(145deg,#31536c,#0b2137);min-width:49px}
+.comms-portrait{position:absolute;inset:3px;filter:drop-shadow(0 1px 3px #000b)}
+.pilot-helmet{position:absolute;left:9px;top:5px;width:29px;height:31px;clip-path:polygon(20% 0,76% 0,100% 28%,94% 84%,67% 100%,30% 100%,5% 78%,0 27%);background:linear-gradient(135deg,#b2d9e2,#5d8098 55%,#263950)}
+.pilot-visor{position:absolute;left:13px;top:15px;width:23px;height:11px;background:linear-gradient(165deg,#92f2fa,#187f9e 62%,#103b68);clip-path:polygon(0 20%,100% 0,92% 95%,11% 100%);border-bottom:2px solid #dcffff}
+.pilot-chin{position:absolute;left:20px;top:28px;width:14px;height:6px;border-top:2px solid #0d2937;border-bottom:2px solid #a5cbdc;transform:skew(6deg)}
+.pilot-ear{position:absolute;left:4px;top:16px;width:9px;height:15px;background:#49718d;border:1px solid #a4c3d3;clip-path:polygon(0 0,100% 15%,100% 92%,0 100%)}
+#radio[data-pilot="ECHO"] .pilot-visor{background:linear-gradient(145deg,#99f5dc,#187e8b)}
+#radio[data-pilot="VECTA"] .pilot-visor{background:linear-gradient(145deg,#ffd79d,#b36851)}
+@media (orientation:landscape) and (max-height:500px){.comms-portrait{transform:scale(.65);transform-origin:top left}}

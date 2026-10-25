@@ -360,12 +360,14 @@ export class FlightAtmosphere {
 export class FlightVfx {
   readonly root = new T.Group();
   private streaks: T.InstancedMesh;
+  private streakCapacity: number;
   private sparks: T.InstancedMesh;
   private dummy = new T.Object3D();
   private particles: { p:T.Vector3;v:T.Vector3;age:number;life:number;color:T.Color;size:number }[] = [];
   private rings: { mesh:T.Mesh;life:number }[] = [];
   constructor(private mobile: boolean) {
-    const count=mobile?75:130;
+    const count=mobile?44:74;
+    this.streakCapacity=count;
     this.streaks = new T.InstancedMesh(cube, neon(0x8bdfff,.55),count);
     this.streaks.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.streaks.frustumCulled=false;
@@ -397,7 +399,8 @@ export class FlightVfx {
   }
   update(position:T.Vector3,time:number,dt:number,speed:number,boost:boolean) {
     const active=(boost?1.5:1)*Math.min(1.5,speed/60);
-    const stride=this.streaks.count;
+    const stride=boost?this.streakCapacity:Math.round(this.streakCapacity*.28);
+    this.streaks.count=stride;
     for(let i=0;i<stride;i++) {
       const u=r(i*7+8),v=r(i*19+3),z=(r(i*13+5)*240+time*speed*1.65)%250;
       const x=(u-.5)*60,y=(v-.5)*46;

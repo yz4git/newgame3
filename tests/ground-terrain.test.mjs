@@ -7,8 +7,8 @@ import {routeCenter} from '../app/nova64-rules.ts';
 test('each of six planetary environments has a real visible upward-facing 3D terrain',()=>{
  for(let stage=0;stage<6;stage++){
   const ground=new GroundWorld();ground.configure(stage,0,false);
-  assert.equal(ground.tilesCount,17);
-  assert.equal(ground.root.children.length,17);
+  assert.equal(ground.tilesCount,12);
+  assert.equal(ground.root.children.length,12);
   let triangles=0,has3D=false,upward=false;
   for(const section of ground.root.children)section.traverse(o=>{
    if(!(o instanceof THREE.Mesh))return;
@@ -28,8 +28,10 @@ test('each of six planetary environments has a real visible upward-facing 3D ter
   ground.clear();assert.equal(ground.tilesCount,0);
  }
 });
-test('opening level transitions from city ground to real river canyon and waterfall',()=>{
- assert.equal(coastZone(0,-300),false);
+test('opening level progresses from water intro to city, river canyon and waterfall',()=>{
+ assert.equal(coastZone(0,-80),true);
+ assert.equal(coastZone(0,-300),true);
+ assert.equal(coastZone(0,-450),false);
  assert.equal(coastZone(0,-2200),true);
  assert.equal(coastZone(0,-3600),false);
  const c=routeCenter(0,-2200);
@@ -57,11 +59,11 @@ test('physical arches track success/failure exactly once',()=>{
  assert.deepEqual(w.gatesCrossed({x:offset,y:1,z:z2+3},{x:offset,y:1,z:z2-3}),[{index:1,passed:false}]);
  assert.equal(w.gateState.missed,1);w.clear();
 });
-test('terrain streams ahead without increasing the fixed 17-tile render budget',()=>{
+test('terrain streams ahead without increasing the bounded 12-tile corridor render budget',()=>{
  const w=new GroundWorld();w.configure(0,0,false);
  for(let z=0;z>-4200;z-=75){
   w.step(z,false);
-  assert.equal(w.tilesCount,17);
+  assert.equal(w.tilesCount,12);
   const deepest=Math.min(...w.root.children.map(g=>g.position.z));
   const closest=Math.max(...w.root.children.map(g=>g.position.z));
   assert.ok(closest>=z-130,'ground falls behind ship');

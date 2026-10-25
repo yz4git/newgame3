@@ -1,0 +1,31 @@
+name: Visual flight gameplay audit
+on:
+  pull_request:
+    paths:
+      - 'app/flight3d.ts'
+      - 'app/flight-terrain.ts'
+      - 'scripts/flight-visual-audit.mjs'
+      - '.github/workflows/visual-flight.yml'
+  workflow_dispatch:
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: google-chrome --version
+      - run: node scripts/flight-visual-audit.mjs
+        env:
+          CHROME_BIN: google-chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flight-visual-screenshots
+          path: flight-audit/
+          retention-days: 3

@@ -28,7 +28,7 @@ export const seed=(n:number)=>{const t=Math.sin(n*127.13+31.71)*43758.5453;retur
 export function routeCenter(scene:number,z:number):V3 {
  const d=-z,scale=scene===4?1.35:1;
  return V(
- (Math.sin(d*.0015+scene*1.3)*5.5+Math.sin(d*.0031+scene)*2.4)*scale,
+ (scene===0?(Math.sin(d*.0021)*9.8+Math.sin(d*.006)*3.8):Math.sin(d*.0015+scene*1.3)*5.5+Math.sin(d*.0031+scene)*2.4)*scale,
  Math.sin(d*.0018+scene*.66)*1.7+Math.cos(d*.0032+scene)*1.15,0);
 }
 export function laneLimit(x:number,y:number){return V(clamp(x,-9.4,9.4),clamp(y,-6.7,7.8),0);}
@@ -39,8 +39,11 @@ export function scriptWaves(mission:Mission):Beat[]{
  if(mission.mode==='all-range'){
   return [4,10,17,24,32,39,45].map((at,i)=>({at,type:kinds[(i+mission.id)%kinds.length],count:3+(i%3),altitude:i%3,elite:i===3||i===5}));
  }
- return [3,8,13.5,19,25,32,38,45,50].filter(at=>at<mission.duration-3)
- .map((at,i)=>({at,type:kinds[(i+mission.id*2)%kinds.length],count:3+(i%3),altitude:i%3,elite:i===4||i===7}));
+ const times=mission.id===0
+  ? [1.7,4.4,6.9,9.5,12.7,16,19.5,23,26,29,32,35.5,39,43,47.5,50.5]
+  : [2.4,6.7,11.2,15.6,20.3,25,30,34.5,39,44,49,54];
+ return times.filter(at=>at<mission.duration-3)
+ .map((at,i)=>({at,type:kinds[(i+mission.id*2)%kinds.length],count:mission.id===0?4+(i%3):3+(i%3),altitude:i%3,elite:i===4||i===7||i===12}));
 }
 export function formation(type:WaveType,index:number,count:number,age:number):V3{
  const mid=index-(count-1)/2;
