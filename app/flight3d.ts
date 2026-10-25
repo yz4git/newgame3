@@ -105,11 +105,12 @@ class GroundFlight {
     hits:this.missionHits,shield:this.shield,boss:this.boss!==null,bossVariant:this.boss?.model.userData.variant??null,missionTime:this.missionTime,fps:this.averageFps,renderScale:this.renderScale,
     checkpoint:this.checkpoint,rescueCount:this.rescueCount,locked:this.lockedTarget!==null,openingCue:this.openingCue,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
-    shipNdcX:this.player.position.clone().project(this.camera).x,shipVisible:this.player.visible,
+    shipNdcX:this.player.position.clone().project(this.camera).x,shipClipBounds:this.shipProjectedBounds(),shipVisible:this.player.visible,
     sightFarX:($('sight-far') as HTMLElement).style.left,
     cameraInsideSolid:this.terrain.collisions(P(this.camera.position),P(this.camera.position),2.5)?.kind??null}),
     start:()=>this.startCampaign(),pause:()=>this.pause(),
     auditSeek:(seconds:number)=>this.auditSeek(seconds),
+    auditSpawnAimTarget:()=>this.auditSpawnAimTarget(),
     auditSetLane:(x:number)=>this.auditSetLane(x)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
@@ -903,6 +904,21 @@ class GroundFlight {
    this.respawnBlink=false;this.player.visible=true;
   }
  }
+ private shipProjectedBounds(){
+  const box=new T.Box3().setFromObject(this.player);
+  let minX=Infinity,maxX=-Infinity;
+  for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]){
+   const p=new T.Vector3(x,y,z).project(this.camera);
+   minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+  }
+  return {left:minX,right:maxX};
+ }
+ private auditSpawnAimTarget(){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  const pos=this.player.position.clone().addScaledVector(this.aim(),83);
+  const e=this.makeEnemy(pos,false,false,false,'heavy',0);
+  e.hp=e.max=1;
+ }
  private auditSeek(seconds:number){
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
   // Inspection-only: seek physical scenery for reference comparisons without
@@ -916,10 +932,27 @@ class GroundFlight {
   this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
   this.waveIndex=this.waves.findIndex(w=>w.at>this.missionTime);
   if(this.waveIndex<0)this.waveIndex=this.waves.length;
+  if(this.mission.id===0){
+   // Seeking only for screenshot review must not carry the prior scene's
+   // mission events/checkpoint/escort across geographically earlier scenes.
+   const depth=-this.player.position.z;
+   this.checkpoint=depth>=STAGE1.checkpoint;
+   this.levelEvent=depth>=STAGE1.escortDeadline?2:0;
+   this.rescueCount=0;this.rescueFinished=false;this.gateBonus=false;
+   this.openingCue=depth>=STAGE1.waterfallPassage?4:
+    depth>=STAGE1.waterfallApproach?3:
+    depth>=STAGE1.archesPreview?2:
+    depth>=STAGE1.canyonReveal?1:0;
+   for(const ally of this.allies)ally.hp=3;
+  }
+  this.noticeTime=this.radioTime=0;
+  $('notice').classList.remove('visible');$('radio').hidden=true;
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
   this.enemies=[];
   for(const s of this.shots)this.scene.remove(s.mesh);
   this.shots=[];
+  for(const supply of this.supplies){this.scene.remove(supply.mesh);supply.mesh.geometry.dispose();(supply.mesh.material as T.Material).dispose();}
+  this.supplies=[];
   this.cameraPanX=railCameraPan(this.laneX);
   this.camera.position.copy(this.player.position).add(new T.Vector3(-this.laneX+this.cameraPanX,4.1,13.5));
  }
