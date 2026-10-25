@@ -141,7 +141,7 @@ export class GroundWorld{
   }
   for(let j=0;j<rows-1;j++)for(let i=0;i<sideCount-1;i++){
    const a=j*sideCount+i,b=a+sideCount;
-   indices.push(a,b,a+1,a+1,b,b+1);
+   indices.push(a,a+1,b,a+1,b+1,b);
   }
   const geometry=new T.BufferGeometry();
   geometry.setAttribute('position',new T.Float32BufferAttribute(verts,3));
