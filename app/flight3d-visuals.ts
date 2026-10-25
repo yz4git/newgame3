@@ -244,9 +244,10 @@ export function createFlightSection(
     for(const name of Object.keys(geometry.attributes)){
       if(name!=='position'&&name!=='normal') geometry.deleteAttribute(name);
     }
-    const bucket=materials.get(object.material)||[];
+    const material=Array.isArray(object.material)?object.material[0]:object.material;
+    const bucket=materials.get(material)||[];
     bucket.push(geometry);
-    materials.set(object.material,bucket);
+    materials.set(material,bucket);
     if(!SHARED.has(object.geometry))object.geometry.dispose();
     root.remove(object);
   }
