@@ -80,6 +80,7 @@ class Flight3D {
   private invulnerable = 0;
   private flash = 0;
   private boss: Foe | null = null;
+  private pendingSectorChange = false;
   private enemies: Foe[] = [];
   private shots: Shot[] = [];
   private blasts: Blast[] = [];
@@ -158,7 +159,7 @@ class Flight3D {
   }
   private hideOverlay() { $('overlay').hidden = true; $('controls').hidden = false; }
   private start() {
-    this.stopObjects(); this.stage = 0; this.score = 0; this.shield = 5; this.boost = 100;
+    this.stopObjects(); this.pendingSectorChange = false; this.stage = 0; this.score = 0; this.shield = 5; this.boost = 100;
     this.craft.position.set(0, 0, 0); this.baseX = 0; this.baseY = 0; this.totalTime = 0;
     this.missileDelay = 0; this.invulnerable = 2;
     this.configureSector(); this.state = 'playing'; this.hideOverlay();
@@ -300,10 +301,9 @@ class Flight3D {
     if (e.boss) {
       this.boss = null; this.stage++;
       for (const other of this.enemies) this.scene.remove(other.mesh); this.enemies = [];
-      for (const shot of this.shots) this.scene.remove(shot.mesh); this.shots = [];
       if (this.stage === worlds.length) { this.finish(true); return; }
       this.shield = Math.min(5, this.shield + 1);
-      this.configureSector(); this.alert('SECTOR CLEARED — NEXT WORLD', 2.9);
+      this.pendingSectorChange = true;
     } else this.enemies.splice(this.enemies.indexOf(e), 1);
   }
   private explode(position: T.Vector3, size: number) {
@@ -410,6 +410,12 @@ class Flight3D {
       b.mesh.scale.setScalar(.2 + progress * 5.5);
       (b.mesh.material as T.MeshBasicMaterial).opacity = Math.max(0, (1 - progress) * .8);
       if (b.life <= 0) { this.scene.remove(b.mesh); b.mesh.material instanceof T.Material && b.mesh.material.dispose(); this.blasts.splice(i, 1); }
+    }
+    if (this.pendingSectorChange) {
+      this.pendingSectorChange = false;
+      for (const shot of this.shots) this.scene.remove(shot.mesh);
+      this.shots = []; this.configureSector();
+      this.alert('SECTOR CLEARED — NEXT WORLD', 2.9);
     }
     this.flash = Math.max(0, this.flash - dt);
     $('hit').style.opacity = String(this.flash);
