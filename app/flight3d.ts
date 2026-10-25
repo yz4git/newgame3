@@ -988,7 +988,7 @@ class GroundFlight {
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
   const position=this.player.position.clone().addScaledVector(this.aim(),110);
   const e=this.makeEnemy(position,false,false,false,'heavy',0);
-  e.fire=.04;e.warning=0;
+  e.fire=.04;e.warning=0;e.hp=e.max=99; // Invulnerable to incidental ally shots during delayed-fire timing test
  }
  private auditSpawnGroup(){
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
