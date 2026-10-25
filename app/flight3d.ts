@@ -220,59 +220,95 @@ class Flight3D {
     const g=createFlightSection(this.stage,index,z,this.floorMaterial,this.terrainMaterial,this.accentMaterial);
     const center=trackCenter(this.stage,z);g.position.x=center.x;g.position.y=center.y;g.rotation.y=trackYaw(this.stage,z);this.scene.add(g);this.scenery.push(g);
   }
-  private spawnFoe(boss = false) {
+  private spawnFoe(boss = false,lane?:{x:number;y:number;z:number},leader=false) {
     const seed = this.sectorTime * 9.13 + this.enemies.length * 4.3;
     const mesh = createFlightShip(boss ? 0x963d54 : this.stage % 2 ? 0xb26f75 : 0x9d577c, boss, this.stage);
-    const x = boss ? 0 : (rand(seed) - .5) * 13.2;
-    const y = boss ? 2.5 : (rand(seed + 4) - .5) * 10;
-    mesh.rotation.y = Math.PI;
-    mesh.position.set(x, y, this.craft.position.z - (boss ? 135 : enemySpawnRange));
+    const x=boss?0:(lane?.x??(rand(seed)-.5)*12);
+    const y=boss?1.5:(lane?.y??(rand(seed+4)-.5)*9);
+    mesh.rotation.y=Math.PI;
+    const spawnZ=this.craft.position.z-(boss?135:enemySpawnRange)-(lane?.z??0);
+    const center=trackCenter(this.stage,spawnZ);
+    mesh.position.set(center.x+x,center.y+y,spawnZ);
     this.scene.add(mesh);
-    const max = boss ? 145 + this.stage * 24 : (this.stage >= 3 ? 6 : 4);
-    const foe: Foe = { mesh, hp: max, max, radius: boss ? 8.0 : 2.15, phase: seed, x, y, fire: boss ? 1.3 : 1.3 + rand(seed + 8) * 1.5, boss, points: boss ? 5000 : 180 + this.stage * 65 };
+    const max=boss?180+this.stage*32:leader?14+this.stage*2:this.stage>=3?6:4;
+    const foe: Foe = { mesh, hp: max, max, radius: boss ? 8.0 : 2.15, phase: seed, x, y, fire: boss ? 1.3 : 1.3 + rand(seed + 8) * 1.5, boss, points:boss?5000:leader?920+this.stage*100:180+this.stage*65 };
     if (boss) {
       this.boss = foe; $('bosswrap').hidden = false; $('boss-name').textContent = 'GUARDIAN / ' + worldNames[this.stage];
       this.alert('WARNING — 3D GUARDIAN', 2.4);
     } else this.enemies.push(foe);
   }
-  private fireShot(origin: T.Vector3, velocity: T.Vector3, foe: boolean, power: number, homing = false) {
+  private fireShot(origin:T.Vector3,velocity:T.Vector3,foe:boolean,power:number,homing=false,bomb=false) {
     if (this.shots.length >= 185) return;
     const mesh = new T.Mesh(shotGeo, foe ? hostile : homing ? missileMat : friendly);
     mesh.position.copy(origin); mesh.scale.set(homing ? .46 : .22, homing ? .46 : .22, homing ? 1.0 : 1.2);
     this.scene.add(mesh);
-    this.shots.push({ mesh, velocity, foe, power, radius: homing ? .68 : .3, homing, life: 3.2 });
+    this.shots.push({mesh,velocity,foe,power,radius:homing?.68:.3,homing,life:3.2,bomb});
   }
-  private fireLasers() {
-    let lock: Foe | null = null, dist = 210;
-    for (const f of [...this.enemies, ...(this.boss ? [this.boss] : [])]) {
-      const dz = this.craft.position.z - f.mesh.position.z;
-      const dx = Math.abs(f.mesh.position.x - this.craft.position.x), dy = Math.abs(f.mesh.position.y - this.craft.position.y);
-      if (dz > 0 && dz < dist && dx < 6 && dy < 6) { lock = f; dist = dz; }
+  private aimRay(){return this.camera.getWorldDirection(new T.Vector3()).normalize();}
+  private findLock():Foe|null{
+    const origin=this.craft.position.clone(),ray=this.aimRay();
+    let best:Foe|null=null,rank=Infinity;
+    for(const foe of [...this.enemies,...(this.boss?[this.boss]:[])]){
+      const delta=foe.mesh.position.clone().sub(origin),depth=delta.dot(ray);
+      if(depth<8||depth>220)continue;
+      const miss=delta.addScaledVector(ray,-depth).length();
+      const tolerance=foe.boss?9.5:Math.max(3.8,depth*.045);
+      const score=miss/tolerance+depth*.0006;
+      if(miss<tolerance&&score<rank){best=foe;rank=score;}
     }
-    this.lockTarget=lock;
-    for (const side of [-1, 1]) {
-      const origin = this.craft.position.clone().add(new T.Vector3(side * .62, -.10, -1.6));
-      const aim = new T.Vector3(0, 0, -1);
-      if (lock) aim.lerp(lock.mesh.position.clone().sub(origin).normalize(), .28).normalize();
-      this.fireShot(origin, aim.multiplyScalar(laserSpeed(this.currentSpeed)), false, 1);
+    return best;
+  }
+  private beginFire(){
+    if(this.state!=='playing'||this.fireHeld)return;
+    this.fireHeld=true;this.charge=0;this.laserDelay=0;
+    this.fireLasers();
+  }
+  private endFire(){
+    if(!this.fireHeld)return;
+    this.fireHeld=false;
+    if(this.state==='playing'&&this.charge>=CHARGE_SECONDS){
+      const target=this.lockTarget??this.findLock();
+      const origin=this.craft.position.clone().add(new T.Vector3(0,.2,-1.8));
+      const direction=target?target.mesh.position.clone().sub(origin).normalize():this.aimRay();
+      this.fireShot(origin,direction.multiplyScalar(missileSpeed(this.currentSpeed)),false,15,true);
+      this.sfx(240,.24);
+      this.alert(target?'LOCK-ON / CHARGE HIT':'CHARGE BLAST',.75);
+    }
+    this.charge=0;
+  }
+  private barrelRoll(sign:number){
+    if(this.state!=='playing'||this.rollCooldown>0)return;
+    this.rollSign=sign;this.rollTime=ROLL_DURATION;this.rollCooldown=ROLL_COOLDOWN;
+    this.cameraShake=.09;this.sfx(370,.16);
+  }
+  private fireLasers(){
+    if(this.state!=='playing')return;
+    const target=this.findLock();this.lockTarget=target;
+    for(const sign of [-1,1]){
+      const from=this.craft.position.clone().add(new T.Vector3(sign*.75,-.1,-2));
+      const dir=this.aimRay();
+      if(target)dir.lerp(target.mesh.position.clone().sub(from).normalize(),.26).normalize();
+      this.fireShot(from,dir.multiplyScalar(laserSpeed(this.currentSpeed)),false,1);
     }
   }
   private fireMissile() {
     if (this.state !== 'playing' || this.missileDelay > 0) return;
-    this.missileDelay = 5.5;
+    this.missileDelay = 8.0;
     let target: Foe | null = this.boss, nearest = 200;
     if (!target) for (const e of this.enemies) { const d = this.craft.position.distanceTo(e.mesh.position); if (d < nearest) { target = e; nearest = d; } }
     const from = this.craft.position.clone().add(new T.Vector3(0, -.1, -2));
     const dir = target ? target.mesh.position.clone().sub(from).normalize() : new T.Vector3(0, 0, -1);
-    this.fireShot(from, dir.multiplyScalar(missileSpeed(this.currentSpeed)), false, 12, true);
+    this.fireShot(from,dir.multiplyScalar(missileSpeed(this.currentSpeed)),false,23,true,true);
     this.sfx(170, .19);
     $('missile').classList.add('fired'); setTimeout(() => $('missile').classList.remove('fired'), 150);
   }
   private enemyShot(e: Foe) {
     const origin = e.mesh.position.clone().add(new T.Vector3(0, 0, e.boss ? 3.5 : 1.3));
     const aim = this.craft.position.clone().sub(origin).normalize();
-    for (let n = 0; n < (e.boss ? 5 : 1); n++) {
-      const spread = (n - (e.boss ? 2 : 0)) * .18;
+    const phase=e.boss?bossPhase(e.hp,e.max):0;
+    const count=e.boss?(phase===1?3:phase===2?5:7):1;
+    for(let n=0;n<count;n++){
+      const spread=(n-(count-1)/2)*(e.boss?(phase===3?.27:.20):.18);
       const velocity = aim.clone().add(new T.Vector3(spread, Math.sin(e.phase + n) * .065, 0)).normalize().multiplyScalar(e.boss ? 43 : 34 + this.stage * 1.5);
       this.fireShot(origin, velocity, true, 1);
     }
@@ -286,7 +322,7 @@ class Flight3D {
     e.hp -= amount;
     if (e.hp > 0) return;
     this.explode(e.mesh.position, e.boss ? 7 : 2.3);
-    this.scene.remove(e.mesh); disposeFlightVisual(e.mesh,true); this.score += e.points; this.sfx(e.boss ? 72 : 115, e.boss ? .45 : .10);
+    this.scene.remove(e.mesh);disposeFlightVisual(e.mesh,true);this.combo++;this.score+=Math.round(e.points*(1+Math.min(12,this.combo)*.12)); this.sfx(e.boss ? 72 : 115, e.boss ? .45 : .10);
     if (e.boss) {
       this.boss = null; this.stage++;
       for (const other of this.enemies){this.scene.remove(other.mesh);disposeFlightVisual(other.mesh,true);} this.enemies = [];
@@ -319,7 +355,9 @@ class Flight3D {
   private update(dt: number) {
     this.totalTime += dt; this.sectorTime += dt;
     this.invulnerable = Math.max(0, this.invulnerable - dt);
-    this.missileDelay = Math.max(0, this.missileDelay - dt);
+    this.missileDelay=Math.max(0,this.missileDelay-dt);
+    this.rollCooldown=Math.max(0,this.rollCooldown-dt);
+    this.rollTime=Math.max(0,this.rollTime-dt);
     this.noticeTime -= dt;
     if (this.noticeTime < 0) $('notice').classList.remove('visible');
     const k = this.keys;
