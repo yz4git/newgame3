@@ -10,8 +10,10 @@
  <canvas id="flight" aria-label="3D宇宙空戦ゲーム・ドラッグで操縦"></canvas>
  <div id="progress-wrap"><i id="progress"></i></div>
  <div id="hit"></div>
- <div class="sight sight-near" aria-hidden="true"><i></i></div>
- <div class="sight sight-far" aria-hidden="true"></div>
+ <div id="sight-near" class="sight sight-near" aria-hidden="true"><i></i></div>
+ <div id="sight-far" class="sight sight-far" aria-hidden="true"></div>
+ <div id="edge-left" class="rail-boundary rail-boundary-left" aria-hidden="true">◀</div>
+ <div id="edge-right" class="rail-boundary rail-boundary-right" aria-hidden="true">▶</div>
  <div id="target-ring" class="target-ring" hidden aria-hidden="true"><span>LOCK <b id="target-distance">000 M</b></span></div>
  <header class="hud">
   <div class="hud-left">
@@ -60,7 +62,7 @@
     <div class="routes"><button id="route-a"></button><button id="route-b"></button></div>
    </div>
    <a href="./" class="return">← 通常モードへ戻る</a>
-   <div class="keyguide">iPhone: ドラッグ操縦 / FIREタップ・長押し / ROLL / LOOP / BOOST / BRAKE<br>PC: WASD・方向キー / Space射撃 / Q・Eロール / R宙返り / Uターン / Shift加速 / B減速 / Mボム</div>
+   <div class="keyguide">iPhone: 左右に大きくドラッグして画面を横スクロール / FIREタップ・長押し / ROLL / BOOST<br>PC: WASD・方向キー / Space射撃 / Q・Eロール / R宙返り / Uターン / Shift加速 / B減速 / Mボム</div>
   </div>
  </section>
 </main>
