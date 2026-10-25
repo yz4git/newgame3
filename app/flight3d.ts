@@ -4,7 +4,7 @@ import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFli
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
 import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
-import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver} from './flight-stage-direction.ts';
+import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver,hiddenCourseUnlocked} from './flight-stage-direction.ts';
 import type {WaveType} from './nova64-rules.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
@@ -423,7 +423,7 @@ class GroundFlight {
  private spawnBoss(){
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
   this.enemies=[];
-  const specialWalker=this.mission.id===0&&this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)&&this.terrain.gateState.passed===gateCount();
+  const specialWalker=this.mission.id===0&&hiddenCourseUnlocked(this.rescueFinished,this.allies.some(a=>a.name==='ECHO'&&a.hp>0),this.terrain.gateState.passed,gateCount());
   // Normal route: siege walker. Seven arches and rescue: attack carrier.
   const model=this.mission.id===0?createFirstStageBoss(!specialWalker):createFlightShip(0xac5269,true,this.mission.scene);
   if(this.mission.id!==0)model.scale.multiplyScalar(1.25);
@@ -522,7 +522,7 @@ class GroundFlight {
    this.overlay('CAMPAIGN CLEAR','MISSION COMPLETE','TOTAL HITS '+this.hits+' / GRADE '+rating+'<br>'+this.route.map(i=>MISSIONS[i].name).join(' → '),'NEW GAME');
    return;
   }
-  const unlock=this.mission.id===0?this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)&&this.terrain.gateState.passed===gateCount():
+  const unlock=this.mission.id===0?hiddenCourseUnlocked(this.rescueFinished,this.allies.some(a=>a.name==='ECHO'&&a.hp>0),this.terrain.gateState.passed,gateCount()):
     routeSelection(this.mission,this.missionHits,this.allies.filter(a=>a.hp>0).length,this.gateBonus)===this.mission.next[1];
   this.gateBonus=!!unlock;
   const chosen=this.mission.next[unlock&&this.mission.next.length>1?1:0];
@@ -809,7 +809,7 @@ class GroundFlight {
     }
     if(distance>=STAGE1.waterfallPassage&&this.openingCue===3){
      this.openingCue=4;
-     if(this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)&&this.terrain.gateState.passed===gateCount()){
+     if(hiddenCourseUnlocked(this.rescueFinished,this.allies.some(a=>a.name==='ECHO'&&a.hp>0),this.terrain.gateState.passed,gateCount())){
       this.gateBonus=true;this.comms('ECHO','よし！後をついてこい。隠し空路へ進む！',3.5);
      }else this.comms('NOVA CONTROL','通常の迎撃エリアへ進入。大型目標に備えよ。',3);
     }
