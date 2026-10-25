@@ -103,7 +103,17 @@ export class GroundWorld{
  private allRange=false;
  private groundMaterial=mat(0xffffff,.9);
  private seaMaterial=new T.MeshStandardMaterial({color:0x317b9b,metalness:.42,roughness:.25,transparent:true,opacity:.94,side:T.DoubleSide,depthWrite:true});
- private waterfallMat=new T.MeshStandardMaterial({color:0x9bdfee,metalness:.15,roughness:.21,transparent:true,opacity:.54,side:T.DoubleSide,depthWrite:false});
+ private waterfallMat=new T.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:'varying vec3 vP; uniform float uTime; void main(){'+
+   'float wave=0.5+0.5*sin(vP.x*0.7+vP.y*0.3+uTime*3.2);'+
+   'float stream=pow(0.5+0.5*sin(vP.y*1.25+vP.x*0.5+uTime*4.9),4.0);'+
+   'float foam=pow(0.5+0.5*sin(vP.x*2.0-vP.y*0.5+uTime*5.6),7.0);'+
+   'vec3 color=mix(vec3(0.18,0.46,0.56),vec3(0.7,0.9,0.97),stream*0.38+foam*0.29);'+
+   'gl_FragColor=vec4(color,0.22+0.20*wave+0.16*foam);}',
+  side:T.DoubleSide,transparent:true,depthWrite:false,blending:T.NormalBlending
+ });
  private roadMat=mat(0x2f3a43,.95);
  private roadLine=new T.MeshBasicMaterial({color:0xbdd9df});
  private seaFoam=new T.MeshBasicMaterial({color:0x9bc7cc,transparent:true,opacity:.20,depthWrite:false});
@@ -360,6 +370,7 @@ export class GroundWorld{
   this.root.add(group);this.tiles.push({group,z:tileZ,colliders});
  }
  step(playerZ:number,allRange:boolean){
+  this.waterfallMat.uniforms.uTime.value=performance.now()*.001;
   if(allRange)return;
   let iterations=0;
   while(iterations++<7){
