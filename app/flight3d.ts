@@ -766,7 +766,7 @@ class GroundFlight {
    const candidate=this.acquire();
    if(candidate!==this.lockCandidate){this.lockCandidate=candidate;this.lockTimer=0;}
    else if(candidate)this.lockTimer+=dt;
-   if(candidate&&this.charge>.28&&this.lockTimer>.18)this.lockedTarget=candidate;
+   if(candidate&&this.charge>.28&&this.lockTimer>.18&&this.lockedTarget!==candidate){this.lockedTarget=candidate;this.sound(990,.11,.018);}
    if(this.lockedTarget&&this.lockedTarget.hp<=0)this.lockedTarget=null;
   }
   this.updatePlayer(dt);
@@ -950,11 +950,14 @@ class GroundFlight {
   const warning=this.playing&&this.mission.mode==='corridor'?railEdgeWarning(this.laneX):0;
   $('edge-left').style.opacity=String(this.laneX<0?warning:0);
   $('edge-right').style.opacity=String(this.laneX>0?warning:0);
+  $('sight-near').classList.toggle('charging',this.fireHeld&&this.charge>.28&&!this.lockedTarget);
+  $('sight-far').classList.toggle('charging',this.fireHeld&&this.charge>.28&&!this.lockedTarget);
   $('sight-near').classList.toggle('locked',this.fireHeld&&!!this.lockedTarget);
   $('sight-far').classList.toggle('locked',this.fireHeld&&!!this.lockedTarget);
   const marker=$('target-ring');
   const e=this.fireHeld&&this.charge>.28?this.lockedTarget??this.lockCandidate:null;
   marker.classList.toggle('locked',!!e&&e===this.lockedTarget);
+  $('lock-state').textContent=e&&e===this.lockedTarget?'LOCK':'ACQUIRE';
   if(e&&this.playing&&e.hp>0){
    const ndc=e.position.clone().project(this.camera);
    const visible=ndc.z>0&&ndc.z<1&&Math.abs(ndc.x)<.93&&Math.abs(ndc.y)<.91;
