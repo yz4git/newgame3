@@ -381,6 +381,19 @@ export class GroundWorld{
     item(group,box,this.seaMaterial,x-30+n*7,-15.2,4.5,5.4,.22,5);
    }
   }
+  if(stage===0&&Math.abs(tileZ+1080)<=HALF-.8){
+   // Actual fly-through checkpoint hoop in the geography rather than just
+   // a text notification. It persists in-world until its tile scrolls past.
+   const checkpointZ=-1080,local=checkpointZ-tileZ;
+   const route=routeCenter(0,checkpointZ),height=route.y+3.2;
+   item(group,torus,this.amber,route.x,height,local,7.3,7.3,.9);
+   item(group,torus,this.emitter,route.x,height,local-.25,6.25,6.25,.9);
+   for(const side of [-1,1]){
+    const x=route.x+side*8.1,base=heightAt(0,x,checkpointZ);
+    item(group,box,this.wallMat,x,base+6.2,local,1.5,12.4,2.0);
+    item(group,ico,this.amber,x,base+12.7,local,.8,1.0,.8);
+   }
+  }
   if(stage===0)for(const gate of this.gates)
    if(Math.abs(gate.z-tileZ)<=HALF-.8)this.makeArch(group,colliders,gate,gate.z-tileZ);
   bake(group);
