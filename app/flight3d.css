@@ -87,3 +87,8 @@ body{position:fixed;inset:0}button,a{font:inherit;-webkit-tap-highlight-color:tr
  .flight-left .help{display:none}
  #controls{bottom:max(7px,env(safe-area-inset-bottom))}
 }
+
+.radio-panel{position:absolute;z-index:6;left:max(17px,env(safe-area-inset-left));bottom:clamp(170px,22vh,235px);width:min(320px,65vw);min-height:67px;display:flex;gap:10px;align-items:center;padding:9px 11px;background:linear-gradient(105deg,#071b30e6,#061527a8);border:1px solid #6ab8e560;box-shadow:0 8px 24px #0008;pointer-events:none}
+.radio-panel .radio-avatar{height:47px;width:42px;min-width:42px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#145c73,#0c2338);color:#85ebff;font-size:11px;font-weight:900;transform:skew(-5deg);border:1px solid #8dedff75}
+.radio-content{min-width:0}.radio-content strong{font-size:9px;letter-spacing:.15em;color:#75e0ff}.radio-content p{font-size:10px;color:#d6e9f5;line-height:1.55;margin:4px 0 0}
+@media(max-height:520px){.radio-panel{bottom:130px;left:12px;min-height:45px;padding:6px}.radio-avatar{display:none!important}.radio-content p{font-size:9px}}
