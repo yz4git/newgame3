@@ -275,6 +275,48 @@ export function disposeFlightVisual(root:T.Object3D,materials=false){
   for(const m of mats)m.dispose();
 }
 
+
+/** Camera-centered spherical atmosphere with real 3D directional color.
+ * No photo skybox, billboard or environment texture is required. */
+export class FlightAtmosphere {
+  readonly material=new T.ShaderMaterial({
+    uniforms:{
+      upper:{value:new T.Color(0x040b1b)},
+      lower:{value:new T.Color(0x132b45)},
+      sun:{value:new T.Color(0x5caacc)}
+    },
+    vertexShader: 'varying vec3 vRay; void main(){vRay=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader: String.raw\`
+      varying vec3 vRay;
+      uniform vec3 upper;
+      uniform vec3 lower;
+      uniform vec3 sun;
+      void main(){
+        vec3 dir=normalize(vRay);
+        float band=smoothstep(-0.62,0.78,dir.y);
+        vec3 col=mix(lower,upper,band);
+        float halo=pow(max(0.0,dot(dir,normalize(vec3(-0.57,0.32,-0.77)))),35.0);
+        col+=sun*halo*0.48;
+        col+=sun*0.055*exp(-abs(dir.y+0.07)*8.0);
+        gl_FragColor=vec4(col,1.0);
+      }
+    \`,
+    side:T.BackSide,depthWrite:false,depthTest:false,
+    fog:false
+  });
+  readonly mesh=new T.Mesh(new T.SphereGeometry(300,28,16),this.material);
+  constructor(){
+    this.mesh.renderOrder=-1000;
+    this.mesh.frustumCulled=false;
+  }
+  setPalette(upper:number,lower:number,sun:number) {
+    (this.material.uniforms.upper.value as T.Color).setHex(upper);
+    (this.material.uniforms.lower.value as T.Color).setHex(lower);
+    (this.material.uniforms.sun.value as T.Color).setHex(sun);
+  }
+  follow(position:T.Vector3){this.mesh.position.copy(position);}
+}
+
 export class FlightVfx {
   readonly root = new T.Group();
   private streaks: T.InstancedMesh;
