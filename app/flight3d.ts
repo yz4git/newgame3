@@ -419,7 +419,9 @@ class GroundFlight {
     new T.RingGeometry(2.15,2.7,16),
     new T.MeshBasicMaterial({color:0xffb344,transparent:true,opacity:.78,depthWrite:false,side:T.DoubleSide})
   );
-  warningMesh.name='attack-warning';warningMesh.visible=false;warningMesh.position.z=ground?-3.5:4.3;
+  warningMesh.name='attack-warning';warningMesh.visible=false;
+  // Enemy aircraft face toward the player after their Y=PI rotation: local -Z is the near side.
+  warningMesh.position.z=ground?4.3:-4.8;
   model.add(warningMesh);
   const enemy:Target={model,position:model.position,hp,max:hp,radius:ground?2.8:elite?4.4:3.4,age:0,boss:false,ground,phase:seed(this.time*11+pos.z),fire:1.2+seed(pos.x+pos.z)*1.3,
    warning:0,warningMesh,points:elite?6:ground?3:1,rescue,seed:seed(pos.z+pos.x)*6,side:0,pattern,flightIndex,birth:pos.clone()};
@@ -478,7 +480,14 @@ class GroundFlight {
   model.rotation.y=Math.PI;
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
-  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,warning:0,warningMesh:null,points:5,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
+  const warningMesh=new T.Mesh(
+   new T.RingGeometry(4.8,5.6,24),
+   new T.MeshBasicMaterial({color:0xffa535,transparent:true,opacity:.8,depthWrite:false,side:T.DoubleSide})
+  );
+  warningMesh.name='attack-warning';warningMesh.visible=false;
+  warningMesh.position.z=this.mission.id===0?(model.userData.variant==='carrier'?-23:-11):-5;
+  model.add(warningMesh);
+  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,warning:0,warningMesh,points:5,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
   if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'大型空中母艦が接近！発光する動力コアを狙え！':'巨大歩行兵器が起動！脚部と背後の装甲が弱点だ！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
