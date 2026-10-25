@@ -1,6 +1,6 @@
 import * as T from 'three';
 import './flight3d.css';
-import {createFlightShip,animateFlightShip,createFlightSection,FlightVfx,disposeFlightVisual} from './flight3d-visuals.ts';
+import {createFlightShip,animateFlightShip,createFlightSection,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
 import {SPEED_MULTIPLIER,cruiseSpeed,boostSpeed,laserSpeed,missileSpeed,enemySpawnRange,displaySpeed} from './flight3d-tuning.ts';
 
 const $ = <E extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as E;
@@ -37,6 +37,7 @@ class Flight3D {
   private renderer: T.WebGLRenderer;
   private craft = createFlightShip(0xd5e5ef);
   private vfx = new FlightVfx(matchMedia('(pointer:coarse)').matches);
+  private atmosphere=new FlightAtmosphere();
   private currentSpeed = cruiseSpeed(0);
   private lockTarget: Foe | null = null;
   private cameraShake = 0;
@@ -81,7 +82,7 @@ class Flight3D {
     const sun = new T.DirectionalLight(0xffe1c5, 2.5);
     sun.position.set(-35, 60, 25); this.scene.add(sun);
     this.craft.rotation.y = 0; // player faces -Z; hostile ships face +Z
-    this.scene.add(this.craft,this.vfx.root);
+    this.scene.add(this.atmosphere.mesh,this.craft,this.vfx.root);
     this.scene.add(new T.AmbientLight(0x5d7fbb, .32));
     this.attachControls();
     this.resize();
@@ -166,6 +167,7 @@ class Flight3D {
     const p = worlds[this.stage];
     this.scene.background = new T.Color(p.sky);
     this.scene.fog = new T.Fog(p.haze, 64, 260);
+    this.atmosphere.setPalette(p.sky,p.haze,p.light);
     this.floorMaterial.color.setHex(p.ground);
     this.terrainMaterial.color.setHex(p.metal);
     this.accentMaterial.color.setHex(p.light);
@@ -415,6 +417,7 @@ class Flight3D {
         reticle.classList.toggle('boss-lock',marked.boss);
       }
     }else reticle.hidden=true;
+    this.atmosphere.follow(this.camera.position);
     this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame(time => this.frame(time));
   }
