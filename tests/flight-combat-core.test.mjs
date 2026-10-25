@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  ARCADE,combatHitPoints,laserDamage,attackCue,cueDuration,
- bombHits,bombFalloff,comboReward,sightRay
+ bombHits,bombFalloff,comboReward,sightRay,rayMissDistance
 } from '../app/flight-combat-core.ts';
 
 test('ordinary foes fall to a correctly aimed basic laser, while elites remain durable',()=>{
@@ -44,4 +44,12 @@ test('both sight frames sit exactly on a single world-space firing ray',()=>{
   assert.ok(Math.abs((near[axis]-origin[axis])/70-(far[axis]-origin[axis])/145)<1e-12);
  }
  assert.ok(near.z>far.z);
+});
+
+test('a luminous core behind the outer boss hitbox still receives aimed damage',()=>{
+ const nose={x:0,y:0,z:-93},core={x:0,y:0,z:-100};
+ assert.equal(rayMissDistance({x:0,y:0,z:0},{x:0,y:0,z:-360},core),0);
+ assert.ok(rayMissDistance(nose,{x:0,y:0,z:-360},core)<.01);
+ assert.ok(rayMissDistance(nose,{x:0,y:0,z:-360},{x:7,y:0,z:-100})>4.8);
+ assert.equal(rayMissDistance({x:0,y:0,z:-105},{x:0,y:0,z:-360},core),Infinity);
 });
