@@ -112,6 +112,7 @@ class GroundFlight {
     start:()=>this.startCampaign(),pause:()=>this.pause(),
     auditSeek:(seconds:number)=>this.auditSeek(seconds),
     auditSpawnAimTarget:()=>this.auditSpawnAimTarget(),
+    auditSpawnGroup:()=>this.auditSpawnGroup(),
     auditSetLane:(x:number)=>this.auditSetLane(x)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
@@ -477,7 +478,7 @@ class GroundFlight {
   model.rotation.y=Math.PI;
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
-  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,warning:0,warningMesh:null,points:80,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
+  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,warning:0,warningMesh:null,points:5,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
   if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'大型空中母艦が接近！発光する動力コアを狙え！':'巨大歩行兵器が起動！脚部と背後の装甲が弱点だ！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
@@ -535,7 +536,7 @@ class GroundFlight {
   this.comboClock=this.time;
   const bonus=comboReward(this.combo);
   this.score+=bonus.points;
-  if(bonus.label&&this.combo===3||this.combo===5||this.combo===10)this.notice(bonus.label,.8);
+  if(bonus.label&&[3,5,10].includes(this.combo))this.notice(bonus.label,.8);
   if(e.rescue){
    this.rescueCount=Math.max(0,this.rescueCount-1);
    if(this.rescueCount===0){this.rescueFinished=true;this.comms('ECHO','助かった！ありがとう！後で秘密の進路を教える。',3.5);this.score+=750;}
@@ -964,6 +965,12 @@ class GroundFlight {
    minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
   }
   return {left:minX,right:maxX};
+ }
+ private auditSpawnGroup(){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  const base=this.player.position.clone().addScaledVector(this.aim(),133);
+  for(const x of [-12,0,12])this.makeEnemy(
+   base.clone().add(new T.Vector3(x,0,0)),false,false,false,'heavy',Math.round(x+12));
  }
  private auditSpawnAimTarget(){
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
