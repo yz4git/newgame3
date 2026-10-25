@@ -40,7 +40,8 @@ function bake(group:T.Group){
  for(const o of [...group.children]){
   if(!(o instanceof T.Mesh))continue;
   o.updateMatrix();
-  const geo=o.geometry.clone().applyMatrix4(o.matrix);
+  let geo=o.geometry.clone().applyMatrix4(o.matrix);
+  if(geo.index){const expanded=geo.toNonIndexed();geo.dispose();geo=expanded;}
   for(const k of Object.keys(geo.attributes))if(k!=='position'&&k!=='normal'&&k!=='color')geo.deleteAttribute(k);
   const p=buckets.get(o.material)||[];p.push(geo);buckets.set(o.material,p);
   group.remove(o);
