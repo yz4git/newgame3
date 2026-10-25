@@ -286,7 +286,7 @@ export class FlightAtmosphere {
       sun:{value:new T.Color(0x5caacc)}
     },
     vertexShader: 'varying vec3 vRay; void main(){vRay=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-    fragmentShader: String.raw\`
+    fragmentShader: String.raw`
       varying vec3 vRay;
       uniform vec3 upper;
       uniform vec3 lower;
@@ -300,7 +300,7 @@ export class FlightAtmosphere {
         col+=sun*0.055*exp(-abs(dir.y+0.07)*8.0);
         gl_FragColor=vec4(col,1.0);
       }
-    \`,
+    `,
     side:T.BackSide,depthWrite:false,depthTest:false,
     fog:false
   });
