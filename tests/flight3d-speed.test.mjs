@@ -26,6 +26,6 @@ test('continuous swept collision catches full-speed tunnelling in 3D', () => {
   const foe={x:0,y:1,z:-3};
   assert.equal(sweptCollision(ship0,ship1,foe,foe,1),true);
   assert.equal(sweptCollision(ship0,ship1,{x:5,y:1,z:-3},{x:5,y:1,z:-3},1),false);
-  assert.equal(sweptCollision(ship0,ship1,{x:3,y:1,z:-3},{x:0,y:1,z:2},.8),true);
+  assert.equal(sweptCollision(ship0,ship1,{x:3,y:1,z:-3},{x:-3,y:1,z:-3},.8),true);
   assert.equal(sweptCollision(ship0,ship0,ship0,ship0,.5),true);
 });
