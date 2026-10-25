@@ -76,7 +76,7 @@ await sleep(5800);
 await capture('04-combat');
 // Inspect later authored world segments without waiting several minutes for the
 // software-rendered CI browser; this is a diagnostic seek, not simulated play.
-for(const [seconds,label] of [[8,'04a-city'],[22,'04b-canyon'],[31,'04c-arches'],[44,'04d-waterfall'],[49,'04e-finale']]){
+for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches'],[41,'04d-waterfall-approach'],[43,'04e-waterfall-pass'],[49,'04f-finale']]){
  await evaluate('window.__novaFlight3D.auditSeek('+seconds+')');
  await sleep(800);
  await capture(label);
