@@ -6,7 +6,7 @@ import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
 import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver,hiddenCourseUnlocked} from './flight-stage-direction.ts';
 import type {WaveType} from './nova64-rules.ts';
-import {ARCADE,combatHitPoints,laserDamage,attackCue,cueDuration,bombHits,bombFalloff,comboReward,sightRay} from './flight-combat-core.ts';
+import {ARCADE,combatHitPoints,laserDamage,attackCue,cueDuration,bombHits,bombFalloff,comboReward,sightRay,rayMissDistance} from './flight-combat-core.ts';
 import {nextRenderScale,adaptivePixelRatio} from './flight-performance.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
@@ -784,7 +784,11 @@ class GroundFlight {
       // damaged, but a close/accurate core shot applies a large multiplier.
       const core=target.boss?target.model.userData.weakpoint as T.Object3D|undefined:undefined;
       const weakpoint=core?.getWorldPosition(new T.Vector3());
-      const hitCore=!!weakpoint&&swept(P(from),P(s.mesh.position),P(weakpoint),P(weakpoint),4.3+s.radius);
+      // The boss's outer hit sphere is larger than the core and the projectile
+      // hits that invisible sphere FIRST. Evaluate the projectile's trajectory
+      // toward the luminous core so a precise shot cannot be stolen by armor.
+      const hitCore=!!weakpoint&&(swept(P(from),P(s.mesh.position),P(weakpoint),P(weakpoint),4.3+s.radius)
+        ||rayMissDistance(P(from),P(s.velocity),P(weakpoint))<=4.3+s.radius);
       const power=core?(hitCore?s.damage*2.7:s.damage*.62):s.damage;
       this.destroyTarget(target,power);
       if(hitCore)this.vfx.burst(weakpoint!,2.5,0xffce88);
