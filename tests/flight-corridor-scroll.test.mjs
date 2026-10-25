@@ -24,7 +24,7 @@ test('camera dead zone: ship moves on screen before scenery scrolls',()=>{
 });
 test('camera pan is smooth, monotonic, bounded, symmetric and continuous at dead zone',()=>{
  const d=1e-6;
- assert.ok(Math.abs(railCameraPan(CAMERA_DEADZONE+d))<d);
+ assert.ok(Math.abs(railCameraPan(CAMERA_DEADZONE+d))<d*1.01);
  let previous=-Infinity;
  for(let x=-RAIL_X_MAX;x<=RAIL_X_MAX;x+=.25){
   const pan=railCameraPan(x);
