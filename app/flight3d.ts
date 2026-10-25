@@ -2,6 +2,7 @@ import * as T from 'three';
 import './flight3d.css';
 import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
+import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
 /**
@@ -376,15 +377,17 @@ class GroundFlight {
  private spawnBoss(){
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
   this.enemies=[];
-  const model=createFlightShip(0xac5269,true,this.mission.scene);
-  model.scale.multiplyScalar(1.25);
+  const specialWalker=this.mission.id===0&&this.rescueFinished&&this.terrain.gateState.passed===gateCount();
+  const model=this.mission.id===0?createFirstStageBoss(specialWalker):createFlightShip(0xac5269,true,this.mission.scene);
+  if(this.mission.id!==0)model.scale.multiplyScalar(1.25);
   const z=this.mission.mode==='corridor'?this.player.position.z-155:Math.cos(this.mission.id)*95;
   const route=routeCenter(this.mission.scene,z);
-  model.position.set(this.mission.mode==='corridor'?route.x:Math.sin(this.mission.id)*95,10,z);
+  model.position.set(this.mission.mode==='corridor'?route.x:Math.sin(this.mission.id)*95,this.mission.id===0?7:10,z);
   model.rotation.y=Math.PI;
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
-  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:15,points:80,rescue:false,seed:123,side:0};
+  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&!specialWalker?22:15,points:80,rescue:false,seed:123,side:0};
+  if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'巨大歩行兵器が起動！発光する装甲のコアを狙え！':'大型空中母艦、接近！真正面の動力コアを撃て！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
   this.comms('NOVA COMMAND','大型敵接近！発光した中枢を狙え！',4);
@@ -605,7 +608,8 @@ class GroundFlight {
      this.enemyShoot(e);e.fire=e.boss?1.35-.12*bossPhase(e.hp,e.max):2+seed(e.phase)*1.6;
     }else e.fire=.5;
    }
-   if(!e.ground)animateFlightShip(e.model,this.time+e.phase,1);
+   if(e.boss&&this.mission.id===0)animateFirstStageBoss(e.model,e.age,bossPhase(e.hp,e.max));
+   else if(!e.ground)animateFlightShip(e.model,this.time+e.phase,1);
    if(!e.boss&&!e.ground&&swept(P(this.previousPosition),P(this.player.position),P(prior),P(e.position),e.radius+1)){
     this.hurt();this.destroyTarget(e,999);
    }
@@ -629,7 +633,14 @@ class GroundFlight {
     for(const target of targets){
      if(target.hp>0&&swept(P(from),P(s.mesh.position),P(target.position),P(target.position),target.radius+s.radius)){
       const position=target.position.clone();
-      this.destroyTarget(target,s.damage);
+      // Radiant guardian core is mechanically meaningful; body armour can be
+      // damaged, but a close/accurate core shot applies a large multiplier.
+      const core=target.boss?target.model.userData.weakpoint as T.Object3D|undefined:undefined;
+      const weakpoint=core?.getWorldPosition(new T.Vector3());
+      const hitCore=!!weakpoint&&swept(P(from),P(s.mesh.position),P(weakpoint),P(weakpoint),4.3+s.radius);
+      const power=core?(hitCore?s.damage*2.7:s.damage*.62):s.damage;
+      this.destroyTarget(target,power);
+      if(hitCore)this.vfx.burst(weakpoint!,2.5,0xffce88);
       if(s.bomb){this.impact(position,13);for(const other of targets)if(other!==target&&other.hp>0&&other.position.distanceTo(position)<32)this.destroyTarget(other,40);}
       consumed=true;break;
      }
