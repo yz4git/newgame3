@@ -15,7 +15,8 @@ export const EDGE_WARNING_START=RAIL_X_MAX-4.0;
 /** Camera first leaves the ship free to move; beyond the dead zone it slides. */
 export function railCameraPan(localX:number){
  const x=clamp(localX,-RAIL_X_MAX,RAIL_X_MAX);
- return Math.sign(x)*Math.max(0,Math.abs(x)-CAMERA_DEADZONE)*CAMERA_SCROLL_GAIN;
+ const outside=Math.max(0,Math.abs(x)-CAMERA_DEADZONE);
+ return outside===0?0:Math.sign(x)*outside*CAMERA_SCROLL_GAIN;
 }
 export function railCameraPanY(localY:number){
  return (clamp(localY,RAIL_Y_MIN,RAIL_Y_MAX)-1.2)*.27;
