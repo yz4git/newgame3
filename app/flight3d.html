@@ -1,50 +1,68 @@
 <!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <meta name="theme-color" content="#030813" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>NOVA STRIKE — TRUE 3D FLIGHT</title>
-</head>
-<body>
-  <main id="frame">
-    <canvas id="flight" aria-label="3D空間戦闘ゲーム"></canvas>
-    <div id="progress-wrap"><i id="progress"></i></div>
-    <div class="reticle" aria-hidden="true"></div>
-    <div id="target-ring" class="target-ring" aria-hidden="true" hidden><i></i><span>LOCKED <b id="target-distance">000 M</b></span></div>
-    <header class="hud">
-      <div><span class="label">SCORE / TRUE 3D</span><strong id="score">0000000</strong><div id="sector">01 / 06</div><div class="chain-stats"><span id="combo">HITS 000</span><span id="reflect">REFLECT 0</span></div></div>
-      <div class="hud-right"><span class="label">SHIELD</span><strong id="hull">◆ ◆ ◆ ◆ ◆</strong><strong id="speed">720 km/h</strong><span id="altitude" class="minor">ALT 1125 M</span><span class="multiplier">FLIGHT SPEED ×3</span><button id="pause" aria-label="一時停止">Ⅱ PAUSE</button></div>
-    </header>
-    <section id="bosswrap" hidden><strong id="boss-name">GUARDIAN</strong><div class="track"><i id="boss-fill"></i></div></section>
-    <div id="notice" aria-live="polite"></div>
-    <div id="radio" class="radio-panel" hidden aria-live="polite">
-      <div class="radio-avatar" aria-hidden="true">N/S</div>
-      <div class="radio-content"><strong id="radio-name">NOVA CONTROL</strong><p id="radio-message"></p></div>
+<html lang="ja"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#030c18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>NOVA STRIKE — SPACE FLIGHT CAMPAIGN</title>
+</head><body>
+<main id="frame">
+ <canvas id="flight" aria-label="3D宇宙空戦ゲーム・ドラッグで操縦"></canvas>
+ <div id="progress-wrap"><i id="progress"></i></div>
+ <div id="hit"></div>
+ <div class="sight sight-near" aria-hidden="true"><i></i></div>
+ <div class="sight sight-far" aria-hidden="true"></div>
+ <div id="target-ring" class="target-ring" hidden aria-hidden="true"><span>LOCK <b id="target-distance">000 M</b></span></div>
+ <header class="hud">
+  <div class="hud-left">
+   <div class="hud-kicker">NOVA STRIKE / FLIGHT OPS</div>
+   <div id="sector">MISSION 01 / OUTER PERIMETER</div>
+   <div class="mission-info"><span id="mode">3D SCROLL</span><span id="speed">720 km/h</span></div>
+   <div class="hit-count"><span>HITS</span><strong id="score">000</strong><span class="minor">PTS <b id="points">0000000</b></span></div>
+   <div class="wingmen" id="friends">ECHO / VECTA</div>
+  </div>
+  <div class="hud-right">
+   <div class="ship-life"><b id="lives">SHIP ×3</b><b id="rings">◯ 0</b></div>
+   <div class="meter-label"><span>SHIELD</span><span id="shield-value">100/100</span></div>
+   <div class="shield-track"><i id="shield-fill"></i></div>
+   <div class="weapons"><span id="laser">LASER 1</span><span id="wing-state">WING OK</span></div>
+   <div class="heat-heading">BOOST / BRAKE GAUGE</div>
+   <div class="heat-track"><i id="heat-fill"></i></div>
+   <button id="pause" aria-label="一時停止">Ⅱ</button>
+  </div>
+ </header>
+ <section id="bosswrap" hidden><div class="boss-heading"><span>BOSS</span><strong id="boss-name">GUARDIAN</strong></div><div class="boss-track"><i id="boss-fill"></i></div></section>
+ <div id="notice"></div>
+ <div id="radio" hidden aria-live="polite"><div class="comms-face" aria-hidden="true"><span>N/S</span></div><div class="comms-copy"><b id="radio-name">NOVA COMMAND</b><p id="radio-message"></p></div></div>
+ <div id="radar-wrap" hidden><canvas id="radar" width="152" height="152" aria-label="周辺機体レーダー"></canvas><span>TACTICAL RADAR</span></div>
+ <div id="controls" hidden>
+   <div class="thumb-left">
+    <div class="help">DRAG TO FLY <span>MOVE / AIM</span></div>
+    <div class="rolling"><button id="bank-left" aria-label="左バンク">◀ BANK</button><button id="bank-right" aria-label="右バンク">BANK ▶</button></div>
+    <div class="rolling"><button id="roll-left" aria-label="左ロール">⟲ ROLL</button><button id="roll-right" aria-label="右ロール">ROLL ⟳</button></div>
+   </div>
+   <div class="thumb-right">
+    <div class="flight-actions"><button id="brake">BRAKE</button><button id="boost">BOOST</button><button id="somersault">LOOP</button><button id="uturn" hidden>U-TURN</button></div>
+    <div class="weapon-actions">
+     <button id="fire" aria-label="レーザー射撃／長押しチャージ">FIRE<span class="charge-track"><i id="charge-fill"></i></span><small>TAP / HOLD</small></button>
+     <button id="bomb" aria-label="ボム発射">NOVA BOMB<b id="bomb-count">×3</b></button>
     </div>
-    <div id="hit"></div>
-    <div id="controls" hidden>
-      <div class="flight-left">
-        <div class="help">DRAG TO STEER<br>コースに沿って自動飛行</div>
-        <div class="roll-buttons"><button id="roll-left" aria-label="左バレルロール">⟲ ROLL</button><button id="roll-right" aria-label="右バレルロール">ROLL ⟳</button></div>
-      </div>
-      <div class="flight-right">
-        <div class="flight-speed"><button id="brake">BRAKE</button><button id="boost">BOOST<span class="meter"><i id="boost-fill"></i></span></button></div>
-        <div class="flight-weapons"><button id="fire">FIRE<span class="charge-meter"><i id="charge-fill"></i></span><small>HOLD / CHARGE</small></button><button id="missile">NOVA BOMB</button></div>
-      </div>
-    </div>
-    <section id="overlay" class="overlay">
-      <div class="panel">
-        <span class="kicker">N / S — CINEMATIC 3D FLIGHT / 3× SPEED</span>
-        <h1 id="overlay-title">NOVA STRIKE</h1>
-        <p id="overlay-info">高速3Dレールシューティング — 照準・チャージショット・反射ロール・巨大ボス</p>
-        <button id="action">3D出撃</button>
-        <a class="home" href="./">← 通常モードに戻る</a>
-        <span class="minor" style="margin-top:25px">iPhone: DRAG / FIRE (HOLD TO CHARGE) / ROLL / BOOST / BRAKE<br>PC: WASD / SPACE FIRE / Q E ROLL / SHIFT BOOST / K BRAKE / M NOVA</span>
-      </div>
-    </section>
-  </main>
-  <script type="module" src="./flight3d.ts"></script>
-</body>
-</html>
+   </div>
+ </div>
+ <section id="overlay" class="overlay">
+  <div class="panel">
+   <div id="overlay-kicker">SPACE FLIGHT CAMPAIGN</div>
+   <h1 id="overlay-title">NOVA STRIKE</h1>
+   <p id="overlay-info">3D空間戦闘キャンペーン</p>
+   <button id="action" class="main-action">START MISSION</button>
+   <div id="route-panel" hidden>
+    <p id="route-suggest"></p>
+    <div class="routes"><button id="route-a"></button><button id="route-b"></button></div>
+   </div>
+   <a href="./" class="return">← 通常モードへ戻る</a>
+   <div class="keyguide">iPhone: ドラッグ操縦 / FIREタップ・長押し / ROLL / LOOP / BOOST / BRAKE<br>PC: WASD・方向キー / Space射撃 / Q・Eロール / R宙返り / Uターン / Shift加速 / B減速 / Mボム</div>
+  </div>
+ </section>
+</main>
+<script type="module" src="./flight3d.ts"></script>
+</body></html>
