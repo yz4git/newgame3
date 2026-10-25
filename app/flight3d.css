@@ -78,3 +78,11 @@ button[hidden],[hidden]{display:none!important}
 @media(max-width:640px){#sector{font-size:9px;max-width:170px}.hud-kicker{font-size:7px}.hit-count strong{font-size:23px}.hud-left{max-width:51%}.hud-right{width:38vw}.wingmen{font-size:8px}.ship-life{font-size:9px}.comms-face{display:none}.sight{top:46%}.target-ring{width:54px;height:54px}.flight-actions{flex-wrap:wrap;justify-content:flex-end;max-width:245px}.flight-actions button{min-width:50px!important}.rolling button{min-width:57px!important;font-size:8px!important}.help{font-size:7px}#fire{min-width:79px!important;min-height:67px!important}#bomb{min-width:75px!important}}
 @media(orientation:landscape) and (max-height:430px){#controls{bottom:max(5px,env(safe-area-inset-bottom))}.rolling button{min-height:34px!important}.flight-actions button{min-height:32px!important}#fire{min-height:60px!important}#bomb{min-height:55px!important}.help{display:none}.hud{top:max(5px,env(safe-area-inset-top))}.hit-count{margin-top:3px}.wingmen{margin-top:2px}#radio{bottom:92px;width:min(300px,44vw);padding:6px}.comms-copy p{font-size:9px}#radar-wrap{bottom:90px;width:95px}#radar{width:95px;height:95px}.keyguide{font-size:8px}}
 @media(orientation:portrait){#controls{bottom:max(18px,env(safe-area-inset-bottom))}.flight-actions{max-width:210px;flex-wrap:wrap;justify-content:flex-end}#radio{bottom:176px;width:min(290px,68vw)}#radar-wrap{bottom:188px;width:96px}#radar{width:96px;height:96px}}
+
+/* The player passes below these physical terrain arch bridges. */
+.course-info{display:inline-flex;gap:4px;color:#ffdfa0;letter-spacing:.06em;padding:2px 6px;border:1px solid #ffcd9870;background:#1b2b32af}
+.course-info b{color:#fff5be;font-variant-numeric:tabular-nums}
+#mode{color:#cfffd7;border-color:#9cd5a79b}
+#flight{touch-action:none}
+.sight-near{border-color:#c9f7da;background:radial-gradient(circle,#abffe525,transparent 72%)}
+@media(max-width:640px){.mission-info{flex-wrap:wrap;gap:3px 7px}.course-info{font-size:8px}.hud-kicker{color:#b7f5ff}}
