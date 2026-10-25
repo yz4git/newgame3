@@ -94,6 +94,32 @@ await capture('04x-real-hit-verification');
 const hitState=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
 if(hitState.hits<=startingHits)throw Error('Playcheck FAILED: front-of-reticle target was not actually destroyed by FIRE');
 console.log('AUDIT_REAL_HIT_OK',hitState.hits-startingHits);
+await evaluate("window.__novaFlight3D.auditSeek(10);window.__novaFlight3D.auditSpawnGroup()");
+const beforeBomb=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+if(beforeBomb.targets<3)throw Error('No enemy group for the smart-bomb gameplay test');
+await evaluate("document.getElementById('bomb').click()");
+await sleep(1100);
+await capture('04y-area-bomb-three-targets');
+const afterBomb=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+if(afterBomb.hits-beforeBomb.hits<3)throw Error('Smart bomb failed to clear nearby enemy formation: '+JSON.stringify({beforeBomb,afterBomb}));
+if(afterBomb.armedBombs>0)throw Error('Smart bomb remains armed after fuse/detonation');
+console.log('AUDIT_BOMB_AREA_OK',afterBomb.hits-beforeBomb.hits);
+await evaluate("window.__novaFlight3D.auditSeek(10);window.__novaFlight3D.auditSpawnThreat()");
+await sleep(160);
+const warned=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+if(warned.warningEnemies<1)throw Error('Attack was not telegraphed; enemy bullets must be avoidable');
+await capture('04z-enemy-attack-telegraph');
+// Software WebGL can render at <15 fps, so wait until a real frame has
+// advanced enough for the tell to finish instead of checking at a wall time.
+let fired=null;
+for(let attempt=0;attempt<20;attempt++){
+ await sleep(160);
+ const state=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+ if(state.hostileShots>0){fired=state;break;}
+}
+if(!fired)throw Error('Enemy telegraph never produced a projectile after polling gameplay frames');
+console.log('AUDIT_ATTACK_CUE_OK',JSON.stringify({warned:warned.warningEnemies,bullets:fired.hostileShots}));
+
 // Inspect later authored world segments without waiting several minutes for the
 // software-rendered CI browser; this is a diagnostic seek, not simulated play.
 for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches'],[41,'04d-waterfall-approach'],[43,'04e-waterfall-pass'],[49,'04f-finale']]){

@@ -40,7 +40,7 @@ export function scriptWaves(mission:Mission):Beat[]{
   return [4,10,17,24,32,39,45].map((at,i)=>({at,type:kinds[(i+mission.id)%kinds.length],count:3+(i%3),altitude:i%3,elite:i===3||i===5}));
  }
  const times=mission.id===0
-  ? [1.7,4.4,6.9,9.5,12.7,16,19.5,23,26,29,32,35.5,39,43,47.5,50.5]
+  ? [2.0,5.5,9,12.5,16.1,19.3,43.2,46.8,50]
   : [2.4,6.7,11.2,15.6,20.3,25,30,34.5,39,44,49,54];
  return times.filter(at=>at<mission.duration-3)
  .map((at,i)=>({at,type:kinds[(i+mission.id*2)%kinds.length],count:mission.id===0?4+(i%3):3+(i%3),altitude:i%3,elite:i===4||i===7||i===12}));

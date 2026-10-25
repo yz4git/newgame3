@@ -6,6 +6,7 @@ import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
 import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver,hiddenCourseUnlocked} from './flight-stage-direction.ts';
 import type {WaveType} from './nova64-rules.ts';
+import {ARCADE,combatHitPoints,laserDamage,attackCue,cueDuration,bombHits,bombFalloff,comboReward,sightRay,rayMissDistance} from './flight-combat-core.ts';
 import {nextRenderScale,adaptivePixelRatio} from './flight-performance.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
@@ -21,8 +22,8 @@ const $=<E extends HTMLElement=HTMLElement>(name:string)=>document.getElementByI
 const P=(p:T.Vector3):V3=>({x:p.x,y:p.y,z:p.z});
 const DIR=(a:T.Vector3,b:T.Vector3)=>b.clone().sub(a).normalize();
 type State=Phase;
-type Target={model:T.Group;position:T.Vector3;hp:number;max:number;radius:number;boss:boolean;ground:boolean;phase:number;age:number;fire:number;points:number;rescue:boolean;seed:number;side:number;pattern:WaveType;flightIndex:number;birth:T.Vector3};
-type Projectile={mesh:T.Mesh;velocity:T.Vector3;friendly:boolean;homing:boolean;bomb:boolean;damage:number;radius:number;life:number;target:Target|null};
+type Target={model:T.Group;position:T.Vector3;hp:number;max:number;radius:number;boss:boolean;ground:boolean;phase:number;age:number;fire:number;warning:number;warningMesh:T.Mesh|null;points:number;rescue:boolean;seed:number;side:number;pattern:WaveType;flightIndex:number;birth:T.Vector3};
+type Projectile={mesh:T.Mesh;velocity:T.Vector3;friendly:boolean;homing:boolean;bomb:boolean;damage:number;radius:number;life:number;fuse:number;target:Target|null};
 type Supply={mesh:T.Mesh;kind:'ring'|'laser'|'repair'|'bomb';radius:number};
 type Flash={mesh:T.Mesh;life:number;duration:number;radius:number};
 type Ally={mesh:T.Group;name:string;hp:number;side:number;cooldown:number};
@@ -56,7 +57,7 @@ class GroundFlight {
  private mission:Mission=MISSIONS[0];
  private stage:State='title';private pausedFrom:State='combat';
  private route:number[]=[0];
- private score=0;private hits=0;private missionHits=0;private missionDamage=0;
+ private score=0;private hits=0;private missionHits=0;private missionDamage=0;private combo=0;private comboClock=-100;
  private shield=100;private shieldMax=100;private lives=3;private bombs=3;private laserLevel=1;private rings=0;private damagedWing=false;
  private enemies:Target[]=[];private boss:Target|null=null;private shots:Projectile[]=[];
  private supplies:Supply[]=[];private blasts:Flash[]=[];private allies:Ally[]=[];
@@ -101,7 +102,7 @@ class GroundFlight {
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,
     visibleTargets:this.enemies.filter(e=>{const p=e.position.clone().project(this.camera);return p.z>0&&p.z<1&&Math.abs(p.x)<.90&&Math.abs(p.y)<.90;}).length,
-    shots:this.shots.length,
+    shots:this.shots.length,hostileShots:this.shots.filter(s=>!s.friendly).length,armedBombs:this.shots.filter(s=>s.friendly&&s.bomb).length,combo:this.combo,warningEnemies:this.enemies.filter(e=>e.warning>0).length,
     hits:this.missionHits,shield:this.shield,boss:this.boss!==null,bossVariant:this.boss?.model.userData.variant??null,missionTime:this.missionTime,fps:this.averageFps,renderScale:this.renderScale,
     checkpoint:this.checkpoint,rescueCount:this.rescueCount,locked:this.lockedTarget!==null,openingCue:this.openingCue,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
@@ -111,6 +112,8 @@ class GroundFlight {
     start:()=>this.startCampaign(),pause:()=>this.pause(),
     auditSeek:(seconds:number)=>this.auditSeek(seconds),
     auditSpawnAimTarget:()=>this.auditSpawnAimTarget(),
+    auditSpawnGroup:()=>this.auditSpawnGroup(),
+    auditSpawnThreat:()=>this.auditSpawnThreat(),
     auditSetLane:(x:number)=>this.auditSetLane(x)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
@@ -235,7 +238,7 @@ class GroundFlight {
  }
  private startCampaign(){
   this.wakeAudio();this.score=0;this.hits=0;this.lives=3;this.bombs=3;this.laserLevel=1;this.rings=0;this.shieldMax=100;this.shield=100;
-  this.route=[0];this.enterMission(0,false);
+  this.combo=0;this.comboClock=-100;this.route=[0];this.enterMission(0,false);
  }
  private cleanup(){
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
@@ -249,7 +252,7 @@ class GroundFlight {
  }
  private enterMission(id:number,resume=false){
   this.cleanup();
-  this.mission=MISSIONS[id];this.setPalette();
+  this.mission=MISSIONS[id];this.setPalette();this.combo=0;this.comboClock=-100;
   this.missionTime=resume?(id===0?distanceToScriptSeconds(-STAGE1.checkpoint):22):0;this.missionHits=resume?this.missionHits:0;this.missionDamage=resume?this.missionDamage:0;
   this.waves=scriptWaves(this.mission);
   this.waveIndex=resume?Math.max(0,this.waves.findIndex(w=>w.at>this.missionTime)):0;
@@ -315,12 +318,16 @@ class GroundFlight {
   const focus=this.camera.position.clone().addScaledVector(this.camera.getWorldDirection(new T.Vector3()),170);
   return focus.sub(this.player.position).normalize();
  }
+ private targetPoint(e:Target){
+  const core=e.boss?e.model.userData.weakpoint as T.Object3D|undefined:undefined;
+  return core?core.getWorldPosition(new T.Vector3()):e.position;
+ }
  private acquire(){
   const direction=this.aim(),origin=this.player.position;
   let best:Target|null=null,score=Infinity;
   for(const e of [...this.enemies,...(this.boss?[this.boss]:[])]){
    if(e.hp<=0)continue;
-   const to=e.position.clone().sub(origin),along=to.dot(direction);
+   const to=this.targetPoint(e).clone().sub(origin),along=to.dot(direction);
    if(along<6||along>320)continue;
    const spread=to.addScaledVector(direction,-along).length();
    const tolerance=e.boss?13:Math.max(3.5,along*.045);
@@ -337,7 +344,7 @@ class GroundFlight {
   if(beam)mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),velocity.clone().normalize());
   else mesh.scale.setScalar(bomb?.85:homing?.5:.25);
   this.scene.add(mesh);
-  this.shots.push({mesh,velocity,damage,friendly,homing,bomb,target,radius:bomb?1.4:homing?.65:.32,life:3});
+  this.shots.push({mesh,velocity,damage,friendly,homing,bomb,target,radius:bomb?1.4:homing?.65:.32,life:3,fuse:bomb?ARCADE.bombFuse:Infinity});
  }
  private fireLasers(){
   if(!this.playing||this.shotDelay>0)return;
@@ -351,23 +358,42 @@ class GroundFlight {
   for(const [x,y] of muzzles){
    const origin=this.player.position.clone().add(new T.Vector3(x,y,-1.55));
    this.emit(origin,direction.clone().multiplyScalar(370+this.velocity),
-    this.laserLevel===3?1.5:1,true,false,false,null,this.laserLevel);
+    laserDamage(this.laserLevel),true,false,false,null,this.laserLevel);
   }
-  this.shotDelay=this.laserLevel===3?.115:.125;
+  this.shotDelay=ARCADE.laserInterval;
   this.sound(this.laserLevel===3?770:this.laserLevel===2?680:570,.072,.020);
  }
  private fireCharge(){
   const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null,origin=this.player.position.clone().add(new T.Vector3(0,.2,-1.8));
-  const direction=target?target.position.clone().sub(origin).normalize():this.aim();
+  const direction=target?this.targetPoint(target).clone().sub(origin).normalize():this.aim();
   this.emit(origin,direction.multiplyScalar(270+this.velocity),16+this.laserLevel*3,true,!!target,false,target);
   this.notice(target?'CHARGE / LOCKED':'CHARGE LASER',.85);this.sound(850,.25,.05);
  }
+ private detonateBomb(s:Projectile){
+  const point=s.mesh.position.clone();
+  this.impact(point,13);
+  for(const e of [...this.enemies,...(this.boss?[this.boss]:[])]){
+   if(e.hp>0&&bombHits(P(point),P(e.position),e.radius))
+    this.destroyTarget(e,ARCADE.bombDamage*bombFalloff(P(point),P(e.position),e.radius));
+  }
+  this.sound(115,.5,.065);
+ }
  private dropBomb(){
-  if(!this.playing||this.bombs<=0)return;
+  if(!this.playing)return;
+  // A second BOMB press detonates the *active* projectile, as in an arcade
+  // smart bomb. Otherwise it explodes automatically when the fuse expires.
+  const active=this.shots.find(s=>s.bomb&&s.friendly);
+  if(active){
+   this.detonateBomb(active);
+   this.scene.remove(active.mesh);
+   this.shots.splice(this.shots.indexOf(active),1);
+   return;
+  }
+  if(this.bombs<=0)return;
   this.bombs--;
   const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null;
   const origin=this.player.position.clone().add(new T.Vector3(0,-.1,-1.9));
-  const direction=target?target.position.clone().sub(origin).normalize():this.aim();
+  const direction=target?this.targetPoint(target).clone().sub(origin).normalize():this.aim();
   this.emit(origin,direction.multiplyScalar(240+this.velocity),46,true,!!target,true,target);
   this.notice('NOVA BOMB',.8);this.sound(240,.32,.07);
  }
@@ -393,9 +419,17 @@ class GroundFlight {
    }
   }
   model.position.copy(pos);this.scene.add(model);
-  const hp=ground?7:elite?12:4;
+  const hp=combatHitPoints(ground?'ground':elite?'elite':'normal');
+  const warningMesh=new T.Mesh(
+    new T.RingGeometry(2.15,2.7,16),
+    new T.MeshBasicMaterial({color:0xffb344,transparent:true,opacity:.78,depthWrite:false,side:T.DoubleSide})
+  );
+  warningMesh.name='attack-warning';warningMesh.visible=false;
+  // Enemy aircraft face toward the player after their Y=PI rotation: local -Z is the near side.
+  warningMesh.position.z=ground?4.3:-4.8;
+  model.add(warningMesh);
   const enemy:Target={model,position:model.position,hp,max:hp,radius:ground?2.8:elite?4.4:3.4,age:0,boss:false,ground,phase:seed(this.time*11+pos.z),fire:1.2+seed(pos.x+pos.z)*1.3,
-   points:elite?6:ground?3:1,rescue,seed:seed(pos.z+pos.x)*6,side:0,pattern,flightIndex,birth:pos.clone()};
+   warning:0,warningMesh,points:elite?6:ground?3:1,rescue,seed:seed(pos.z+pos.x)*6,side:0,pattern,flightIndex,birth:pos.clone()};
   this.enemies.push(enemy);return enemy;
  }
  private spawnWave(){
@@ -451,7 +485,14 @@ class GroundFlight {
   model.rotation.y=Math.PI;
   this.scene.add(model);
   const hp=185+this.mission.difficulty*36;
-  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,points:80,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
+  const warningMesh=new T.Mesh(
+   new T.RingGeometry(4.8,5.6,24),
+   new T.MeshBasicMaterial({color:0xffa535,transparent:true,opacity:.8,depthWrite:false,side:T.DoubleSide})
+  );
+  warningMesh.name='attack-warning';warningMesh.visible=false;
+  warningMesh.position.z=this.mission.id===0?(model.userData.variant==='carrier'?-23:-11):-5;
+  model.add(warningMesh);
+  this.boss={model,position:model.position,hp,max:hp,boss:true,ground:false,age:0,fire:1.15,phase:0,radius:this.mission.id===0&&specialWalker?22:15,warning:0,warningMesh,points:5,rescue:false,seed:123,side:0,pattern:'heavy',flightIndex:0,birth:model.position.clone()};
   if(this.mission.id===0)this.comms('NOVA COMMAND',specialWalker?'大型空中母艦が接近！発光する動力コアを狙え！':'巨大歩行兵器が起動！脚部と背後の装甲が弱点だ！',4);
   this.bossStage=1;this.stage='boss';
   $('bosswrap').hidden=false;$('boss-name').textContent=this.mission.boss;
@@ -459,6 +500,7 @@ class GroundFlight {
   this.notice('WARNING / '+this.mission.boss,3);this.sound(135,.55,.06);
  }
  private enemyShoot(e:Target){
+  if(this.shots.filter(s=>!s.friendly).length>=ARCADE.maxHostileBullets)return;
   const target=interceptTarget(P(e.position),P(this.player.position),
     {x:(this.player.position.x-this.previousPosition.x)*30,y:(this.player.position.y-this.previousPosition.y)*30,z:-this.velocity},
     e.boss?87:70);
@@ -502,6 +544,13 @@ class GroundFlight {
   if(e.boss){this.boss=null;this.missionHits+=e.points;this.hits+=e.points;this.score+=9000;this.clearMission();return;}
   const idx=this.enemies.indexOf(e);if(idx>=0)this.enemies.splice(idx,1);
   this.missionHits+=e.points;this.hits+=e.points;this.score+=e.points*100;
+  // Consecutive kills form a score-driven offensive rhythm; collisions and
+  // passive ally kills cannot be exploited to gain free player chains.
+  this.combo=this.time-this.comboClock<=ARCADE.comboWindow?this.combo+1:1;
+  this.comboClock=this.time;
+  const bonus=comboReward(this.combo);
+  this.score+=bonus.points;
+  if(bonus.label&&[3,5,10].includes(this.combo))this.notice(bonus.label,.8);
   if(e.rescue){
    this.rescueCount=Math.max(0,this.rescueCount-1);
    if(this.rescueCount===0){this.rescueFinished=true;this.comms('ECHO','助かった！ありがとう！後で秘密の進路を教える。',3.5);this.score+=750;}
@@ -682,16 +731,33 @@ class GroundFlight {
     e.position.y+=Math.sin(e.age*2.7+e.phase)*dt*2;
     e.model.rotation.y=Math.atan2(this.player.position.x-e.position.x,this.player.position.z-e.position.z);
    }
-   e.fire-=dt;
-   if(e.fire<=0){
-    if(e.position.distanceTo(this.player.position)<185){
-     this.enemyShoot(e);e.fire=e.boss?1.35-.12*bossPhase(e.hp,e.max):2+seed(e.phase)*1.6;
-    }else e.fire=.5;
+   if(e.warning>0){
+    e.warning-=dt;
+    if(e.warningMesh){
+     e.warningMesh.visible=true;
+     e.warningMesh.scale.setScalar(1+.15*Math.sin(e.age*18));
+     (e.warningMesh.material as T.MeshBasicMaterial).opacity=.45+.34*Math.abs(Math.sin(e.age*12));
+    }
+    if(e.warning<=0){
+     if(e.warningMesh)e.warningMesh.visible=false;
+     this.enemyShoot(e);
+     e.fire=e.boss?1.6-.16*bossPhase(e.hp,e.max):2.4+seed(e.phase)*1.4;
+    }
+   }else{
+    e.fire-=dt;
+    if(attackCue(e.fire,e.position.distanceTo(this.player.position),
+      this.shots.filter(s=>!s.friendly).length,e.boss)){
+     e.warning=cueDuration(e.boss);
+    }else if(e.fire<=0)e.fire=.28;
    }
    if(e.boss&&this.mission.id===0)animateFirstStageBoss(e.model,e.age,bossPhase(e.hp,e.max));
    else if(!e.ground)animateFlightShip(e.model,this.time+e.phase,1);
    if(!e.boss&&!e.ground&&swept(P(this.previousPosition),P(this.player.position),P(prior),P(e.position),e.radius+1)){
-    this.hurt();this.destroyTarget(e,999);
+    this.hurt(24);
+    // Ramming must not reward points or increment the combo. It costs shield.
+    this.scene.remove(e.model);disposeFlightVisual(e.model,true);
+    const idx=this.enemies.indexOf(e);if(idx>=0)this.enemies.splice(idx,1);
+    continue;
    }
    if(!e.boss&&e.position.distanceTo(this.player.position)>380){
     this.scene.remove(e.model);disposeFlightVisual(e.model,true);
@@ -705,9 +771,10 @@ class GroundFlight {
    const s=this.shots[i],from=s.mesh.position.clone();
    if(s.homing){
     const target=s.target&&s.target.hp>0?s.target:null;
-    if(target)s.velocity.lerp(DIR(s.mesh.position,target.position).multiplyScalar(this.velocity+290),Math.min(1,dt*5));
+    if(target)s.velocity.lerp(DIR(s.mesh.position,this.targetPoint(target)).multiplyScalar(this.velocity+290),Math.min(1,dt*5));
    }
-   s.mesh.position.addScaledVector(s.velocity,dt);s.life-=dt;
+   s.mesh.position.addScaledVector(s.velocity,dt);s.life-=dt;s.fuse-=dt;
+   if(s.bomb&&s.fuse<=0){this.detonateBomb(s);this.scene.remove(s.mesh);this.shots.splice(i,1);continue;}
    let consumed=false;
    if(s.friendly){
     for(const target of targets){
@@ -717,11 +784,15 @@ class GroundFlight {
       // damaged, but a close/accurate core shot applies a large multiplier.
       const core=target.boss?target.model.userData.weakpoint as T.Object3D|undefined:undefined;
       const weakpoint=core?.getWorldPosition(new T.Vector3());
-      const hitCore=!!weakpoint&&swept(P(from),P(s.mesh.position),P(weakpoint),P(weakpoint),4.3+s.radius);
+      // The boss's outer hit sphere is larger than the core and the projectile
+      // hits that invisible sphere FIRST. Evaluate the projectile's trajectory
+      // toward the luminous core so a precise shot cannot be stolen by armor.
+      const hitCore=!!weakpoint&&(swept(P(from),P(s.mesh.position),P(weakpoint),P(weakpoint),4.3+s.radius)
+        ||rayMissDistance(P(from),P(s.velocity),P(weakpoint))<=4.3+s.radius);
       const power=core?(hitCore?s.damage*2.7:s.damage*.62):s.damage;
       this.destroyTarget(target,power);
       if(hitCore)this.vfx.burst(weakpoint!,2.5,0xffce88);
-      if(s.bomb){this.impact(position,13);for(const other of targets)if(other!==target&&other.hp>0&&other.position.distanceTo(position)<32)this.destroyTarget(other,40);}
+      if(s.bomb)this.detonateBomb(s);
       consumed=true;break;
      }
     }
@@ -835,7 +906,7 @@ class GroundFlight {
     this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);this.notice('CHECKPOINT',1.5);
    }
    const crossed=(interval:number)=>(Math.floor(scriptClock/interval)!==Math.floor((scriptClock-(opening?this.velocity*dt/STAGE1.nominalSpeed:dt))/interval));
-   if(crossed(5.6))this.spawnTurret();
+   if((!opening||distance<STAGE1.escortDeadline||distance>STAGE1.waterfallPassage)&&crossed(5.6))this.spawnTurret();
    if(crossed(12))this.spawnSupply('ring');
    if(crossed(24))this.spawnSupply(this.laserLevel<3?'laser':'repair');
    if(opening?distance>=STAGE1.boss:this.missionTime>=this.mission.duration)this.spawnBoss();
@@ -913,6 +984,18 @@ class GroundFlight {
   }
   return {left:minX,right:maxX};
  }
+ private auditSpawnThreat(){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  const position=this.player.position.clone().addScaledVector(this.aim(),110);
+  const e=this.makeEnemy(position,false,false,false,'heavy',0);
+  e.fire=.04;e.warning=0;e.hp=e.max=99; // Invulnerable to incidental ally shots during delayed-fire timing test
+ }
+ private auditSpawnGroup(){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  const base=this.player.position.clone().addScaledVector(this.aim(),133);
+  for(const x of [-12,0,12])this.makeEnemy(
+   base.clone().add(new T.Vector3(x,0,0)),false,false,false,'heavy',Math.round(x+12));
+ }
  private auditSpawnAimTarget(){
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
   const pos=this.player.position.clone().addScaledVector(this.aim(),83);
@@ -984,12 +1067,12 @@ class GroundFlight {
   const fov=this.boostHeld?75:this.brakeHeld?56:64;
   this.camera.fov=lerp(this.camera.fov,fov,dt*3.7);this.camera.updateProjectionMatrix();
   if(this.playing){
-   const pNear=this.mission.mode==='corridor'
-    ?railAimPoint(this.mission.scene,this.player.position.z,this.laneX,this.laneY,70)
-    :P(this.player.position.clone().addScaledVector(this.aim(),70));
-   const pFar=this.mission.mode==='corridor'
-    ?railAimPoint(this.mission.scene,this.player.position.z,this.laneX,this.laneY,145)
-    :P(this.player.position.clone().addScaledVector(this.aim(),145));
+   // Both near/far sights must be points on the actual laser ray.
+   // The previous railAimPoint at two different route positions caused the
+   // projected sight frames and the real projectiles to disagree.
+   const ray=this.aim(),origin=P(this.player.position);
+   const pNear=sightRay(origin,P(ray),70);
+   const pFar=sightRay(origin,P(ray),145);
    for(const [id,p] of [['sight-near',pNear],['sight-far',pFar]] as const){
     const sight=$(id);
     const ndc=new T.Vector3(p.x,p.y,p.z).project(this.camera);
@@ -1013,7 +1096,7 @@ class GroundFlight {
   marker.classList.toggle('locked',!!e&&e===this.lockedTarget);
   $('lock-state').textContent=e&&e===this.lockedTarget?'LOCK':'ACQUIRE';
   if(e&&this.playing&&e.hp>0){
-   const ndc=e.position.clone().project(this.camera);
+   const ndc=this.targetPoint(e).clone().project(this.camera);
    const visible=ndc.z>0&&ndc.z<1&&Math.abs(ndc.x)<.93&&Math.abs(ndc.y)<.91;
    marker.hidden=!visible;
    if(visible){
