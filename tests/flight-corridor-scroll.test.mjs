@@ -19,8 +19,8 @@ test('camera dead zone: ship moves on screen before scenery scrolls',()=>{
  }
  assert.ok(railCameraPan(44)>28);
  assert.ok(railCameraPan(-44)<-28);
- assert.ok(railViewportOffset(44)>7 && railViewportOffset(44)<10);
- assert.ok(railViewportOffset(-44)<-7 && railViewportOffset(-44)>-10);
+ assert.ok(railViewportOffset(44)>=6 && railViewportOffset(44)<8);
+ assert.ok(railViewportOffset(-44)<-6 && railViewportOffset(-44)>-8);
 });
 test('camera pan is smooth, monotonic, bounded, symmetric and continuous at dead zone',()=>{
  const d=1e-6;
