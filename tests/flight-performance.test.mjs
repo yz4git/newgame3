@@ -12,6 +12,6 @@ test('renderer recovers slowly and never exceeds native maximum',()=>{
  assert.equal(nextRenderScale(.67,60,0,7),.77);
  assert.equal(nextRenderScale(1,60,0,7),1);
  assert.equal(nextRenderScale(.84,42,5,12),.84);
- assert.equal(adaptivePixelRatio(1.35,.67),.9045);
+ assert.ok(Math.abs(adaptivePixelRatio(1.35,.67)-.9045)<1e-9);
  assert.equal(adaptivePixelRatio(1.35,1),1.35);
 });
