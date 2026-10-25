@@ -390,7 +390,7 @@ class GroundFlight {
   this.rescueCount=3;
   this.comms('ECHO','敵機に追われている！援護をお願い！',3.8);
   for(let i=0;i<3;i++){
-   const z=this.player.position.z-205-i*11,r=routeCenter(0,z);
+   const z=this.player.position.z-132-i*9,r=routeCenter(0,z);
    const e=this.makeEnemy(new T.Vector3(r.x+(-1+i)*3.0,r.y+1.6,z),false,false,true,'squad',i);
    e.fire=2.4;
   }
@@ -398,7 +398,7 @@ class GroundFlight {
  private spawnBoss(){
   for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
   this.enemies=[];
-  const specialWalker=this.mission.id===0&&this.rescueFinished&&this.terrain.gateState.passed===gateCount();
+  const specialWalker=this.mission.id===0&&this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)&&this.terrain.gateState.passed===gateCount();
   // Normal route: siege walker. Seven arches and rescue: attack carrier.
   const model=this.mission.id===0?createFirstStageBoss(!specialWalker):createFlightShip(0xac5269,true,this.mission.scene);
   if(this.mission.id!==0)model.scale.multiplyScalar(1.25);
@@ -419,6 +419,10 @@ class GroundFlight {
   const target=interceptTarget(P(e.position),P(this.player.position),
     {x:(this.player.position.x-this.previousPosition.x)*30,y:(this.player.position.y-this.previousPosition.y)*30,z:-this.velocity},
     e.boss?87:70);
+  if(e.rescue){
+   const friend=this.allies.find(a=>a.name==='ECHO'&&a.hp>0);
+   if(friend){target.x=friend.mesh.position.x;target.y=friend.mesh.position.y;target.z=friend.mesh.position.z;}
+  }
   const from=e.position.clone();
   const direction=new T.Vector3(target.x,target.y,target.z).sub(from).normalize();
   const phase=e.boss?bossPhase(e.hp,e.max):1;
@@ -493,7 +497,7 @@ class GroundFlight {
    this.overlay('CAMPAIGN CLEAR','MISSION COMPLETE','TOTAL HITS '+this.hits+' / GRADE '+rating+'<br>'+this.route.map(i=>MISSIONS[i].name).join(' → '),'NEW GAME');
    return;
   }
-  const unlock=this.mission.id===0?this.rescueFinished&&this.terrain.gateState.passed===gateCount():
+  const unlock=this.mission.id===0?this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)&&this.terrain.gateState.passed===gateCount():
     routeSelection(this.mission,this.missionHits,this.allies.filter(a=>a.hp>0).length,this.gateBonus)===this.mission.next[1];
   this.gateBonus=!!unlock;
   const chosen=this.mission.next[unlock&&this.mission.next.length>1?1:0];
@@ -563,7 +567,7 @@ class GroundFlight {
   if(this.mission.id===0)for(const gate of this.terrain.gatesCrossed(P(this.previousPosition),P(this.player.position))){
    if(gate.passed){this.notice('ARCH '+this.terrain.gateState.passed+'/7',1.2);this.sound(840,.11,.025);this.score+=120;}
    else this.notice('ARCH MISSED',1.2);
-   if(this.terrain.gateState.lastCross===6&&this.terrain.gateState.passed===7&&this.rescueFinished){
+   if(this.terrain.gateState.lastCross===6&&this.terrain.gateState.passed===7&&this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)){
     this.gateBonus=true;this.comms('ECHO','全アーチ突破！滝の裏に隠しルートがある！',3.7);
    }
   }
@@ -573,9 +577,10 @@ class GroundFlight {
   for(const a of this.allies){
    if(a.hp<=0){a.mesh.visible=false;continue;}
    const flyby=clamp(1-this.missionTime/6,0,1);
-   const desired=this.player.position.clone().add(
-     new T.Vector3(a.side*(6+flyby*4),-2.8+flyby*3,6-flyby*36)
-   );
+   const beingPursued=this.mission.id===0&&a.name==='ECHO'&&this.levelEvent===1&&!this.rescueFinished;
+   const desired=beingPursued
+    ?this.player.position.clone().add(new T.Vector3(-12+Math.sin(this.time*2)*5,3.5,-105))
+    :this.player.position.clone().add(new T.Vector3(a.side*(6+flyby*4),-2.8+flyby*3,6-flyby*36));
    a.mesh.position.lerp(desired,Math.min(1,dt*2.7));
    a.mesh.rotation.set(0,this.yaw,-a.side*.11+Math.sin(this.time*2+a.side)*.04);
    animateFlightShip(a.mesh,this.time,1);
@@ -758,7 +763,11 @@ class GroundFlight {
     }
     if(distance>=STAGE1.escortDeadline&&this.levelEvent===1){
      this.levelEvent=2;
-     if(!this.rescueFinished)this.comms('NOVA CONTROL','救援信号が途絶えた。特殊ルートは閉鎖された。',2.9);
+     if(!this.rescueFinished){
+      const ally=this.allies.find(a=>a.name==='ECHO');
+      if(ally)ally.hp=0;
+      this.comms('NOVA CONTROL','救援信号が途絶えた。特殊ルートは閉鎖された。',2.9);
+     }
     }
     if(distance>=STAGE1.canyonReveal&&this.openingCue===0){
      this.openingCue=1;this.comms('VECTA','市街地を離脱。前方は低空峡谷コース！',3.4);
@@ -771,7 +780,7 @@ class GroundFlight {
     }
     if(distance>=STAGE1.waterfallPassage&&this.openingCue===3){
      this.openingCue=4;
-     if(this.rescueFinished&&this.terrain.gateState.passed===gateCount()){
+     if(this.rescueFinished&&this.allies.some(a=>a.name==='ECHO'&&a.hp>0)&&this.terrain.gateState.passed===gateCount()){
       this.gateBonus=true;this.comms('ECHO','よし！後をついてこい。隠し空路へ進む！',3.5);
      }else this.comms('NOVA CONTROL','通常の迎撃エリアへ進入。大型目標に備えよ。',3);
     }
