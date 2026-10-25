@@ -1,3 +1,17 @@
+## NEW 3D CAMPAIGN — Full flight-gameplay rebuild (2026-10-25)
+
+The standalone `flight3d.html` no longer runs the original TRUE 3D FLIGHT prototype or the interim RAIL FLIGHT prototype. Its **gameplay engine, DOM cockpit, mobile layout and campaign progression are replaced** by `app/flight3d.ts`, `app/flight3d.html`, `app/flight3d.css`, and the new pure rules module `app/nova64-rules.ts`. The prior rules/tuning files and tests have been deleted. The existing 3D ship/environment geometry helpers are retained as reusable rendering assets only. Classic and World Rebuild in the main game stay untouched.
+
+The new shooter faithfully targets **genre-defining Star Fox 64-style systems**, without reproducing Nintendo characters, graphics, level maps, music, text or proprietary game code:
+- Six original missions interconnected by a branching map; results and route choices affect the next stage, with alternate expert routes.
+- Corridor scrolling and 360-degree all-range combat with U-turn and radar.
+- Actual 3D rear chase camera, twin reticles, roll/bank, somersault, boost/brake heat and cooldown, manually tapped twin lasers, hold-and-release charge/homing, bombs and target lock.
+- Three-tier weapon upgrades, breakable wing, variable shield cap from collecting multiple rings, extra lives, checkpoints and game-over retry.
+- Scripted 3D enemy formation waves, elite escorts, scripted obstacles, boss phases, wingmen that fight and take damage, voice-style (text + procedural beep) radio messages, mission rankings, destructible enemies, shockwave VFX.
+- Responsive iPhone landscape/touch buttons, keyboard and basic gamepad mappings, reduced mobile DPR and retained static scenery batching.
+
+This is a **new original game implementation**, not a verified one-to-one recreation of every licensed stage, vehicle, story or asset. CI checks are static/unit/build only; real iPhone Safari gameplay remains to be verified.
+
 ## NOVA STRIKE TRUE 3D FLIGHT — ON-RAILS SPACE COMBAT (2026-10-25)
 
 The standalone `flight3d.html` gameplay is reworked into an **original on-rails 3D space shooter**, inspired by the control and pacing conventions of classic console rail shooters (not a copy of copyrighted characters, music, world layouts, story, or vehicle designs).
