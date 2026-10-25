@@ -79,7 +79,8 @@ class Flight3D {
   private baseY = 0;
   private pointer: number | null = null;
   private lastTouch = { x: 0, y: 0 };
-  private keys = new Set<string>();
+  private keys=new Set<string>();
+  private padLast:boolean[]=[];
   private previous = 0;
   private raf = 0;
   private noticeTime = 0;
@@ -176,7 +177,7 @@ class Flight3D {
   }
   private hideOverlay() { $('overlay').hidden = true; $('controls').hidden = false; }
   private start() {
-    this.stopObjects();this.waveIndex=0;this.rollTime=0;this.rollCooldown=0;this.shotsReflected=0;this.combo=0;this.charge=0;this.fireHeld=false;this.pendingSectorChange=false;this.lockTarget=null;this.stage=0;this.score=0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
+    this.stopObjects();this.padLast=[];this.waveIndex=0;this.rollTime=0;this.rollCooldown=0;this.shotsReflected=0;this.combo=0;this.charge=0;this.fireHeld=false;this.pendingSectorChange=false;this.lockTarget=null;this.stage=0;this.score=0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
     this.craft.position.set(0, 0, 0); this.baseX = 0; this.baseY = 0; this.totalTime = 0;
     this.missileDelay = 0; this.invulnerable = 2;
     this.configureSector(); this.state = 'playing'; this.hideOverlay();
@@ -375,13 +376,32 @@ class Flight3D {
     this.rollTime=Math.max(0,this.rollTime-dt);
     this.noticeTime -= dt;
     if (this.noticeTime < 0) $('notice').classList.remove('visible');
-    const k = this.keys;
-    const dx = Number(k.has('d') || k.has('arrowright')) - Number(k.has('a') || k.has('arrowleft'));
-    const dy = Number(k.has('w') || k.has('arrowup')) - Number(k.has('s') || k.has('arrowdown'));
+    const k=this.keys;
+    const pad=navigator.getGamepads?.().find(p=>p&&p.connected)??null;
+    const pressed=(i:number)=>!!pad?.buttons[i]?.pressed;
+    const axis=(i:number)=>Math.abs(pad?.axes[i]??0)>.18?(pad?.axes[i]??0):0;
+    if(pad){
+      for(const index of [0,1,2,3,9]){
+        if(pressed(index)&&!this.padLast[index]){
+          if(index===0)this.beginFire();
+          if(index===1)this.fireMissile();
+          if(index===2)this.barrelRoll(-1);
+          if(index===3)this.barrelRoll(1);
+          if(index===9)this.pause();
+        }
+      }
+      if(!pressed(0)&&this.padLast[0])this.endFire();
+      this.padLast=pad.buttons.map(b=>b.pressed);
+    }else{
+      if(this.padLast[0])this.endFire();
+      this.padLast=[];
+    }
+    const dx=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'))+axis(0);
+    const dy=Number(k.has('w')||k.has('arrowup'))-Number(k.has('s')||k.has('arrowdown'))-axis(1);
     const steering=clampRail(this.baseX+dx*dt*14,this.baseY+dy*dt*14);
     this.baseX=steering.x;this.baseY=steering.y;
-    const accelerating=(this.boostHeld||k.has('shift'))&&this.boost>0;
-    const braking=(this.brakeHeld||k.has('k')||k.has('x'))&&this.boost>0&&!accelerating;
+    const accelerating=(this.boostHeld||k.has('shift')||pressed(5))&&this.boost>0;
+    const braking=(this.brakeHeld||k.has('k')||k.has('x')||pressed(4))&&this.boost>0&&!accelerating;
     this.boost=clamp(this.boost+(accelerating?-28:braking?-17:16)*dt,0,100);
     const previousShipPosition=this.craft.position.clone();
     const speed=accelerating?boostSpeed():braking?cruiseSpeed(this.stage)*.48:cruiseSpeed(this.stage);
