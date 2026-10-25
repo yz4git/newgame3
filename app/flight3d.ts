@@ -94,7 +94,8 @@ class GroundFlight {
     hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
     shipNdcX:this.player.position.clone().project(this.camera).x,
-    sightFarX:($('sight-far') as HTMLElement).style.left}),
+    sightFarX:($('sight-far') as HTMLElement).style.left,
+    cameraInsideSolid:this.terrain.collisions(P(this.camera.position),P(this.camera.position),2.5)?.kind??null}),
     start:()=>this.startCampaign(),pause:()=>this.pause(),
     auditSeek:(seconds:number)=>this.auditSeek(seconds),
     auditSetLane:(x:number)=>this.auditSetLane(x)}});
