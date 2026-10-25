@@ -150,3 +150,10 @@ button[hidden],[hidden]{display:none!important}
 #sight-near.locked{border-color:#d6ff76!important;filter:drop-shadow(0 0 7px #aaff89)}
 #sight-far.locked{border-color:#b6f872!important}
 #fire.locked{border-color:#b7ff7c!important;box-shadow:0 0 22px #8cff65a8!important;background:linear-gradient(145deg,#245b3f,#092820)!important}
+
+/* Charge acquisition: yellow pulse becomes lime when a genuine target lock
+   has held long enough; empty target space never falsely displays LOCK. */
+#sight-near.charging,#sight-far.charging{border-color:#fce47e!important;filter:drop-shadow(0 0 5px #ffc477)}
+#target-ring #lock-state{font-size:inherit;font-style:normal;font-weight:900}
+#target-ring:not(.locked){border-color:#f8cd79;box-shadow:0 0 12px #f9bf6777}
+#target-ring:not(.locked) span{color:#ffe3a5}
