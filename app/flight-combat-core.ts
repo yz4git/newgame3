@@ -55,3 +55,16 @@ export function comboReward(streak:number){
 export function sightRay(origin:V3,direction:V3,range:number):V3{
  return {x:origin.x+direction.x*range,y:origin.y+direction.y*range,z:origin.z+direction.z*range};
 }
+
+/** Distance of a weakpoint to a bullet's forward ray, including the segment
+ * before the visible armor collision sphere. Without this, bullets hit the
+ * invisible outer boss hitbox BEFORE reaching its glowing weakpoint. */
+export function rayMissDistance(origin:V3,velocity:V3,target:V3){
+ const vx=velocity.x,vy=velocity.y,vz=velocity.z;
+ const len=Math.hypot(vx,vy,vz);
+ if(len<1e-8)return Infinity;
+ const dx=target.x-origin.x,dy=target.y-origin.y,dz=target.z-origin.z;
+ const t=(dx*vx+dy*vy+dz*vz)/len;
+ if(t<0)return Infinity;
+ return Math.hypot(dx-vx*t/len,dy-vy*t/len,dz-vz*t/len);
+}
