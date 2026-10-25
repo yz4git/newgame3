@@ -356,7 +356,11 @@ class GroundFlight {
    let pos:T.Vector3;
    if(this.mission.mode==='corridor'){
     const z=this.player.position.z-118-f.z,route=routeCenter(this.mission.scene,z);
-    pos=new T.Vector3(route.x+f.x,route.y+f.y+3,z);
+    const flank=wave.type==='crossfire'?(i%3-1)*19
+     :wave.type==='pincer'?(i%2===0?-27:27)
+     :wave.type==='flypast'?(i%2===0?-33:33)
+     :wave.type==='intercept'?(i%2===0?-15:15):0;
+    pos=new T.Vector3(route.x+f.x+flank,route.y+f.y+3,z);
    }else{
     const angle=6.28*(i/wave.count)+this.missionTime*.17;
     pos=this.player.position.clone().add(new T.Vector3(Math.cos(angle)*98,f.y,Math.sin(angle)*98));
@@ -369,7 +373,7 @@ class GroundFlight {
  private spawnTurret(){
   const z=this.player.position.z-112,route=routeCenter(this.mission.scene,z);
   const left=Math.floor(this.missionTime*3)%2===0?-1:1;
-  const x=route.x+left*(8+seed(this.missionTime)*5);
+  const x=route.x+left*(17+seed(this.missionTime)*21);
   const y=heightAt(this.mission.scene,x,z)+1;
   const turret=this.makeEnemy(new T.Vector3(x,y,z),false,true);
   turret.fire=1.65;
@@ -416,7 +420,7 @@ class GroundFlight {
  }
  private spawnSupply(kind:Supply['kind']){
   const z=this.player.position.z-130,center=routeCenter(this.mission.scene,z);
-  const x=center.x+Math.sin(this.missionTime*1.1)*6;
+  const x=center.x+Math.sin(this.missionTime*1.1)*26;
   const pos=this.mission.mode==='corridor'?new T.Vector3(x,center.y+Math.sin(this.missionTime)*3,z):
     this.player.position.clone().addScaledVector(this.forward(),85);
   const color=kind==='ring'?0xffde84:kind==='laser'?0x9efbff:kind==='repair'?0x97ffab:0xffad6f;
