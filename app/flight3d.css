@@ -86,3 +86,36 @@ button[hidden],[hidden]{display:none!important}
 #flight{touch-action:none}
 .sight-near{border-color:#c9f7da;background:radial-gradient(circle,#abffe525,transparent 72%)}
 @media(max-width:640px){.mission-info{flex-wrap:wrap;gap:3px 7px}.course-info{font-size:8px}.hud-kicker{color:#b7f5ff}}
+
+/* Live Chrome screenshot audit: compact landscape HUD so the playfield dominates. */
+@media (orientation:landscape) and (max-height:500px){
+ .hud{top:max(4px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right))}
+ .hud-kicker{font-size:7px;letter-spacing:.12em}
+ #sector{font-size:9px;margin-top:2px}
+ .mission-info{margin-top:2px;font-size:8px;gap:6px}
+ .hit-count{margin-top:3px;gap:4px}.hit-count strong{font-size:21px}
+ .hit-count>span:first-child{font-size:9px}
+ .wingmen{font-size:7px;margin-top:3px}
+ .hud-right{width:165px;gap:2px}
+ .ship-life{font-size:9px}
+ .meter-label{font-size:8px}.shield-track{height:6px}
+ .weapons{font-size:7px}.heat-heading{font-size:7px}.heat-track{height:4px}
+ #pause{width:24px;height:24px;top:70px;font-size:13px}
+ #controls{bottom:max(4px,env(safe-area-inset-bottom));left:max(6px,env(safe-area-inset-left));right:max(6px,env(safe-area-inset-right));gap:4px;opacity:.88}
+ .thumb-left,.thumb-right{gap:3px}
+ .rolling,.flight-actions,.weapon-actions{gap:3px}
+ #controls button{padding:5px 6px;min-width:45px;min-height:29px;font-size:8px;box-shadow:0 2px 5px #0009}
+ .rolling button{min-width:46px!important;min-height:30px!important;font-size:7px!important}
+ .flight-actions button{min-width:45px!important;min-height:29px!important;font-size:7px!important}
+ .weapon-actions button{min-height:45px!important}
+ #fire{min-width:69px!important;min-height:51px!important;font-size:14px!important;padding:5px!important}
+ #fire small{font-size:6px}.charge-track{width:51px}
+ #bomb{min-width:62px!important;font-size:7px!important;gap:1px}
+ #bomb b{font-size:10px}
+ .help{display:none}
+ #radio{bottom:82px;width:min(230px,36vw);padding:5px;gap:6px;min-height:40px}
+ .comms-face{height:29px;width:30px;font-size:8px}
+ .comms-copy b{font-size:8px}.comms-copy p{font-size:8px;line-height:1.3}
+ .sight{width:29px;height:29px}.sight-far{width:11px;height:11px}
+ #notice{top:18%;font-size:13px}
+}
