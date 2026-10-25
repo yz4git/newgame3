@@ -97,6 +97,7 @@ export class GroundWorld{
  private tiles:Tile[]=[];
  private count=0;
  private sceneId=0;
+ private allRange=false;
  private groundMaterial=mat(0xffffff,.9);
  private seaMaterial=new T.MeshStandardMaterial({color:0x317b9b,metalness:.42,roughness:.25,transparent:true,opacity:.94,side:T.DoubleSide,depthWrite:true});
  private roadMat=mat(0x2f3a43,.95);
@@ -110,7 +111,7 @@ export class GroundWorld{
  readonly gateState={passed:0,missed:0,lastCross:-1};
  constructor(){this.groundMaterial.vertexColors=true;}
  configure(scene:number,z:number,allRange:boolean){
-  this.clear();this.sceneId=scene;this.count=0;
+  this.clear();this.sceneId=scene;this.allRange=allRange;this.count=0;
   const color=COLORS[scene];this.roadMat.color.setHex(color.road);
   this.wallMat.color.setHex(color.wall);this.trimMat.color.setHex(color.top);
   this.emitter.color.setHex(color.glow);this.stone.color.setHex(color.rock);
@@ -124,14 +125,15 @@ export class GroundWorld{
   }
  }
  private tileGround(group:T.Group,z:number){
-  const sideCount=23,rows=13,verts=[],normals=[],colors=[],indices=[];
+  const sideCount=this.allRange?37:23,rows=13,verts=[],normals=[],colors=[],indices=[];
   const palette=COLORS[this.sceneId];
   const low=new T.Color(palette.earth),green=new T.Color(palette.grass);
   const roadCenter=routeCenter(this.sceneId,z).x;
   for(let j=0;j<rows;j++){
    const lz=HALF-j*TILE/(rows-1),wz=z+lz;
    for(let i=0;i<sideCount;i++){
-    const x=-135+i*270/(sideCount-1)+roadCenter;
+    const width=this.allRange?650:270;
+    const x=-width*.5+i*width/(sideCount-1)+roadCenter;
     const h=heightAt(this.sceneId,x,wz);
     verts.push(x,h,lz);
     const t=clamp(.27+.26*Math.sin(x*.055+wz*.024+this.sceneId)+.12*u(i*13+j*7+Math.floor(z/90)),0,1);
