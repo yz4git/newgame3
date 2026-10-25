@@ -109,9 +109,15 @@ await sleep(160);
 const warned=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
 if(warned.warningEnemies<1)throw Error('Attack was not telegraphed; enemy bullets must be avoidable');
 await capture('04z-enemy-attack-telegraph');
-await sleep(1050);
-const fired=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
-if(fired.hostileShots<1)throw Error('Enemy telegraph did not culminate in a projectile');
+// Software WebGL can render at <15 fps, so wait until a real frame has
+// advanced enough for the tell to finish instead of checking at a wall time.
+let fired=null;
+for(let attempt=0;attempt<20;attempt++){
+ await sleep(160);
+ const state=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+ if(state.hostileShots>0){fired=state;break;}
+}
+if(!fired)throw Error('Enemy telegraph never produced a projectile after polling gameplay frames');
 console.log('AUDIT_ATTACK_CUE_OK',JSON.stringify({warned:warned.warningEnemies,bullets:fired.hostileShots}));
 
 // Inspect later authored world segments without waiting several minutes for the
