@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Stylized hard-surface art is procedural: no sprite billboards or 2D backdrops.
 // Shared primitives/materials keep the mobile GPU cost predictable.
@@ -233,7 +234,44 @@ export function createFlightSection(
     ring.rotation.z=(index%3-1)*.18;
     for(const s of [-1,1]) part(root,cube,metal,s*10,-7,-1,1.4,16,2);
   }
+  // Static geometric batching: at most three draw calls per section, rather
+  // than a separate draw call for every building, tree, wave and surface.
+  const materials=new Map<T.Material,T.BufferGeometry[]>();
+  for(const object of [...root.children]){
+    if(!(object instanceof T.Mesh)) continue;
+    object.updateMatrix();
+    const geometry=object.geometry.clone().applyMatrix4(object.matrix);
+    for(const name of Object.keys(geometry.attributes)){
+      if(name!=='position'&&name!=='normal') geometry.deleteAttribute(name);
+    }
+    const bucket=materials.get(object.material)||[];
+    bucket.push(geometry);
+    materials.set(object.material,bucket);
+    if(!SHARED.has(object.geometry))object.geometry.dispose();
+    root.remove(object);
+  }
+  for(const [material,geometries] of materials){
+    const merged=mergeGeometries(geometries,false);
+    if(merged)root.add(new T.Mesh(merged,material));
+    geometries.forEach(g=>g.dispose());
+  }
   return root;
+}
+
+const SHARED=new Set<T.BufferGeometry>([cube,cylinder,orb,cone,torus,plane]);
+export function disposeFlightVisual(root:T.Object3D,materials=false){
+  const disposed=new Set<T.BufferGeometry>(),mats=new Set<T.Material>();
+  root.traverse(o=>{
+    if(!(o instanceof T.Mesh))return;
+    if(!SHARED.has(o.geometry)&&!disposed.has(o.geometry)){
+      disposed.add(o.geometry);o.geometry.dispose();
+    }
+    if(materials){
+      const array=Array.isArray(o.material)?o.material:[o.material];
+      for(const m of array)mats.add(m);
+    }
+  });
+  for(const m of mats)m.dispose();
 }
 
 export class FlightVfx {
