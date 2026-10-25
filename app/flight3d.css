@@ -32,7 +32,7 @@ body{position:fixed;inset:0}button,a{font:inherit;-webkit-tap-highlight-color:tr
 
 /* Cinematic flight telemetry: all UI elements are HTML, while targets,
    craft, bullets and scenery are actual camera-projected 3D geometry. */
-.target-ring{position:absolute;z-index:4;pointer-events:none;transform:translate(-50%,-50%);width:62px;height:62px;border:1px solid #8cf7ffb5;box-shadow:0 0 18px #35e4ff65,inset 0 0 8px #70e9ff30;clip-path:polygon(0 0,32% 0,32% 6%,68% 6%,68% 0,100% 0,100% 32%,94% 32%,94% 68%,100% 68%,100% 100%,68% 100%,68% 94%,32% 94%,32% 100%,0 100%,0 68%,6% 68%,6% 32%,0 32%);transition:opacity .16s}
+.target-ring{position:absolute;z-index:4;pointer-events:none;transform:translate(-50%,-50%);width:62px;height:62px;border:1px solid #8cf7ffb5;box-shadow:0 0 18px #35e4ff65,inset 0 0 8px #70e9ff30;transition:opacity .16s}
 .target-ring i{display:block;position:absolute;inset:23px;border:1px solid #a5faffaa;transform:rotate(45deg)}
 .target-ring span{position:absolute;left:50%;top:70px;transform:translateX(-50%);font-size:9px;letter-spacing:.13em;color:#9ef2ff;text-shadow:0 1px 9px #000;font-weight:800;white-space:nowrap}
 .target-ring b{margin-left:6px;font-variant-numeric:tabular-nums}
