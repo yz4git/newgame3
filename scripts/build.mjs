@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 await build();
 const assets=await readdir('dist/assets');
 const version=createHash('sha256').update(assets.join('|')+await readFile('dist/index.html','utf8')).digest('hex').slice(0,12);
-const urls=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png',...assets.map(f=>'./assets/'+f)];
+const urls=['./','./index.html','./flight3d.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png',...assets.map(f=>'./assets/'+f)];
 const sw=`const CACHE='nova-${version}';const FILES=${JSON.stringify(urls)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('nova-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

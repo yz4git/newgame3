@@ -1,3 +1,9 @@
+## NOVA STRIKE — TRUE 3D FLIGHT (2026-10-25)
+
+Added an independent **full 3D flight mode** at `flight3d.html`, launched from the title screen's "完全3D フライトモード" button. This is not another camera filter on World Rebuild: it has its own 3D-space flight physics, perspective chase camera, independently moving depth coordinate, three-dimensional enemy/projectile collision checks (swept sphere tests), automatic twin lasers, boost management, homing missiles, shields, pause/restart and six physical world environments with a guardian at each sector exit. Existing campaign, World Rebuild, Classic, score attack and Boss Rush are unchanged.
+
+Touch: drag anywhere on the scene to steer vertically and horizontally, hold BOOST to increase forward 3D speed, tap MISSILE for homing attack. Keyboard: WASD/arrows, Shift/Space boost, M missile, P/Escape pause. The 3D renderer requires WebGL; it displays a descriptive failure message instead of falsely falling back to 2D. iPhone uses a capped device pixel ratio. The new page is a Vite multi-page entry and is included in PWA precache.
+
 ## NOVA STRIKE 8.0.1 — PHONE PLAY REVIEW (2026-10-15)
 
 Reviewed the published game with real drag, weapon, NOVA, pause and help input,
