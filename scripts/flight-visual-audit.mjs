@@ -84,6 +84,16 @@ for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches']
 await command('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:2,mobile:true,screenWidth:844,screenHeight:390});
 await sleep(900);
 await capture('05-iphone-landscape');
+// Actual simultaneous multi-touch: drag the steering surface while holding FIRE.
+// Detect stuck input, accidental scrolling/zoom and pointer capture failures.
+await command('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
+await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:330,y:200,id:1},{x:714,y:342,id:2}]});
+await sleep(220);
+await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:404,y:180,id:1},{x:714,y:342,id:2}]});
+await sleep(500);
+await capture('05a-multitouch-drag-fire');
+await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+await command('Emulation.setTouchEmulationEnabled',{enabled:false});
 await evaluate("document.getElementById('pause').click()");
 await sleep(300);
 await capture('06-pause');
