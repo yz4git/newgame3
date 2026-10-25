@@ -22,7 +22,7 @@ The `Visual flight gameplay audit` GitHub Actions workflow starts the **producti
 | Area | Old actual screenshot findings | Implemented change |
 |---|---|---|
 | City geometry | Hundreds of repetitive, evenly spaced cyan-striped boxes; some buildings filled the whole flight corridor | Five materially and geometrically different hard-surface building types, urban overpasses, landmarks, rubble, foliage, safer clear flight corridor |
-| Ground | A flat green strip with abrupt horizontal cutoff at the horizon | 520m-wide sculpted, vertex-coloured landscape with distant raised hills and mottled terrain |
+| Ground | A flat green strip with abrupt horizontal cutoff at the horizon | 520m-wide sculpted, vertex-coloured landscape with distant raised hills and mottled terrain; 12 active corridor tiles or 17 all-range tiles |
 | Early stage | Straight asphalt road directly below plane, no recognizable opening | Ocean/coastal opening, diversified city corridor, then river basin with physical arches and waterfall |
 | River | Bright opaque blue slab and white highway-like streaks | Darker subdued water with faint ripples and translucent GPU-animated waterfall |
 | Arch obstacles | Square gate posts / bridge beam instead of recognizable arch profile | Curved low-poly stone masonry, physical clearance colliders, pass/miss geometry |
