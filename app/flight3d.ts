@@ -221,7 +221,7 @@ class GroundFlight {
   if(this.waveIndex<0)this.waveIndex=this.waves.length;
   this.checkpoint=resume;this.rescueFinished=false;this.rescueCount=0;this.gateBonus=false;this.levelEvent=0;
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
-  this.invulnerable=2.4;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
+  this.invulnerable=resume?2.3:4.2;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
   this.laneX=0;this.laneY=2;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
   this.player.position.set(0,2,resume?-this.missionTime*75:0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
@@ -351,6 +351,7 @@ class GroundFlight {
    }
    this.makeEnemy(pos,wave.elite&&i===Math.floor(wave.count/2),false,false);
   }
+  if(this.mission.id===0&&this.waveIndex===1)this.comms('ECHO','前方に敵編隊。まずは照準に合わせて射撃！',3.2);
   if(wave.elite)this.comms('VECTA','重装甲機を確認。ロックオンで撃破！',2.5);
  }
  private spawnTurret(){
@@ -542,7 +543,10 @@ class GroundFlight {
  private updateAllies(dt:number){
   for(const a of this.allies){
    if(a.hp<=0){a.mesh.visible=false;continue;}
-   const desired=this.player.position.clone().add(new T.Vector3(a.side*6,-2.8,6));
+   const flyby=clamp(1-this.missionTime/6,0,1);
+   const desired=this.player.position.clone().add(
+     new T.Vector3(a.side*(6+flyby*4),-2.8+flyby*3,6-flyby*36)
+   );
    a.mesh.position.lerp(desired,Math.min(1,dt*2.7));
    a.mesh.rotation.set(0,this.yaw,-a.side*.11+Math.sin(this.time*2+a.side)*.04);
    animateFlightShip(a.mesh,this.time,1);
