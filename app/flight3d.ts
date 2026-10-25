@@ -39,7 +39,8 @@ const palette=[
 
 class GroundFlight {
  private canvas=$<HTMLCanvasElement>('flight');
- private scene=new T.Scene(),camera=new T.PerspectiveCamera(63,1,.1,750);
+ private scene=new T.Scene();
+ private camera=new T.PerspectiveCamera(63,1,.1,750);
  private renderer:T.WebGLRenderer;
  private terrain=new GroundWorld();
  private sky=new FlightAtmosphere();
