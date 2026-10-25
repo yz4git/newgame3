@@ -28,8 +28,10 @@ test('each of six planetary environments has a real visible upward-facing 3D ter
   ground.clear();assert.equal(ground.tilesCount,0);
  }
 });
-test('opening level transitions from city ground to real river canyon and waterfall',()=>{
- assert.equal(coastZone(0,-300),false);
+test('opening level progresses from water intro to city, river canyon and waterfall',()=>{
+ assert.equal(coastZone(0,-80),true);
+ assert.equal(coastZone(0,-300),true);
+ assert.equal(coastZone(0,-450),false);
  assert.equal(coastZone(0,-2200),true);
  assert.equal(coastZone(0,-3600),false);
  const c=routeCenter(0,-2200);
