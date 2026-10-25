@@ -1,3 +1,15 @@
+## NOVA STRIKE TRUE 3D FLIGHT — CINEMATIC SPEED ×3 (2026-10-25)
+
+This is an upgrade to the **independent** `flight3d.html` mode; the main campaign's World Rebuild and Classic visual/gameplay modes remain untouched.
+
+- **Exactly 3× the original forward travel speed:** normal flight 20→60 units/s (stage 1), BOOST 45→135 units/s. The corresponding speedometer is 240→720 km/h and 540→1620 km/h (in-game scale).
+- **Safe relative muzzle velocity:** main shots travel faster than the moving player even at boost. Long-range enemy arrivals, longer boss separation, more responsive missile tracking and adapted fire cadence retain active encounters at high speed.
+- **New fully modeled craft:** hard-surface silhouette, swept polygon armor, sculpted cockpit, wing reinforcement, emissive thrusters and moving engine plumes. Six guardians have physically distinct superstructures and weapon assemblies.
+- **Six physically modeled landscapes:** orbital infrastructure, ship convoys/harbour, neon city towers, polar glacier, forest canopy temples and heavy furnace industry. Static meshes are merged into material batches per segment for mobile performance.
+- **Atmosphere and combat:** stage-specific spherical shader atmosphere, distant directional glow, perspective chase camera, speed-sensitive field of view and shake, instanced hyperspeed streaks, explosive debris/rings, camera-projected 3D target-lock brackets, altitude and velocity HUD.
+- **Controls:** drag anywhere in the game view to steer; hold BOOST (Shift/Space on desktop) to accelerate; tap MISSILE (M on desktop) to launch a homing missile. P/Escape pauses.
+- **Performance:** reduced DPR on coarse-pointer phones, reused primitive meshes/materials, geometry batching and GPU-instanced particles/streaks. Static typecheck, Node regression suite and Vite production build are run in GitHub Actions. These automated checks do not replace live Safari performance or visual play testing.
+
 ## NOVA STRIKE — TRUE 3D FLIGHT (2026-10-25)
 
 Added an independent **full 3D flight mode** at `flight3d.html`, launched from the title screen's "完全3D フライトモード" button. This is not another camera filter on World Rebuild: it has its own 3D-space flight physics, perspective chase camera, independently moving depth coordinate, three-dimensional enemy/projectile collision checks (swept sphere tests), automatic twin lasers, boost management, homing missiles, shields, pause/restart and six physical world environments with a guardian at each sector exit. Existing campaign, World Rebuild, Classic, score attack and Boss Rush are unchanged.

@@ -12,9 +12,10 @@
     <canvas id="flight" aria-label="3D空間戦闘ゲーム"></canvas>
     <div id="progress-wrap"><i id="progress"></i></div>
     <div class="reticle" aria-hidden="true"></div>
+    <div id="target-ring" class="target-ring" aria-hidden="true" hidden><i></i><span>LOCKED <b id="target-distance">000 M</b></span></div>
     <header class="hud">
       <div><span class="label">SCORE / TRUE 3D</span><strong id="score">0000000</strong><div id="sector">01 / 06</div></div>
-      <div class="hud-right"><span class="label">SHIELD</span><strong id="hull">◆ ◆ ◆ ◆ ◆</strong><strong id="speed">240 km/h</strong><button id="pause" aria-label="一時停止">Ⅱ PAUSE</button></div>
+      <div class="hud-right"><span class="label">SHIELD</span><strong id="hull">◆ ◆ ◆ ◆ ◆</strong><strong id="speed">720 km/h</strong><span id="altitude" class="minor">ALT 1125 M</span><span class="multiplier">FLIGHT SPEED ×3</span><button id="pause" aria-label="一時停止">Ⅱ PAUSE</button></div>
     </header>
     <section id="bosswrap" hidden><strong id="boss-name">GUARDIAN</strong><div class="track"><i id="boss-fill"></i></div></section>
     <div id="notice" aria-live="polite"></div>
@@ -25,9 +26,9 @@
     </div>
     <section id="overlay" class="overlay">
       <div class="panel">
-        <span class="kicker">N / S — INDEPENDENT FLIGHT SYSTEM</span>
+        <span class="kicker">N / S — CINEMATIC 3D FLIGHT / 3× SPEED</span>
         <h1 id="overlay-title">NOVA STRIKE</h1>
-        <p id="overlay-info">実際の奥行き空間を飛ぶ完全3Dシューティング</p>
+        <p id="overlay-info">3倍速のシネマティック3Dシューティング</p>
         <button id="action">3D出撃</button>
         <a class="home" href="./">← 通常モードに戻る</a>
         <span class="minor" style="margin-top:25px">iPhone: DRAG / BOOST / MISSILE · PC: WASD / SHIFT / M / P</span>

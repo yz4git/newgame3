@@ -1,5 +1,7 @@
 import * as T from 'three';
 import './flight3d.css';
+import {createFlightShip,animateFlightShip,createFlightSection,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
+import {SPEED_MULTIPLIER,cruiseSpeed,boostSpeed,laserSpeed,missileSpeed,enemySpawnRange,displaySpeed,sweptCollision} from './flight3d-tuning.ts';
 
 const $ = <E extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as E;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -17,44 +19,12 @@ type State = 'title' | 'playing' | 'paused' | 'over' | 'clear';
 type Foe = { mesh: T.Group; hp: number; max: number; radius: number; phase: number; x: number; y: number; fire: number; boss: boolean; points: number };
 type Shot = { mesh: T.Mesh; velocity: T.Vector3; foe: boolean; power: number; radius: number; homing: boolean; life: number };
 type Blast = { mesh: T.Mesh; life: number; duration: number };
-const hullGeo = new T.ConeGeometry(0.56, 3.7, 5);
-const plateGeo = new T.BoxGeometry(1, 1, 1);
 const orbGeo = new T.IcosahedronGeometry(1, 1);
 const shotGeo = new T.SphereGeometry(1, 8, 6);
-const ringGeo = new T.TorusGeometry(1, .065, 5, 32);
-const mat = (color: number, glow = 0) => new T.MeshStandardMaterial({ color, metalness: .66, roughness: .36, flatShading: true, emissive: color, emissiveIntensity: glow });
-const gold = new T.MeshBasicMaterial({ color: 0xffce8a });
+const mat = (color: number, glow = 0) => new T.MeshStandardMaterial({ color, metalness: .65, roughness: .34, flatShading: true, emissive: color, emissiveIntensity: glow });
 const hostile = new T.MeshBasicMaterial({ color: 0xff7195, toneMapped: false });
 const friendly = new T.MeshBasicMaterial({ color: 0x7feaff, toneMapped: false });
 const missileMat = new T.MeshBasicMaterial({ color: 0xffd18a, toneMapped: false });
-function bodyPart(group: T.Group, geometry: T.BufferGeometry, material: T.Material, x: number, y: number, z: number, sx: number, sy: number, sz: number) {
-  const mesh = new T.Mesh(geometry, material);
-  mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); group.add(mesh); return mesh;
-}
-function spacecraft(color: number, boss = false) {
-  const ship = new T.Group();
-  const skin = mat(color, .12), dark = mat(0x0b1d32), trim = mat(0xa9c4d8, .12);
-  const core = new T.Mesh(hullGeo, skin);
-  core.rotation.x = -Math.PI / 2; core.position.z = -.24;
-  ship.add(core);
-  for (const sign of [-1, 1]) {
-    const wing = bodyPart(ship, plateGeo, skin, sign * 1.17, -.12, .63, 2.2, .16, 1.4);
-    wing.rotation.z = sign * .12; wing.rotation.y = sign * .15;
-    bodyPart(ship, plateGeo, trim, sign * 2.1, .10, .93, .13, .55, 1.2);
-    bodyPart(ship, plateGeo, dark, sign * .52, .23, 1.1, .55, .55, .75);
-    bodyPart(ship, orbGeo, new T.MeshBasicMaterial({ color: 0x6ce9ff }), sign * .62, -.08, 1.75, .29, .27, .23);
-  }
-  bodyPart(ship, orbGeo, trim, 0, .33, -.42, .34, .28, .79);
-  if (boss) {
-    ship.scale.set(2.65, 2.35, 2.1);
-    for (const s of [-1, 1]) {
-      bodyPart(ship, plateGeo, skin, s * 2.45, .5, -.2, 1.2, 1.0, 2.6);
-      bodyPart(ship, orbGeo, gold, s * 2.4, .6, -1.5, .38, .38, .45);
-    }
-    bodyPart(ship, orbGeo, new T.MeshBasicMaterial({ color: 0xffb573 }), 0, .18, -1.8, .85, .85, .8);
-  }
-  return ship;
-}
 function hitSegment(a: T.Vector3, b: T.Vector3, center: T.Vector3, radius: number) {
   const ab = new T.Vector3().subVectors(b, a);
   const t = clamp(new T.Vector3().subVectors(center, a).dot(ab) / Math.max(.000001, ab.lengthSq()), 0, 1);
@@ -65,7 +35,12 @@ class Flight3D {
   private scene = new T.Scene();
   private camera = new T.PerspectiveCamera(66, 1, .12, 420);
   private renderer: T.WebGLRenderer;
-  private craft = spacecraft(0xd5e5ef);
+  private craft = createFlightShip(0xd5e5ef);
+  private vfx = new FlightVfx(matchMedia('(pointer:coarse)').matches);
+  private atmosphere=new FlightAtmosphere();
+  private currentSpeed = cruiseSpeed(0);
+  private lockTarget: Foe | null = null;
+  private cameraShake = 0;
   private state: State = 'title';
   private stage = 0;
   private sectorTime = 0;
@@ -106,7 +81,8 @@ class Flight3D {
     this.scene.add(new T.HemisphereLight(0x98c9ef, 0x111525, 2.1));
     const sun = new T.DirectionalLight(0xffe1c5, 2.5);
     sun.position.set(-35, 60, 25); this.scene.add(sun);
-    this.scene.add(this.craft);
+    this.craft.rotation.y = 0; // player faces -Z; hostile ships face +Z
+    this.scene.add(this.atmosphere.mesh,this.craft,this.vfx.root);
     this.scene.add(new T.AmbientLight(0x5d7fbb, .32));
     this.attachControls();
     this.resize();
@@ -159,10 +135,11 @@ class Flight3D {
   }
   private hideOverlay() { $('overlay').hidden = true; $('controls').hidden = false; }
   private start() {
-    this.stopObjects(); this.pendingSectorChange = false; this.stage = 0; this.score = 0; this.shield = 5; this.boost = 100;
+    this.stopObjects(); this.pendingSectorChange = false; this.lockTarget=null; this.stage = 0; this.score = 0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
     this.craft.position.set(0, 0, 0); this.baseX = 0; this.baseY = 0; this.totalTime = 0;
     this.missileDelay = 0; this.invulnerable = 2;
     this.configureSector(); this.state = 'playing'; this.hideOverlay();
+    this.camera.position.set(0, 5.2, 15.4); this.camera.fov=71; this.camera.updateProjectionMatrix();
     this.previous = performance.now(); this.unlockAudio(); this.alert('TRUE 3D FLIGHT — SECTOR 01', 2.4);
   }
   private resume() { if (this.state !== 'paused') return; this.state = 'playing'; this.hideOverlay(); this.previous = performance.now(); }
@@ -178,94 +155,68 @@ class Flight3D {
     this.renderOverlay(clear ? 'ALL SECTORS CLEAR' : 'SIGNAL LOST', 'SCORE ' + this.score.toString().padStart(7, '0') + '<br>' + (clear ? '6つの立体戦場を突破！' : '3D空間の回避ラインを見直して再挑戦。') + (this.score > best ? '<br>NEW BEST' : ''), 'もう一度出撃');
   }
   private stopObjects() {
-    for (const e of this.enemies) this.scene.remove(e.mesh);
-    if (this.boss) this.scene.remove(this.boss.mesh);
+    for (const e of this.enemies){this.scene.remove(e.mesh);disposeFlightVisual(e.mesh,true);}
+    if (this.boss){this.scene.remove(this.boss.mesh);disposeFlightVisual(this.boss.mesh,true);}
     for (const s of this.shots) this.scene.remove(s.mesh);
     for (const b of this.blasts) this.scene.remove(b.mesh);
-    for (const g of this.scenery) this.scene.remove(g);
-    this.enemies = []; this.boss = null; this.shots = []; this.blasts = []; this.scenery = [];
+    for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
+    this.vfx.clear();
+    this.enemies = []; this.boss = null; this.lockTarget=null; this.shots = []; this.blasts = []; this.scenery = [];
   }
   private configureSector() {
     const p = worlds[this.stage];
     this.scene.background = new T.Color(p.sky);
     this.scene.fog = new T.Fog(p.haze, 64, 260);
+    this.atmosphere.setPalette(p.sky,p.haze,p.light);
     this.floorMaterial.color.setHex(p.ground);
     this.terrainMaterial.color.setHex(p.metal);
     this.accentMaterial.color.setHex(p.light);
-    for (const g of this.scenery) this.scene.remove(g);
+    for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.scenery = [];
-    for (let i = 0; i < 16; i++) this.makeScenery(this.craft.position.z - 35 - i * 26, i);
-    this.sectorTime = 0; this.spawnDelay = 1.3; this.laserDelay = 0;
+    for (let i = 0; i < 16; i++) this.makeScenery(this.craft.position.z - 55 - i * 38, i);
+    this.sectorTime = 0; this.spawnDelay = 1.3; this.laserDelay = 0;this.lockTarget=null;
     $('sector').textContent = String(this.stage + 1).padStart(2, '0') + ' / 06 — ' + worldNames[this.stage];
     $('bosswrap').hidden = true; $('progress').style.width = '0%';
   }
   private makeScenery(z: number, index: number) {
-    const g = new T.Group(); g.position.z = z;
-    const isSpace = this.stage === 0;
-    if (!isSpace) bodyPart(g, plateGeo, this.floorMaterial, 0, -15, 0, 54, .3, 25.7);
-    for (let n = 0; n < 7; n++) {
-      const seed = index * 13 + n * 7 + this.stage * 91;
-      const sign = n % 2 ? -1 : 1;
-      const x = sign * (11 + rand(seed) * 19), zz = (rand(seed + 4) - .5) * 22;
-      if (isSpace) {
-        const a = bodyPart(g, orbGeo, this.terrainMaterial, x * 1.2, -3 + rand(seed + 2) * 20, zz, 1.8 + rand(seed + 3) * 5, 1.3 + rand(seed + 6) * 4, 1.4 + rand(seed + 9) * 4);
-        a.rotation.set(rand(seed) * 2, rand(seed + 1) * 2, rand(seed + 2) * 2);
-      } else if (this.stage === 3) {
-        const ice = bodyPart(g, new T.ConeGeometry(1, 1, 5), this.terrainMaterial, x, -5, zz, 3.3, 18 + rand(seed) * 19, 3.6);
-        ice.rotation.z = (rand(seed + 3) - .5) * .26;
-      } else if (this.stage === 4) {
-        bodyPart(g, new T.CylinderGeometry(.55, 1.25, 1, 6), this.terrainMaterial, x, -8, zz, 1, 15, 1);
-        bodyPart(g, orbGeo, this.accentMaterial, x, 0, zz, 4.6, 5, 4.6);
-      } else if (this.stage === 1) {
-        bodyPart(g, plateGeo, this.terrainMaterial, x, -12, zz, 3.8, 4.2, 7.5);
-        bodyPart(g, plateGeo, this.accentMaterial, x, -9.8, zz, 1.9, .14, 4.2);
-      } else {
-        const height = 12 + rand(seed) * (this.stage === 2 ? 27 : 20);
-        bodyPart(g, plateGeo, this.terrainMaterial, x, -15 + height / 2, zz, 3 + rand(seed + 2) * 3, height, 4 + rand(seed + 4) * 3);
-        bodyPart(g, plateGeo, this.accentMaterial, x, -15 + height + .18, zz, 3.5, .26, 4.5);
-      }
-    }
-    if (index % 3 === 0) {
-      const frame = new T.Mesh(new T.TorusGeometry(12, .24, 6, 48), this.accentMaterial);
-      frame.position.set(0, 1, 0); frame.rotation.z = index * .12; g.add(frame);
-      for (const x of [-12, 12]) bodyPart(g, plateGeo, this.terrainMaterial, x, -8, 0, 1.15, 17, 1.15);
-    }
-    this.scene.add(g); this.scenery.push(g);
+    const g=createFlightSection(this.stage,index,z,this.floorMaterial,this.terrainMaterial,this.accentMaterial);
+    this.scene.add(g);this.scenery.push(g);
   }
   private spawnFoe(boss = false) {
     const seed = this.sectorTime * 9.13 + this.enemies.length * 4.3;
-    const mesh = spacecraft(boss ? 0x963d54 : this.stage % 2 ? 0xb26f75 : 0x9d577c, boss);
+    const mesh = createFlightShip(boss ? 0x963d54 : this.stage % 2 ? 0xb26f75 : 0x9d577c, boss, this.stage);
     const x = boss ? 0 : (rand(seed) - .5) * 13.2;
     const y = boss ? 2.5 : (rand(seed + 4) - .5) * 10;
     mesh.rotation.y = Math.PI;
-    mesh.position.set(x, y, this.craft.position.z - (boss ? 92 : 105));
+    mesh.position.set(x, y, this.craft.position.z - (boss ? 135 : enemySpawnRange));
     this.scene.add(mesh);
-    const max = boss ? 170 + this.stage * 35 : (this.stage >= 3 ? 6 : 4);
-    const foe: Foe = { mesh, hp: max, max, radius: boss ? 5.6 : 1.5, phase: seed, x, y, fire: boss ? 1.3 : 1.3 + rand(seed + 8) * 1.5, boss, points: boss ? 5000 : 180 + this.stage * 65 };
+    const max = boss ? 145 + this.stage * 24 : (this.stage >= 3 ? 6 : 4);
+    const foe: Foe = { mesh, hp: max, max, radius: boss ? 8.0 : 2.15, phase: seed, x, y, fire: boss ? 1.3 : 1.3 + rand(seed + 8) * 1.5, boss, points: boss ? 5000 : 180 + this.stage * 65 };
     if (boss) {
       this.boss = foe; $('bosswrap').hidden = false; $('boss-name').textContent = 'GUARDIAN / ' + worldNames[this.stage];
       this.alert('WARNING — 3D GUARDIAN', 2.4);
     } else this.enemies.push(foe);
   }
   private fireShot(origin: T.Vector3, velocity: T.Vector3, foe: boolean, power: number, homing = false) {
-    if (this.shots.length >= 140) return;
+    if (this.shots.length >= 185) return;
     const mesh = new T.Mesh(shotGeo, foe ? hostile : homing ? missileMat : friendly);
     mesh.position.copy(origin); mesh.scale.set(homing ? .46 : .22, homing ? .46 : .22, homing ? 1.0 : 1.2);
     this.scene.add(mesh);
     this.shots.push({ mesh, velocity, foe, power, radius: homing ? .68 : .3, homing, life: 3.2 });
   }
   private fireLasers() {
-    let lock: Foe | null = null, dist = 160;
+    let lock: Foe | null = null, dist = 210;
     for (const f of [...this.enemies, ...(this.boss ? [this.boss] : [])]) {
       const dz = this.craft.position.z - f.mesh.position.z;
       const dx = Math.abs(f.mesh.position.x - this.craft.position.x), dy = Math.abs(f.mesh.position.y - this.craft.position.y);
-      if (dz > 0 && dz < dist && dx < 4.5 && dy < 4.5) { lock = f; dist = dz; }
+      if (dz > 0 && dz < dist && dx < 6 && dy < 6) { lock = f; dist = dz; }
     }
+    this.lockTarget=lock;
     for (const side of [-1, 1]) {
       const origin = this.craft.position.clone().add(new T.Vector3(side * .62, -.10, -1.6));
       const aim = new T.Vector3(0, 0, -1);
       if (lock) aim.lerp(lock.mesh.position.clone().sub(origin).normalize(), .28).normalize();
-      this.fireShot(origin, aim.multiplyScalar(110), false, 1);
+      this.fireShot(origin, aim.multiplyScalar(laserSpeed(this.currentSpeed)), false, 1);
     }
   }
   private fireMissile() {
@@ -275,7 +226,7 @@ class Flight3D {
     if (!target) for (const e of this.enemies) { const d = this.craft.position.distanceTo(e.mesh.position); if (d < nearest) { target = e; nearest = d; } }
     const from = this.craft.position.clone().add(new T.Vector3(0, -.1, -2));
     const dir = target ? target.mesh.position.clone().sub(from).normalize() : new T.Vector3(0, 0, -1);
-    this.fireShot(from, dir.multiplyScalar(74), false, 9, true);
+    this.fireShot(from, dir.multiplyScalar(missileSpeed(this.currentSpeed)), false, 12, true);
     this.sfx(170, .19);
     $('missile').classList.add('fired'); setTimeout(() => $('missile').classList.remove('fired'), 150);
   }
@@ -284,23 +235,23 @@ class Flight3D {
     const aim = this.craft.position.clone().sub(origin).normalize();
     for (let n = 0; n < (e.boss ? 5 : 1); n++) {
       const spread = (n - (e.boss ? 2 : 0)) * .18;
-      const velocity = aim.clone().add(new T.Vector3(spread, Math.sin(e.phase + n) * .065, 0)).normalize().multiplyScalar(e.boss ? 31 : 27);
+      const velocity = aim.clone().add(new T.Vector3(spread, Math.sin(e.phase + n) * .065, 0)).normalize().multiplyScalar(e.boss ? 43 : 34 + this.stage * 1.5);
       this.fireShot(origin, velocity, true, 1);
     }
   }
   private hitShip() {
     if (this.invulnerable > 0 || this.state !== 'playing') return;
-    this.shield--; this.invulnerable = 1.65; this.flash = .6; this.sfx(95, .24);
+    this.shield--; this.invulnerable = 1.65; this.flash = .6; this.cameraShake=.5; this.vfx.burst(this.craft.position,1.6,0xff6e6c); this.sfx(95, .24);
     if (this.shield <= 0) this.finish(false);
   }
   private damageFoe(e: Foe, amount: number) {
     e.hp -= amount;
     if (e.hp > 0) return;
     this.explode(e.mesh.position, e.boss ? 7 : 2.3);
-    this.scene.remove(e.mesh); this.score += e.points; this.sfx(e.boss ? 72 : 115, e.boss ? .45 : .10);
+    this.scene.remove(e.mesh); disposeFlightVisual(e.mesh,true); this.score += e.points; this.sfx(e.boss ? 72 : 115, e.boss ? .45 : .10);
     if (e.boss) {
       this.boss = null; this.stage++;
-      for (const other of this.enemies) this.scene.remove(other.mesh); this.enemies = [];
+      for (const other of this.enemies){this.scene.remove(other.mesh);disposeFlightVisual(other.mesh,true);} this.enemies = [];
       if (this.stage === worlds.length) { this.finish(true); return; }
       this.shield = Math.min(5, this.shield + 1);
       this.pendingSectorChange = true;
@@ -310,6 +261,7 @@ class Flight3D {
     const mesh = new T.Mesh(orbGeo, new T.MeshBasicMaterial({ color: size > 4 ? 0xffc27c : 0xff846a, transparent: true, opacity: .72, depthWrite: false }));
     mesh.position.copy(position); mesh.scale.setScalar(.2); this.scene.add(mesh);
     this.blasts.push({ mesh, life: .65, duration: .65 });
+    this.vfx.burst(position,size,size>4?0xffbd7c:0xff816e);
   }
   private alert(message: string, seconds = 2) { $('notice').textContent = message; $('notice').classList.add('visible'); this.noticeTime = seconds; }
   private sfx(freq: number, length: number) {
@@ -339,15 +291,18 @@ class Flight3D {
     this.baseY = clamp(this.baseY + dy * dt * 11, -6.5, 8);
     const accelerating = (this.boostHeld || k.has('shift') || k.has(' ')) && this.boost > 0;
     this.boost = clamp(this.boost + (accelerating ? -30 : 12) * dt, 0, 100);
-    const speed = accelerating ? 45 : 20 + this.stage * 1.3;
+    const previousShipPosition=this.craft.position.clone();
+    const speed = accelerating ? boostSpeed() : cruiseSpeed(this.stage);
+    this.currentSpeed = speed;
     this.craft.position.x += (this.baseX - this.craft.position.x) * Math.min(1, dt * 12);
     this.craft.position.y += (this.baseY - this.craft.position.y) * Math.min(1, dt * 12);
     this.craft.position.z -= speed * dt;
     this.craft.rotation.z += (-dx * .18 - (this.baseX - this.craft.position.x) * .055 - this.craft.rotation.z) * Math.min(1, dt * 7);
     this.craft.rotation.x = -dy * .08;
     this.craft.visible = this.invulnerable <= 0 || Math.sin(this.totalTime * 34) > -.25;
+    animateFlightShip(this.craft,this.totalTime,speed/60);
     this.scenery.forEach((g, i) => {
-      if (g.position.z > this.craft.position.z + 37) g.position.z -= this.scenery.length * 26;
+      if (g.position.z > this.craft.position.z + 55) g.position.z -= this.scenery.length * 38;
       if (this.stage === 0) g.rotation.z = Math.sin(this.totalTime * .12 + i) * .014;
     });
     if (!this.boss && this.sectorTime >= 45) {
@@ -355,31 +310,33 @@ class Flight3D {
       this.enemies = []; this.spawnFoe(true);
     } else if (!this.boss && this.sectorTime < 45) {
       this.spawnDelay -= dt;
-      if (this.spawnDelay <= 0) { this.spawnFoe(); this.spawnDelay = Math.max(.95, 2.1 - this.stage * .16); }
+      if (this.spawnDelay <= 0) { this.spawnFoe(); this.spawnDelay = Math.max(.85, 1.65 - this.stage * .12); }
     }
     this.laserDelay -= dt;
-    if (this.laserDelay <= 0) { this.fireLasers(); this.laserDelay = .135; }
+    if (this.laserDelay <= 0) { this.fireLasers(); this.laserDelay = .105; }
     const foes = this.boss ? [...this.enemies, this.boss] : [...this.enemies];
     for (const foe of foes) {
+      const foePrevious=foe.mesh.position.clone();
       if (foe.boss) {
-        foe.mesh.position.z += (this.craft.position.z - 66 - foe.mesh.position.z) * Math.min(1, dt * 1.2);
+        foe.mesh.position.z += (this.craft.position.z - 105 - foe.mesh.position.z) * Math.min(1, dt * 2.3);
         foe.mesh.position.x = Math.sin(this.sectorTime * .65) * 4.5;
         foe.mesh.position.y = 1.5 + Math.sin(this.sectorTime * .87) * 2.4;
         foe.mesh.rotation.z = Math.sin(this.sectorTime * 1.1) * .11;
       } else {
-        foe.mesh.position.z += (7 + this.stage) * dt;
+        foe.mesh.position.z += (21 + this.stage * 3) * dt;
         foe.mesh.position.x = clamp(foe.x + Math.sin(this.sectorTime * 1.7 + foe.phase) * 1.7, -8, 8);
         foe.mesh.position.y = foe.y + Math.sin(this.sectorTime * 2.1 + foe.phase) * 1.2;
         foe.mesh.rotation.z = Math.sin(this.sectorTime * 2.1 + foe.phase) * .25;
         if (foe.mesh.position.z > this.craft.position.z + 12) {
-          this.scene.remove(foe.mesh); this.enemies.splice(this.enemies.indexOf(foe), 1); continue;
+          this.scene.remove(foe.mesh);disposeFlightVisual(foe.mesh,true); this.enemies.splice(this.enemies.indexOf(foe), 1); continue;
         }
       }
       foe.fire -= dt;
-      if (foe.fire <= 0 && foe.mesh.position.z < this.craft.position.z - 10) {
-        this.enemyShot(foe); foe.fire = foe.boss ? 1.15 : 2.4;
+      if (foe.fire <= 0 && foe.mesh.position.z < this.craft.position.z - 20) {
+        this.enemyShot(foe); foe.fire = foe.boss ? 1.4 : 2.7;
       }
-      if (!foe.boss && foe.mesh.position.distanceTo(this.craft.position) < foe.radius + .8) {
+      animateFlightShip(foe.mesh,this.totalTime+foe.phase,1);
+      if (!foe.boss && sweptCollision(previousShipPosition,this.craft.position,foePrevious,foe.mesh.position,foe.radius+.65)) {
         this.hitShip(); this.damageFoe(foe, foe.hp);
       }
     }
@@ -388,12 +345,12 @@ class Flight3D {
       if (shot.homing) {
         let best: Foe | null = this.boss, closest = 1e9;
         if (!best) for (const e of this.enemies) { const distance = e.mesh.position.distanceToSquared(a); if (distance < closest) { closest = distance; best = e; } }
-        if (best) shot.velocity.lerp(best.mesh.position.clone().sub(a).normalize().multiplyScalar(86), Math.min(1, dt * 3.8));
+        if (best) shot.velocity.lerp(best.mesh.position.clone().sub(a).normalize().multiplyScalar(missileSpeed(this.currentSpeed)), Math.min(1, dt * 3.8));
       }
       shot.mesh.position.addScaledVector(shot.velocity, dt); shot.life -= dt;
       let contact: Foe | null = null;
       if (shot.foe) {
-        if (hitSegment(a, shot.mesh.position, this.craft.position, shot.radius + .74)) { this.hitShip(); shot.life = 0; }
+        if (sweptCollision(a,shot.mesh.position,previousShipPosition,this.craft.position,shot.radius+.74)) { this.hitShip(); shot.life = 0; }
       } else {
         for (const e of foes) {
           if (e.hp > 0 && hitSegment(a, shot.mesh.position, e.mesh.position, shot.radius + e.radius)) { contact = e; break; }
@@ -417,6 +374,8 @@ class Flight3D {
       this.shots = []; this.configureSector();
       this.alert('SECTOR CLEARED — NEXT WORLD', 2.9);
     }
+    this.vfx.update(this.craft.position,this.totalTime,dt,speed,accelerating);
+    this.cameraShake=Math.max(0,this.cameraShake-dt*1.6);
     this.flash = Math.max(0, this.flash - dt);
     $('hit').style.opacity = String(this.flash);
     this.updateUI();
@@ -424,8 +383,10 @@ class Flight3D {
   private updateUI() {
     $('score').textContent = this.score.toString().padStart(7, '0');
     $('hull').textContent = '◆ '.repeat(this.shield) + '◇ '.repeat(5 - this.shield);
-    $('speed').textContent = Math.round((this.boostHeld && this.boost > 0 ? 45 : 20 + this.stage * 1.3) * 12) + ' km/h';
+    $('speed').textContent = displaySpeed(this.currentSpeed) + ' km/h';
+    $('speed').classList.toggle('hypersonic',this.currentSpeed>=boostSpeed());
     $('boost-fill').style.width = this.boost.toFixed(0) + '%';
+    $('altitude').textContent = 'ALT ' + Math.round((this.craft.position.y+15)*75).toString().padStart(4,'0') + ' M';
     $('missile').textContent = this.missileDelay > 0 ? 'MISSILE ' + this.missileDelay.toFixed(1) : 'MISSILE READY';
     $('progress').style.width = Math.min(100, this.sectorTime / 45 * 100) + '%';
     if (this.boss) $('boss-fill').style.width = Math.max(0, this.boss.hp / this.boss.max * 100) + '%';
@@ -433,9 +394,32 @@ class Flight3D {
   private frame(t: number) {
     const dt = Math.min(.035, Math.max(0, (t - (this.previous || t)) / 1000)); this.previous = t;
     if (this.state === 'playing') this.update(dt);
-    const desired = new T.Vector3(this.craft.position.x * .58, this.craft.position.y + 5.0, this.craft.position.z + 14.7);
-    this.camera.position.lerp(desired, Math.min(1, dt * 6 || .08));
-    this.camera.lookAt(this.craft.position.x * .42, this.craft.position.y * .45 + 1, this.craft.position.z - 32);
+    const accelerating=this.currentSpeed>=boostSpeed();
+    const desired = new T.Vector3(this.craft.position.x * .64, this.craft.position.y + 5.4, this.craft.position.z + (accelerating ? 18.5 : 16.4));
+    this.camera.position.lerp(desired, Math.min(1, dt * 8 || .09));
+    if(this.cameraShake>0){this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.28;this.camera.position.y+=(Math.random()-.5)*this.cameraShake*.27;}
+    this.camera.lookAt(this.craft.position.x * .47, this.craft.position.y * .48 + 1, this.craft.position.z - 43);
+    this.camera.rotateZ(-this.craft.rotation.z*.09);
+    const fov = accelerating ? 83 : 71;
+    this.camera.fov+=(fov-this.camera.fov)*Math.min(1,dt*4.5);
+    this.camera.updateProjectionMatrix();
+    const marked=this.lockTarget;
+    const reticle=$('target-ring');
+    const targetExists=marked && (marked===this.boss||this.enemies.includes(marked)) && marked.hp>0;
+    if(targetExists){
+      const worldPos=marked.mesh.position.clone();
+      const ahead=worldPos.sub(this.camera.position).dot(this.camera.getWorldDirection(new T.Vector3()))>0;
+      const clip=marked.mesh.position.clone().project(this.camera);
+      const visible=ahead&&clip.z>-.95&&clip.z<1&&Math.abs(clip.x)<.93&&Math.abs(clip.y)<.89;
+      reticle.hidden=!visible;
+      if(visible){
+        reticle.style.left=((clip.x+1)*50).toFixed(2)+'%';
+        reticle.style.top=((1-clip.y)*50).toFixed(2)+'%';
+        $('target-distance').textContent=Math.max(0,Math.round(this.craft.position.distanceTo(marked.mesh.position)))+' M';
+        reticle.classList.toggle('boss-lock',marked.boss);
+      }
+    }else reticle.hidden=true;
+    this.atmosphere.follow(this.camera.position);
     this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame(time => this.frame(time));
   }
