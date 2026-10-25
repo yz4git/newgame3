@@ -887,7 +887,8 @@ class GroundFlight {
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
   // Inspection-only: seek physical scenery for reference comparisons without
   // waiting for a full level. Not enabled in normal gameplay sessions.
-  this.missionTime=clamp(seconds,0,this.mission.duration-.2);
+  this.missionTime=clamp(seconds,0,this.mission.id===0?STAGE1.boss/STAGE1.nominalSpeed-.025:this.mission.duration-.2);
+  this.laneX=0;this.laneY=2;this.cameraPanX=0;
   this.player.position.z=-this.missionTime*76;
   const center=routeCenter(this.mission.scene,this.player.position.z);
   this.player.position.x=center.x+this.laneX;this.player.position.y=center.y+this.laneY;
