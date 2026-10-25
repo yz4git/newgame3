@@ -142,3 +142,11 @@ button[hidden],[hidden]{display:none!important}
 @media(orientation:landscape) and (max-height:500px){
  .rail-boundary{top:41%;font-size:28px}
 }
+
+/* Positive, mechanic-driven target lock feedback; don't show a permanent
+   lock when no charge is held or no enemy is inside the projected reticle. */
+.target-ring.locked{border-color:#caff70;box-shadow:0 0 23px #9dfc68c9,inset 0 0 12px #baff6888}
+.target-ring.locked span{color:#d9ff8a}
+#sight-near.locked{border-color:#d6ff76!important;filter:drop-shadow(0 0 7px #aaff89)}
+#sight-far.locked{border-color:#b6f872!important}
+#fire.locked{border-color:#b7ff7c!important;box-shadow:0 0 22px #8cff65a8!important;background:linear-gradient(145deg,#245b3f,#092820)!important}
