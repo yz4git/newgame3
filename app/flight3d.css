@@ -119,3 +119,14 @@ button[hidden],[hidden]{display:none!important}
  .sight{width:29px;height:29px}.sight-far{width:11px;height:11px}
  #notice{top:18%;font-size:13px}
 }
+
+/* Readable original mission-pilot portraits instead of the old N/S placeholder. */
+.comms-face{position:relative;overflow:hidden;background:linear-gradient(145deg,#31536c,#0b2137);min-width:49px}
+.comms-portrait{position:absolute;inset:3px;filter:drop-shadow(0 1px 3px #000b)}
+.pilot-helmet{position:absolute;left:9px;top:5px;width:29px;height:31px;clip-path:polygon(20% 0,76% 0,100% 28%,94% 84%,67% 100%,30% 100%,5% 78%,0 27%);background:linear-gradient(135deg,#b2d9e2,#5d8098 55%,#263950)}
+.pilot-visor{position:absolute;left:13px;top:15px;width:23px;height:11px;background:linear-gradient(165deg,#92f2fa,#187f9e 62%,#103b68);clip-path:polygon(0 20%,100% 0,92% 95%,11% 100%);border-bottom:2px solid #dcffff}
+.pilot-chin{position:absolute;left:20px;top:28px;width:14px;height:6px;border-top:2px solid #0d2937;border-bottom:2px solid #a5cbdc;transform:skew(6deg)}
+.pilot-ear{position:absolute;left:4px;top:16px;width:9px;height:15px;background:#49718d;border:1px solid #a4c3d3;clip-path:polygon(0 0,100% 15%,100% 92%,0 100%)}
+#radio[data-pilot="ECHO"] .pilot-visor{background:linear-gradient(145deg,#99f5dc,#187e8b)}
+#radio[data-pilot="VECTA"] .pilot-visor{background:linear-gradient(145deg,#ffd79d,#b36851)}
+@media (orientation:landscape) and (max-height:500px){.comms-portrait{transform:scale(.65);transform-origin:top left}}
