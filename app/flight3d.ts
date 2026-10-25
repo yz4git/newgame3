@@ -99,7 +99,9 @@ class GroundFlight {
     groundHeight:heightAt(this.mission.scene,this.player.position.x,this.player.position.z),
     altitude:this.player.position.y-heightAt(this.mission.scene,this.player.position.x,this.player.position.z),
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
-    gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
+    gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,
+    visibleTargets:this.enemies.filter(e=>{const p=e.position.clone().project(this.camera);return p.z>0&&p.z<1&&Math.abs(p.x)<.90&&Math.abs(p.y)<.90;}).length,
+    shots:this.shots.length,
     hits:this.missionHits,shield:this.shield,boss:this.boss!==null,bossVariant:this.boss?.model.userData.variant??null,missionTime:this.missionTime,fps:this.averageFps,renderScale:this.renderScale,
     checkpoint:this.checkpoint,rescueCount:this.rescueCount,locked:this.lockedTarget!==null,openingCue:this.openingCue,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
@@ -376,10 +378,22 @@ class GroundFlight {
    const shell=new T.Mesh(boxGeo,armor);shell.scale.set(4.2,3,4.4);shell.position.y=1.4;model.add(shell);
    const head=new T.Mesh(coneGeo,armor);head.rotation.x=-Math.PI/2;head.scale.set(1.2,2.5,1.2);head.position.set(0,3.35,-1.8);model.add(head);
    const core=new T.Mesh(orb,glow);core.scale.set(.72,.65,.7);core.position.set(0,2,-2.25);model.add(core);
-  }else model.rotation.y=Math.PI;
+  }else{
+   model.rotation.y=Math.PI;
+   // The actual gameplay audit showed hostile fighters were only a few pixels
+   // across at engagement distance and blended into the city background.
+   model.scale.multiplyScalar(elite?1.63:1.47);
+   for(const side of [-1,1]){
+    const exhaust=new T.Mesh(coneGeo,hostileMat);
+    exhaust.position.set(side*1.95,-.1,1.65);
+    exhaust.rotation.x=-Math.PI/2;
+    exhaust.scale.set(.42,.95,.42);
+    model.add(exhaust);
+   }
+  }
   model.position.copy(pos);this.scene.add(model);
   const hp=ground?7:elite?12:4;
-  const enemy:Target={model,position:model.position,hp,max:hp,radius:ground?2.8:elite?3:2.3,age:0,boss:false,ground,phase:seed(this.time*11+pos.z),fire:1.2+seed(pos.x+pos.z)*1.3,
+  const enemy:Target={model,position:model.position,hp,max:hp,radius:ground?2.8:elite?4.4:3.4,age:0,boss:false,ground,phase:seed(this.time*11+pos.z),fire:1.2+seed(pos.x+pos.z)*1.3,
    points:elite?6:ground?3:1,rescue,seed:seed(pos.z+pos.x)*6,side:0,pattern,flightIndex,birth:pos.clone()};
   this.enemies.push(enemy);return enemy;
  }
@@ -390,7 +404,7 @@ class GroundFlight {
    const f=formation(wave.type,i,wave.count,this.missionTime);
    let pos:T.Vector3;
    if(this.mission.mode==='corridor'){
-    const z=this.player.position.z-188-f.z,route=routeCenter(this.mission.scene,z);
+    const z=this.player.position.z-151-f.z,route=routeCenter(this.mission.scene,z);
     const flank=wave.type==='crossfire'?(i%3-1)*19
      :wave.type==='pincer'?(i%2===0?-27:27)
      :wave.type==='flypast'?(i%2===0?-33:33)
