@@ -93,7 +93,7 @@ class GroundFlight {
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
     hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
-    shipNdcX:this.player.position.clone().project(this.camera).x,
+    shipNdcX:this.player.position.clone().project(this.camera).x,shipVisible:this.player.visible,
     sightFarX:($('sight-far') as HTMLElement).style.left,
     cameraInsideSolid:this.terrain.collisions(P(this.camera.position),P(this.camera.position),2.5)?.kind??null}),
     start:()=>this.startCampaign(),pause:()=>this.pause(),
@@ -791,6 +791,7 @@ class GroundFlight {
    this.player.position.x=route.x+this.laneX;
    this.previousPosition.copy(this.player.position);
    this.invulnerable=2.5;
+   this.respawnBlink=false;this.player.visible=true;
   }
  }
  private auditSeek(seconds:number){
