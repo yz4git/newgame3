@@ -357,9 +357,11 @@ export class GroundWorld{
    rubble.rotation.z=u(n+8)*Math.PI;
   }
   if(stage===0&&d>900&&d<1430){
+   // The earlier narrow "tower corridor" intersected the moving chase camera.
+   // Tower landmarks remain visible out on the flanks, beyond the full rail.
    for(const s of [-1,1]){
-    const x=center+s*20;
-    this.makeTower(group,colliders,x,0,tileZ,8,20+u(d+s)*12,Math.round(d+s));
+    const x=center+s*(92+u(d+s)*14);
+    this.makeTower(group,colliders,x,0,tileZ,9,21+u(d+s)*16,Math.round(d+s));
    }
   }
   if(stage===0&&d>3250&&d<3460){
