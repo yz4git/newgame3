@@ -239,7 +239,7 @@ class GroundFlight {
   $('bosswrap').hidden=true;
   this.camera.position.copy(this.player.position).add(new T.Vector3(0,5.6,15));
   this.camera.fov=65;this.camera.updateProjectionMatrix();
-  this.notice('MISSION '+String(id+1).padStart(2,'0')+' / '+this.mission.name,2.8);
+  this.notice('MISSION '+String(id+1).padStart(2,'0')+' / '+this.mission.name,1.8);
   this.comms('NOVA CONTROL',id===0?'海沿いの都市防衛線を突破！ビルと橋を避けて低空を飛べ。':'ミッション開始。地形と敵配置をよく見て進め！',4);
   this.refreshHUD();
  }
@@ -343,7 +343,7 @@ class GroundFlight {
    const f=formation(wave.type,i,wave.count,this.missionTime);
    let pos:T.Vector3;
    if(this.mission.mode==='corridor'){
-    const z=this.player.position.z-172-f.z,route=routeCenter(this.mission.scene,z);
+    const z=this.player.position.z-118-f.z,route=routeCenter(this.mission.scene,z);
     pos=new T.Vector3(route.x+f.x,route.y+f.y+3,z);
    }else{
     const angle=6.28*(i/wave.count)+this.missionTime*.17;
@@ -354,7 +354,7 @@ class GroundFlight {
   if(wave.elite)this.comms('VECTA','重装甲機を確認。ロックオンで撃破！',2.5);
  }
  private spawnTurret(){
-  const z=this.player.position.z-155,route=routeCenter(this.mission.scene,z);
+  const z=this.player.position.z-112,route=routeCenter(this.mission.scene,z);
   const left=Math.floor(this.missionTime*3)%2===0?-1:1;
   const x=route.x+left*(8+seed(this.missionTime)*5);
   const y=heightAt(this.mission.scene,x,z)+1;
@@ -695,7 +695,7 @@ class GroundFlight {
    }
    if(!this.checkpoint&&this.missionTime>25){this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);this.notice('CHECKPOINT',1.5);}
    const crossed=(interval:number)=>(Math.floor(this.missionTime/interval)!==Math.floor((this.missionTime-dt)/interval));
-   if(crossed(7.5))this.spawnTurret();
+   if(crossed(5.6))this.spawnTurret();
    if(crossed(12))this.spawnSupply('ring');
    if(crossed(24))this.spawnSupply(this.laserLevel<3?'laser':'repair');
    if(this.missionTime>=this.mission.duration)this.spawnBoss();
