@@ -62,6 +62,7 @@ class GroundFlight {
  private pointer:number|null=null;private pX=0;private pY=0;private gamepadLast:boolean[]=[];
  private currentTarget:Target|null=null;private previousPosition=new T.Vector3();private time=0;private lastFrame=0;
  private noticeTime=0;private radioTime=0;private cameraShake=0;private damageFlash=0;private audio:AudioContext|null=null;
+ private averageFps=60;
  private bossStage=1;private raf=0;private radar=$<HTMLCanvasElement>('radar');
  constructor(){
   this.renderer=new T.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});
@@ -73,6 +74,7 @@ class GroundFlight {
   this.scene.add(new T.HemisphereLight(0xb6d8ef,0x24342e,2.45));
   const sun=new T.DirectionalLight(0xffedcb,2.75);sun.position.set(-75,110,-45);this.scene.add(sun);
   this.player.rotation.y=0;
+  this.player.scale.setScalar(1.35);
   this.scene.add(this.terrain.root,this.player,this.sky.mesh,this.vfx.root);
   this.scene.add(new T.AmbientLight(0x99bcca,.15));
   this.bind();this.resize();this.setPalette();
@@ -87,8 +89,9 @@ class GroundFlight {
     altitude:this.player.position.y-heightAt(this.mission.scene,this.player.position.x,this.player.position.z),
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
-    hits:this.missionHits,shield:this.shield,boss:this.boss!==null}),
-    start:()=>this.startCampaign(),pause:()=>this.pause()}});
+    hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps}),
+    start:()=>this.startCampaign(),pause:()=>this.pause(),
+    auditSeek:(seconds:number)=>this.auditSeek(seconds)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
  private get playing(){return this.stage==='combat'||this.stage==='boss';}
@@ -748,23 +751,41 @@ class GroundFlight {
   mark(this.player.position,'#f5ffff',4);
   context.restore();
  }
+ private auditSeek(seconds:number){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  // Inspection-only: seek physical scenery for reference comparisons without
+  // waiting for a full level. Not enabled in normal gameplay sessions.
+  this.missionTime=clamp(seconds,0,this.mission.duration-.2);
+  this.player.position.z=-this.missionTime*76;
+  const center=routeCenter(this.mission.scene,this.player.position.z);
+  this.player.position.x=center.x+this.laneX;this.player.position.y=center.y+this.laneY;
+  this.previousPosition.copy(this.player.position);
+  this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
+  this.waveIndex=this.waves.findIndex(w=>w.at>this.missionTime);
+  if(this.waveIndex<0)this.waveIndex=this.waves.length;
+  for(const e of this.enemies){this.scene.remove(e.model);disposeFlightVisual(e.model,true);}
+  this.enemies=[];
+  for(const s of this.shots)this.scene.remove(s.mesh);
+  this.shots=[];
+  this.camera.position.copy(this.player.position).add(new T.Vector3(0,4.1,13.5));
+ }
  private render(dt:number){
   const forward=this.forward();
-  const behind=this.player.position.clone().addScaledVector(forward,-16.4).add(new T.Vector3(0,5.2,0));
+  const behind=this.player.position.clone().addScaledVector(forward,-13.3).add(new T.Vector3(0,3.8,0));
   this.camera.position.lerp(behind,Math.min(1,dt*7||.08));
   if(this.cameraShake>0){
    this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.4;
    this.camera.position.y+=(Math.random()-.5)*this.cameraShake*.25;
   }
-  const look=this.player.position.clone().addScaledVector(forward,85);
+  const look=this.player.position.clone().addScaledVector(forward,96);
   if(this.mission.mode==='corridor'){
    const center=routeCenter(this.mission.scene,look.z);
    look.x=center.x+this.laneX*.3;
-   look.y=center.y-3.0+this.laneY*.25;
+   look.y=center.y-4.1+this.laneY*.23;
   }else look.y-=3;
   this.camera.lookAt(look);
   this.camera.rotateZ(-this.player.rotation.z*.08);
-  const fov=this.boostHeld?74:this.brakeHeld?59:65;
+  const fov=this.boostHeld?72:this.brakeHeld?53:61;
   this.camera.fov=lerp(this.camera.fov,fov,dt*3.7);this.camera.updateProjectionMatrix();
   const marker=$('target-ring');
   const e=this.currentTarget;
@@ -783,10 +804,19 @@ class GroundFlight {
   this.renderRadar();
  }
  private frame(now:number){
-  const dt=Math.min(.034,Math.max(0,(now-(this.lastFrame||now))/1000));
+  // Real elapsed time instead of a 34ms/frame cap. That old cap slowed the
+  // entire game to ~25% speed on heavy scenes, hiding scheduled enemy waves.
+  const elapsed=Math.min(.25,Math.max(0,(now-(this.lastFrame||now))/1000));
   this.lastFrame=now;
-  if(this.playing){this.currentTarget=this.acquire();this.updateGame(dt);}
-  this.render(dt);
+  if(elapsed>0)this.averageFps=lerp(this.averageFps,1/elapsed,.1);
+  if(this.playing){
+   const steps=Math.max(1,Math.ceil(elapsed/0.034)),dt=elapsed/steps;
+   for(let i=0;i<steps&&this.playing;i++){
+    this.currentTarget=this.acquire();
+    this.updateGame(dt);
+   }
+  }
+  this.render(elapsed);
   this.raf=requestAnimationFrame(t=>this.frame(t));
  }
 }
