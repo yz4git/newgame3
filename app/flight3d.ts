@@ -6,6 +6,7 @@ import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
 import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver,hiddenCourseUnlocked} from './flight-stage-direction.ts';
 import type {WaveType} from './nova64-rules.ts';
+import {nextRenderScale,adaptivePixelRatio} from './flight-performance.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
 /**
@@ -71,11 +72,13 @@ class GroundFlight {
  private currentTarget:Target|null=null;private previousPosition=new T.Vector3();private time=0;private lastFrame=0;
  private noticeTime=0;private radioTime=0;private cameraShake=0;private damageFlash=0;private audio:AudioContext|null=null;
  private averageFps=60;
+ private baseDpr=1;private renderScale=1;private lowFpsSecs=0;private highFpsSecs=0;
  private bossStage=1;private raf=0;private radar=$<HTMLCanvasElement>('radar');
  constructor(){
   this.renderer=new T.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});
   const mobile=matchMedia('(pointer:coarse)').matches;
-  this.renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.35:1.9));
+  this.baseDpr=Math.min(devicePixelRatio||1,mobile?1.35:1.9);
+  this.renderer.setPixelRatio(this.baseDpr);
   this.renderer.outputColorSpace=T.SRGBColorSpace;
   this.renderer.toneMapping=T.ACESFilmicToneMapping;
   this.renderer.toneMappingExposure=1.28;
@@ -97,7 +100,7 @@ class GroundFlight {
     altitude:this.player.position.y-heightAt(this.mission.scene,this.player.position.x,this.player.position.z),
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
-    hits:this.missionHits,shield:this.shield,boss:this.boss!==null,bossVariant:this.boss?.model.userData.variant??null,missionTime:this.missionTime,fps:this.averageFps,
+    hits:this.missionHits,shield:this.shield,boss:this.boss!==null,bossVariant:this.boss?.model.userData.variant??null,missionTime:this.missionTime,fps:this.averageFps,renderScale:this.renderScale,
     checkpoint:this.checkpoint,rescueCount:this.rescueCount,locked:this.lockedTarget!==null,openingCue:this.openingCue,
     laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
     shipNdcX:this.player.position.clone().project(this.camera).x,shipVisible:this.player.visible,
@@ -981,7 +984,19 @@ class GroundFlight {
   // entire game to ~25% speed on heavy scenes, hiding scheduled enemy waves.
   const elapsed=Math.min(.25,Math.max(0,(now-(this.lastFrame||now))/1000));
   this.lastFrame=now;
-  if(elapsed>0)this.averageFps=lerp(this.averageFps,1/elapsed,.1);
+  if(elapsed>0){
+   this.averageFps=lerp(this.averageFps,1/elapsed,.09);
+   if(this.playing){
+    this.lowFpsSecs=this.averageFps<28?this.lowFpsSecs+elapsed:0;
+    this.highFpsSecs=this.averageFps>53?this.highFpsSecs+elapsed:0;
+    const next=nextRenderScale(this.renderScale,this.averageFps,this.lowFpsSecs,this.highFpsSecs);
+    if(next!==this.renderScale){
+     this.renderScale=next;
+     this.renderer.setPixelRatio(adaptivePixelRatio(this.baseDpr,next));
+     this.lowFpsSecs=0;this.highFpsSecs=0;
+    }
+   }
+  }
   if(this.playing){
    const steps=Math.max(1,Math.ceil(elapsed/0.034)),dt=elapsed/steps;
    for(let i=0;i<steps&&this.playing;i++){
