@@ -25,9 +25,11 @@ type Projectile={mesh:T.Mesh;velocity:T.Vector3;friendly:boolean;homing:boolean;
 type Supply={mesh:T.Mesh;kind:'ring'|'laser'|'repair'|'bomb';radius:number};
 type Flash={mesh:T.Mesh;life:number;duration:number};
 type Ally={mesh:T.Group;name:string;hp:number;side:number;cooldown:number};
-const orb=new T.IcosahedronGeometry(1,1),boltGeo=new T.IcosahedronGeometry(1,0),boxGeo=new T.BoxGeometry(1,1,1),coneGeo=new T.ConeGeometry(1,1,8);
+const orb=new T.IcosahedronGeometry(1,1),boltGeo=new T.IcosahedronGeometry(1,0),laserBoltGeo=new T.CapsuleGeometry(.22,3.4,3,6),boxGeo=new T.BoxGeometry(1,1,1),coneGeo=new T.ConeGeometry(1,1,8);
 const allyColors=[0x84dcf2,0xf5c493],enemyColors=[0x9b5575,0xc67c65,0x704f96];
-const laserMat=new T.MeshBasicMaterial({color:0x8dffc9,toneMapped:false});
+const laserMat=new T.MeshBasicMaterial({color:0xa4f5ff,toneMapped:false});
+const twinLaserMat=new T.MeshBasicMaterial({color:0x8effb9,toneMapped:false});
+const hyperLaserMat=new T.MeshBasicMaterial({color:0xe8ff79,toneMapped:false});
 const hostileMat=new T.MeshBasicMaterial({color:0xff6985,toneMapped:false});
 const chargedMat=new T.MeshBasicMaterial({color:0xb9f75f,toneMapped:false});
 const bombMat=new T.MeshBasicMaterial({color:0xffe095,toneMapped:false});
@@ -321,24 +323,32 @@ class GroundFlight {
   }
   return best;
  }
- private emit(position:T.Vector3,velocity:T.Vector3,damage:number,friendly:boolean,homing=false,bomb=false,target:Target|null=null){
+ private emit(position:T.Vector3,velocity:T.Vector3,damage:number,friendly:boolean,homing=false,bomb=false,target:Target|null=null,beamLevel=1){
   if(this.shots.length>=225)return;
-  const material=friendly?(bomb?bombMat:homing?chargedMat:laserMat):hostileMat;
-  const mesh=new T.Mesh(boltGeo,material);mesh.position.copy(position);
-  mesh.scale.setScalar(bomb?.85:homing?.5:.25);
+  const material=friendly?(bomb?bombMat:homing?chargedMat:beamLevel>=3?hyperLaserMat:beamLevel===2?twinLaserMat:laserMat):hostileMat;
+  const beam=friendly&&!homing&&!bomb;
+  const mesh=new T.Mesh(beam?laserBoltGeo:boltGeo,material);mesh.position.copy(position);
+  if(beam)mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),velocity.clone().normalize());
+  else mesh.scale.setScalar(bomb?.85:homing?.5:.25);
   this.scene.add(mesh);
   this.shots.push({mesh,velocity,damage,friendly,homing,bomb,target,radius:bomb?1.4:homing?.65:.32,life:3});
  }
  private fireLasers(){
   if(!this.playing||this.shotDelay>0)return;
-  const forward=this.aim();
-  for(const s of [-1,1]){
-   const origin=this.player.position.clone().add(new T.Vector3(s*1.05,-.1,-1.5));
-   const aim=forward.clone();
-   this.emit(origin,aim.multiplyScalar(360+this.velocity),1+(this.laserLevel>1?1:0),true);
+  // The original weapon progression is clearly legible in the number of
+  // beams: single -> twin -> hyper quadruple. Each has real world-space
+  // muzzle origins so banking and camera pan do not desync laser trails.
+  const muzzles=this.laserLevel===1?[[0,.15]]:
+   this.laserLevel===2?[[-1.15,-.12],[1.15,-.12]]:
+   [[-1.55,-.35],[-.72,.26],[.72,.26],[1.55,-.35]];
+  const direction=this.aim();
+  for(const [x,y] of muzzles){
+   const origin=this.player.position.clone().add(new T.Vector3(x,y,-1.55));
+   this.emit(origin,direction.clone().multiplyScalar(370+this.velocity),
+    this.laserLevel===3?1.5:1,true,false,false,null,this.laserLevel);
   }
-  if(this.laserLevel>=3)this.emit(this.player.position.clone().add(new T.Vector3(0,.3,-1.4)),forward.multiplyScalar(390+this.velocity),2,true);
-  this.shotDelay=.12;this.sound(640,.065,.018);
+  this.shotDelay=this.laserLevel===3?.115:.125;
+  this.sound(this.laserLevel===3?770:this.laserLevel===2?680:570,.072,.020);
  }
  private fireCharge(){
   const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null,origin=this.player.position.clone().add(new T.Vector3(0,.2,-1.8));
