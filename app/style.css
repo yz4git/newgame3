@@ -155,3 +155,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-
 .message.tactical strong{font-size:14px;line-height:1.25;letter-spacing:.025em;font-style:normal;text-wrap:balance}
 .message.tactical.danger{border-color:#ff9e9d}
 .small-toast.suppressed{opacity:0}
+
+/* Separate true-3D gameplay mode, not a visual-style toggle. */
+a.full3d-link{display:flex;text-decoration:none;min-height:37px;color:#a9f1ff;border-color:#6fe6ff99;background:linear-gradient(90deg,#062a3bcc,#0b203644);font-weight:800;font-size:11px}
+a.full3d-link span{color:#83d9f1;font-size:9px}
+@media(max-height:760px){.title-menu{gap:6px}.title-menu>.secondary-button{min-height:37px;padding-block:8px}.title-lockup{top:10%}.title-lockup h1{margin:12px 0 8px}}
