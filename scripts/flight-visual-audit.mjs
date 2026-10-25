@@ -74,6 +74,13 @@ await command('Input.dispatchKeyEvent',{type:'keyUp',key:'f',code:'KeyF',windows
 await capture('03-charge');
 await sleep(5800);
 await capture('04-combat');
+// Inspect later authored world segments without waiting several minutes for the
+// software-rendered CI browser; this is a diagnostic seek, not simulated play.
+for(const [seconds,label] of [[8,'04a-city'],[22,'04b-canyon'],[31,'04c-arches'],[44,'04d-waterfall'],[49,'04e-finale']]){
+ await evaluate('window.__novaFlight3D.auditSeek('+seconds+')');
+ await sleep(800);
+ await capture(label);
+}
 await command('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:2,mobile:true,screenWidth:844,screenHeight:390});
 await sleep(900);
 await capture('05-iphone-landscape');
