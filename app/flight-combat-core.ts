@@ -14,7 +14,7 @@ export const ARCADE={
   twinLaserDamage:2.6,
   hyperLaserDamage:3.0,
   laserInterval:.125,
-  threatWarning:.78,
+  threatWarning:1.36,
   bombFuse:.47,
   bombRadius:38,
   bombDamage:65,
@@ -37,7 +37,7 @@ export function laserDamage(level:number){
 export function attackCue(remaining:number,range:number,activeShots:number,boss=false){
  return remaining<=0&&range<(boss?225:185)&&activeShots<ARCADE.maxHostileBullets;
 }
-export function cueDuration(boss:boolean){return boss?.98:ARCADE.threatWarning;}
+export function cueDuration(boss:boolean){return boss?1.65:ARCADE.threatWarning;}
 export function bombHits(blast:V3,target:V3,targetRadius=0){
  return dist(blast,target)<=ARCADE.bombRadius+targetRadius;
 }
