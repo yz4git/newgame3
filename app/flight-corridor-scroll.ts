@@ -9,10 +9,10 @@ export const RAIL_X_MAX=44;
 export const RAIL_Y_MIN=-6.7;
 export const RAIL_Y_MAX=11.5;
 export const CAMERA_DEADZONE=6.5;
-export const CAMERA_SCROLL_GAIN=.82;
+export const CAMERA_SCROLL_GAIN=1;
 export const EDGE_WARNING_START=RAIL_X_MAX-4.0;
 
-/** Camera first leaves the ship free to move; beyond the dead zone it slides. */
+/** Camera first leaves the ship free to move; beyond the dead zone it slides while keeping the full wing span onscreen. */
 export function railCameraPan(localX:number){
  const x=clamp(localX,-RAIL_X_MAX,RAIL_X_MAX);
  const outside=Math.max(0,Math.abs(x)-CAMERA_DEADZONE);

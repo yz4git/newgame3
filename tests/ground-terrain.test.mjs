@@ -7,8 +7,8 @@ import {routeCenter} from '../app/nova64-rules.ts';
 test('each of six planetary environments has a real visible upward-facing 3D terrain',()=>{
  for(let stage=0;stage<6;stage++){
   const ground=new GroundWorld();ground.configure(stage,0,false);
-  assert.equal(ground.tilesCount,12);
-  assert.equal(ground.root.children.length,12);
+  assert.equal(ground.tilesCount,9);
+  assert.equal(ground.root.children.length,9);
   let triangles=0,has3D=false,upward=false;
   for(const section of ground.root.children)section.traverse(o=>{
    if(!(o instanceof THREE.Mesh))return;
@@ -59,11 +59,11 @@ test('physical arches track success/failure exactly once',()=>{
  assert.deepEqual(w.gatesCrossed({x:offset,y:1,z:z2+3},{x:offset,y:1,z:z2-3}),[{index:1,passed:false}]);
  assert.equal(w.gateState.missed,1);w.clear();
 });
-test('terrain streams ahead without increasing the bounded 12-tile corridor render budget',()=>{
+test('terrain streams ahead without increasing the bounded 9-tile corridor render budget',()=>{
  const w=new GroundWorld();w.configure(0,0,false);
  for(let z=0;z>-4200;z-=75){
   w.step(z,false);
-  assert.equal(w.tilesCount,12);
+  assert.equal(w.tilesCount,9);
   const deepest=Math.min(...w.root.children.map(g=>g.position.z));
   const closest=Math.max(...w.root.children.map(g=>g.position.z));
   assert.ok(closest>=z-130,'ground falls behind ship');

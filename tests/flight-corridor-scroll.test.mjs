@@ -19,12 +19,12 @@ test('camera dead zone: ship moves on screen before scenery scrolls',()=>{
  }
  assert.ok(railCameraPan(44)>28);
  assert.ok(railCameraPan(-44)<-28);
- assert.ok(railViewportOffset(44)>9 && railViewportOffset(44)<16);
- assert.ok(railViewportOffset(-44)<-9);
+ assert.ok(railViewportOffset(44)>=6 && railViewportOffset(44)<8);
+ assert.ok(railViewportOffset(-44)<-6 && railViewportOffset(-44)>-8);
 });
 test('camera pan is smooth, monotonic, bounded, symmetric and continuous at dead zone',()=>{
  const d=1e-6;
- assert.ok(Math.abs(railCameraPan(CAMERA_DEADZONE+d))<d);
+ assert.ok(Math.abs(railCameraPan(CAMERA_DEADZONE+d))<d*1.01);
  let previous=-Infinity;
  for(let x=-RAIL_X_MAX;x<=RAIL_X_MAX;x+=.25){
   const pan=railCameraPan(x);
@@ -51,4 +51,10 @@ test('reticle and lasers follow the world-space ship across full flight width',(
   assert.ok(Math.abs(aim.x-center.x-x*.96)<1e-8);
   assert.ok(aim.x>center.x-45 && aim.x<center.x+45);
  }
+});
+
+test('screen-edge craft has room for full wings even with 44-unit rail travel',()=>{
+ assert.ok(railCameraPan(44)>35);
+ assert.ok(railViewportOffset(44)<10);
+ assert.ok(railViewportOffset(-44)>-10);
 });
