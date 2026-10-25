@@ -56,7 +56,7 @@ export function clampRail(x:number,y:number) {
   return {x:Math.max(-TRACK_HALF_WIDTH,Math.min(TRACK_HALF_WIDTH,x)),
     y:Math.max(TRACK_VERTICAL.low,Math.min(TRACK_VERTICAL.high,y))};
 }
-export function rollDeflects(remaining:number){return remaining>.07&&remaining<ROLL_DURATION;}
+export function rollDeflects(remaining:number){return remaining>.07&&remaining<=ROLL_DURATION;}
 export function bossPhase(hp:number,max:number) {const ratio=hp/Math.max(1,max);return ratio>.65?1:ratio>.32?2:3;}
 export function collisionSegment(a:Vec3,b:Vec3,target:Vec3,radius:number) {
   const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
