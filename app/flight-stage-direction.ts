@@ -79,3 +79,11 @@ export function ringMilestone(total:number):'shield'|'life'|null {
  if(total%6===3)return 'shield';
  return null;
 }
+
+/** Classic contextual inputs: climb+boost loops; climb+brake turns around only in all-range. */
+export function contextualManeuver(climbing:boolean,boost:boolean,brake:boolean,allRange:boolean):'loop'|'uturn'|null {
+ if(!climbing)return null;
+ if(boost)return 'loop';
+ if(brake&&allRange)return 'uturn';
+ return null;
+}
