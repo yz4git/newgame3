@@ -10,7 +10,7 @@ import {routeCenter,seed,clamp,swept,type V3} from './nova64-rules.ts';
 export type Collider={x:number;y:number;z:number;rx:number;ry:number;rz:number;kind:'building'|'rock'|'tower'|'bridge'};
 export type Gate={z:number;passed:boolean;missed:boolean;index:number};
 type Tile={group:T.Group;z:number;colliders:Collider[]};
-const TILE=90,HALF=45,COUNT=17,CHANNEL=120;
+const TILE=90,HALF=45,CORRIDOR_TILES=12,ARENA_TILES=17,CHANNEL=120;
 const box=new T.BoxGeometry(1,1,1);
 const ico=new T.IcosahedronGeometry(1,1);
 const cone=new T.ConeGeometry(1,1,6);
@@ -139,7 +139,8 @@ export class GroundWorld{
   this.seaMaterial.color.setHex(color.water);
   this.gateState.passed=0;this.gateState.missed=0;this.gateState.lastCross=-1;
   for(const g of this.gates){g.passed=false;g.missed=false;}
-  for(let i=0;i<COUNT;i++){
+  const visibleTiles=allRange?ARENA_TILES:CORRIDOR_TILES;
+  for(let i=0;i<visibleTiles;i++){
    const tileZ=allRange?(-720+i*TILE):z-i*TILE;
    this.addTile(tileZ);
   }
