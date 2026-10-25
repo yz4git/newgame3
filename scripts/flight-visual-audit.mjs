@@ -69,7 +69,9 @@ await sleep(1900);
 await command('Input.dispatchKeyEvent',{type:'keyUp',key:'d',code:'KeyD',windowsVirtualKeyCode:68});
 await capture('02-move-right');
 await command('Input.dispatchKeyEvent',{type:'keyDown',key:'f',code:'KeyF',windowsVirtualKeyCode:70});
-await sleep(1400);
+await sleep(850);
+await capture('03a-held-charge');
+await sleep(550);
 await command('Input.dispatchKeyEvent',{type:'keyUp',key:'f',code:'KeyF',windowsVirtualKeyCode:70});
 await capture('03-charge');
 await sleep(5800);
@@ -80,6 +82,10 @@ for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches']
  await evaluate('window.__novaFlight3D.auditSeek('+seconds+')');
  await sleep(800);
  await capture(label);
+ if(label==='04b-canyon'){
+  const state=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+  if(!state.checkpoint||state.rescueCount<1)throw Error('Stage order regression: escort encounter must follow checkpoint on canyon approach');
+ }
 }
 // Verify that lateral input SCROLLS THE ACTUAL WORLD CAMERA instead of only
 // shifting the aircraft across a fixed central view.
@@ -116,8 +122,11 @@ await sleep(500);
 await capture('05a-multitouch-drag-fire');
 await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
 await command('Emulation.setTouchEmulationEnabled',{enabled:false});
-await sleep(950);
+await evaluate("window.__novaFlight3D.auditSeek(55.1)");
+await sleep(1600);
 await capture('05b-boss-approach');
+const bossState=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+if(!bossState.boss||bossState.bossVariant!=='walker')throw Error('Standard Corneria guardian should be the giant siege walker; boss snapshot must be REAL');
 await evaluate("document.getElementById('pause').click()");
 await sleep(300);
 await capture('06-pause');

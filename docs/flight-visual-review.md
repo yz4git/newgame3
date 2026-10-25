@@ -1,3 +1,19 @@
+## Reproduction pass: staged missions and flight systems (2026-10-25)
+
+Compared again against the [official Nintendo manual](https://www.nintendo.com/eu/media/downloads/games_8/emanuals/nintendo_3ds_2/star_fox_64_3d/ElectronicManual_Nintendo3DS_Starfox643D_EN.pdf) and the Corneria route chronology. All assets, ships, environments and dialogue remain original NovaStrike material, not a licensed port.
+
+**Bugs corrected in prior version**:
+- Escort attackers appeared **before** the checkpoint, and the first physical arch could be encountered before rescuing the chased wingmate. Now the actual travel-distance milestones are checkpoint 1080 → chased escort 1320 → escort deadline 1740 → seven bridges beginning 1790 → waterfall 3130-3465 → boss 4190. Boost and brake alter how fast you reach these milestones without disrupting their order.
+- The escort wingman had always flown beside the player and the enemy shots targeted the player rather than the wingman. ECHO now moves ahead into the ambush and enemy guns actually track ECHO. Failure removes ECHO from the team and prevents the hidden path; successful rescue and clearing seven arches are required.
+- The normal and expert first-stage boss variants were inverted. Normal route now has the siege walker, hidden river path gets the attack carrier.
+- Every hostile used essentially the same movement and flew straight past in roughly a second. Seven real 3D patterns now retain a target for several seconds; formations banking/dive/intercept/crossfire/pincer speeds vary and projectiles lead a moving player.
+- The old FIRE implementation both auto-spammed regular lasers while holding *and* immediately auto-homed any charge or bomb even with no acquired target. Tap now fires once (repeat taps for rapid fire); holding charges, briefly tracking a target creates a **real lock** indicated by an amber → green HUD with a sound. Only genuine locked targets receive homing charge and bomb projectiles.
+- Laser progression is now **one / two / four distinct directional plasma bolts**, with tier-dependent glow, damage and muzzle positions.
+- Every third gold ring extends shield and every sixth grants a reserve ship; the previous incorrect unlimited-3-ring-only reward has been removed.
+- Bank+steer now has a meaningful high-speed turn. Double tapping Q/E executes a roll while holding banks, and keyboard ascent while boosting (or brake/ascent in all-range) does the contextual loop/U-turn.
+
+**Verification**: new deterministic beat and enemy-movement tests, production build, and live Chrome screenshots (including checkpoint-and-rescue ordering and actual boss appearance). iPhone Safari physical hardware remains unverified. The 3D flight mode is still a standalone NovaStrike interpretation, not an exact Star Fox 64 licensed content remake.
+
 ## Wide horizontal scrolling / rail-camera behavior (2026-10-25)
 
 Unlike the earlier ±9.4-unit corridor, 3D Scroll mode now has **±44 units** of world-space horizontal maneuvering. The local aircraft offset is not simply remapped into a screen coordinate: the entire Three.js **camera is translated horizontally**, revealing the full-width modeled terrain, flanking buildings, turrets and enemies. This follows Star Fox 64 manual's defining 3D-scroll behavior: freely move around the viewing area with a screen-edge arrow at the outer limit.
