@@ -230,7 +230,7 @@ class GroundFlight {
    return{mesh,name:i===0?'ECHO':'VECTA',hp:3,side,cooldown:4+i*3};
   });
   this.stage='combat';this.closeOverlay();
-  $('mode').textContent=this.mission.mode==='all-range'?'ALL-RANGE':'3D SCROLL';
+  $('mode').textContent=this.mission.mode==='all-range'?'ALL-RANGE':'GROUND FLIGHT';
   $('radar-wrap').hidden=this.mission.mode!=='all-range';
   $('uturn').hidden=this.mission.mode!=='all-range';
   $('bosswrap').hidden=true;
@@ -725,6 +725,7 @@ class GroundFlight {
   $('progress').style.width=(Math.min(1,this.missionTime/this.mission.duration)*100).toFixed(0)+'%';
   $('friends').textContent=this.allies.map(a=>a.name+' '+(a.hp>0?'◆'.repeat(a.hp):'LOST')).join(' / ');
   $('mode').textContent=this.mission.mode==='all-range'?'ALL-RANGE':'GROUND FLIGHT';
+  $('arches').hidden=this.mission.id!==0;
   $('bosswrap').hidden=!this.boss;
   if(this.boss)$('boss-fill').style.width=(Math.max(0,this.boss.hp/this.boss.max)*100).toFixed(0)+'%';
   $('arc-count').textContent=this.mission.id===0?this.terrain.gateState.passed+' / '+gateCount():'—';
