@@ -47,13 +47,13 @@ class Nova64 {
  private rings=0;private damage=0;private weaponHeat=0;private charge=0;private charging=false;private invulnerable=0;
  private missionTime=0;private waveIndex=0;private waves:Beat[]=[];
  private checkpoint=false;private restartTime=0;private gateShortcut=false;
- private speed=60;private throttle=0;
+ private speed=60;private throttle=0;private heatLocked=false;
  private boss:Enemy|null=null;private enemies:Enemy[]=[];private shots:Shot[]=[];private pickups:Pickup[]=[];
  private hazards:Hazard[]=[];private scenery:T.Group[]=[];private impacts:Impact[]=[];private friends:Wingmate[]=[];
  private startPosition=new T.Vector3();
  private lastPosition=new T.Vector3();private wantX=0;private wantY=0;private yaw=0;private desiredYaw=0;
  private roll=0;private rollDir=1;private rollCooldown=0;private somersault=0;private somersaultCooldown=0;private uturn=0;
- private boost=false;private brake=false;private bankLeft=false;private bankRight=false;
+ private boost=false;private brake=false;private padBoost=false;private padBrake=false;private bankLeft=false;private bankRight=false;
  private pointer:number|null=null;private pointerX=0;private pointerY=0;private firePointer:number|null=null;
  private keys=new Set<string>();private padButtons:boolean[]=[];
  private lock:Enemy|null=null;private cameraShake=0;private hitFlash=0;private bossPhaseSeen=1;
@@ -168,11 +168,11 @@ class Nova64 {
   }else{
    this.wantX=clamp(this.wantX+sx*.17,-8,8);this.wantY=clamp(this.wantY+sy*.25,-8,8);
   }
-  this.boost=pressed(5)||this.boost;this.brake=pressed(4)||this.brake;
+  this.padBoost=pressed(5);this.padBrake=pressed(4);
  }
  private openOverlay(title:string,kicker:string,info:string,button:string){
   $('overlay').hidden=false;$('overlay-title').textContent=title;$('overlay-kicker').textContent=kicker;
-  $('overlay-info').innerHTML=info;$('action').textContent=button;
+  $('overlay-info').innerHTML=info;$('action').textContent=button;$('action').hidden=false;
   $('route-panel').hidden=true;$('controls').hidden=true;
  }
  private hideOverlay(){$('overlay').hidden=true;$('controls').hidden=false;}
@@ -206,10 +206,10 @@ class Nova64 {
  private enterMission(id:number,checkpoint=false){
   this.clearDynamic();this.mission=MISSIONS[id];
   this.waveIndex=0;this.waves=scriptWaves(this.mission);
-  this.missionTime=checkpoint?Math.min(29,this.mission.duration*.5):0;
+  this.missionTime=checkpoint?21:0;
   this.checkpoint=checkpoint;this.gateShortcut=false;this.bossPhaseSeen=1;this.hitFlash=0;this.cameraShake=0;
   this.invulnerable=2.3;this.weaponHeat=0;this.charge=0;this.charging=false;this.roll=0;this.rollCooldown=0;this.somersault=0;this.uturn=0;
-  this.wantX=this.wantY=0;this.yaw=this.desiredYaw=0;this.boost=this.brake=false;this.speed=60;
+  this.wantX=this.wantY=0;this.yaw=this.desiredYaw=0;this.boost=this.brake=false;this.speed=60;this.throttle=0;this.heatLocked=false;this.ship.userData.brokenWing=false;
   this.ship.visible=true;this.ship.rotation.set(0,0,0);
   if(checkpoint){this.waveIndex=this.waves.findIndex(w=>w.at>this.missionTime);if(this.waveIndex<0)this.waveIndex=this.waves.length;}
   this.ship.position.set(0,0,0);
@@ -281,7 +281,7 @@ class Nova64 {
   let best:Enemy|null=null,score=Infinity;
   for(const e of [...this.enemies,...(this.boss?[this.boss]:[])]){
    const delta=e.mesh.position.clone().sub(from),along=delta.dot(aim);
-   if(along<5||along>240)continue;
+   if(along<5||along>350)continue;
    const miss=delta.addScaledVector(aim,-along).length();
    const tolerance=e.boss?11:Math.max(3.0,along*.044);
    if(miss<tolerance&&miss/tolerance+along*.0007<score){best=e;score=miss/tolerance+along*.0007;}
@@ -389,9 +389,9 @@ class Nova64 {
   }
  }
  private spawnRing(kind:Pickup['kind']){
-  const z=this.mission.mode==='corridor'?this.ship.position.z-170:this.ship.position.z-80;
+  const z=this.mission.mode==='corridor'?this.ship.position.z-170:this.ship.position.z+this.forward().z*95;
   const route=routeCenter(this.mission.scene,z);
-  const x=this.mission.mode==='corridor'?route.x+Math.sin(this.missionTime*.7)*6:this.ship.position.x+Math.sin(this.missionTime)*10;
+  const x=this.mission.mode==='corridor'?route.x+Math.sin(this.missionTime*.7)*6:this.ship.position.x+this.forward().x*95+Math.cos(this.yaw)*Math.sin(this.missionTime)*7;
   const y=this.mission.mode==='corridor'?route.y+Math.sin(this.missionTime*.3)*4:this.ship.position.y;
   const c=kind==='ring'?0xffdf7c:kind==='laser'?0x8afaff:kind==='bomb'?0xffa36a:0x8dffab;
   const m=new T.Mesh(new T.TorusGeometry(kind==='ring'?2.35:1.6,.28,7,24),
@@ -506,10 +506,11 @@ class Nova64 {
   const inputY=Number(k.has('w')||k.has('arrowup'))-Number(k.has('s')||k.has('arrowdown'));
   const v=laneLimit(this.wantX+inputX*dt*16,this.wantY+inputY*dt*16);
   this.wantX=v.x;this.wantY=v.y;
-  const boosting=this.boost||k.has('shift'),braking=this.brake||k.has('control')||k.has('b');
-  if(this.throttle>=1)this.throttle=1;
-  const activeBoost=boosting&&this.throttle<.97,activeBrake=braking&&this.throttle<.97&&!activeBoost;
-  this.throttle=clamp(this.throttle+(activeBoost||activeBrake?dt*.27:-dt*.22),0,1);
+  const boosting=this.boost||this.padBoost||k.has('shift'),braking=this.brake||this.padBrake||k.has('control')||k.has('b');
+  if(this.throttle>=.995)this.heatLocked=true;
+  if(this.throttle<.18)this.heatLocked=false;
+  const activeBoost=boosting&&!this.heatLocked,activeBrake=braking&&!this.heatLocked&&!activeBoost;
+  this.throttle=clamp(this.throttle+(activeBoost||activeBrake?dt*.35:-dt*.27),0,1);
   this.speed=activeBoost?128:activeBrake?26:62+this.mission.difficulty*3;
   this.lastPosition.copy(this.ship.position);
   if(this.mission.mode==='corridor'){
@@ -524,7 +525,7 @@ class Nova64 {
    const forward=this.forward();
    this.ship.position.addScaledVector(forward,this.speed*dt);
    this.ship.position.y=clamp(this.ship.position.y+(this.wantY-this.ship.position.y)*dt*.6,-9,16);
-   const clamped=clampArena(plain(this.ship.position),168);
+   const clamped=clampArena(plain(this.ship.position),285);
    if(dist(clamped,plain(this.ship.position))>1){
     this.desiredYaw+=Math.PI*.96;this.ship.position.set(clamped.x,clamped.y,clamped.z);
     this.message('EDGE OF COMBAT AREA / AUTO TURN',1.3);this.sound(220,.13);
