@@ -104,6 +104,16 @@ const afterBomb=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.
 if(afterBomb.hits-beforeBomb.hits<3)throw Error('Smart bomb failed to clear nearby enemy formation: '+JSON.stringify({beforeBomb,afterBomb}));
 if(afterBomb.armedBombs>0)throw Error('Smart bomb remains armed after fuse/detonation');
 console.log('AUDIT_BOMB_AREA_OK',afterBomb.hits-beforeBomb.hits);
+await evaluate("window.__novaFlight3D.auditSeek(10);window.__novaFlight3D.auditSpawnThreat()");
+await sleep(320);
+await capture('04z-enemy-attack-telegraph');
+const warned=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+if(warned.warningEnemies<1)throw Error('Attack was not telegraphed; enemy bullets must be avoidable');
+await sleep(950);
+const fired=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+if(fired.hostileShots<1)throw Error('Enemy telegraph did not culminate in a projectile');
+console.log('AUDIT_ATTACK_CUE_OK',JSON.stringify({warned:warned.warningEnemies,bullets:fired.hostileShots}));
+
 // Inspect later authored world segments without waiting several minutes for the
 // software-rendered CI browser; this is a diagnostic seek, not simulated play.
 for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches'],[41,'04d-waterfall-approach'],[43,'04e-waterfall-pass'],[49,'04f-finale']]){
