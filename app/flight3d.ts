@@ -122,7 +122,7 @@ class GroundFlight {
    this.pX=e.clientX;this.pY=e.clientY;
   });
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])
-   this.canvas.addEventListener(ev,e=>{if(e.pointerId===this.pointer)this.pointer=null;});
+   this.canvas.addEventListener(ev,e=>{if((e as PointerEvent).pointerId===this.pointer)this.pointer=null;});
   const hold=(id:string,down:()=>void,up:()=>void)=>{
    const el=$(id);
    el.addEventListener('pointerdown',e=>{
