@@ -4,7 +4,7 @@ import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFli
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
 import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
-import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone} from './flight-stage-direction.ts';
+import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver} from './flight-stage-direction.ts';
 import type {WaveType} from './nova64-rules.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
@@ -63,7 +63,7 @@ class GroundFlight {
  private levelEvent=0;private checkpoint=false;private rescueFinished=false;private rescueCount=0;private gateBonus=false;
  private laneX=0;private laneY=1.2;private cameraPanX=0;private yaw=0;private targetYaw=0;private velocity=74;
  private boostHeld=false;private brakeHeld=false;private padBoost=false;private padBrake=false;private leftBank=false;private rightBank=false;private keys=new Set<string>();
- private bankTapLeft=-9;private bankTapRight=-9;
+ private bankTapLeft=-9;private bankTapRight=-9;private contextualManeuverHeld=false;
  private heat=0;private overheated=false;private charge=0;private fireHeld=false;private shotDelay=0;
  private lockedTarget:Target|null=null;private lockCandidate:Target|null=null;private lockTimer=0;
  private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;private respawnBlink=false;
@@ -253,7 +253,7 @@ class GroundFlight {
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
   this.invulnerable=resume?2.3:4.2;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
   this.laneX=0;this.laneY=2;this.cameraPanX=0;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
-  this.leftBank=this.rightBank=false;this.bankTapLeft=this.bankTapRight=-9;
+  this.leftBank=this.rightBank=false;this.bankTapLeft=this.bankTapRight=-9;this.contextualManeuverHeld=false;
   this.player.position.set(0,2,resume?(id===0?-STAGE1.checkpoint:-this.missionTime*75):0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
   this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
@@ -551,6 +551,9 @@ class GroundFlight {
   this.laneY=clamp(this.laneY+iy*dt*13,RAIL_Y_MIN,RAIL_Y_MAX);
   const accelerating=(this.boostHeld||this.padBoost||k.has('shift'))&&!this.overheated;
   const braking=(this.brakeHeld||this.padBrake||k.has('control')||k.has('b'))&&!this.overheated&&!accelerating;
+  const contextual=contextualManeuver(iy>0,accelerating,braking,this.mission.mode==='all-range');
+  if(contextual&&!this.contextualManeuverHeld)this.flip(contextual==='uturn');
+  this.contextualManeuverHeld=!!contextual;
   this.heat=clamp(this.heat+(accelerating||braking?dt*.36:-dt*.33),0,1);
   if(this.heat>=.999)this.overheated=true;
   if(this.heat<.14)this.overheated=false;
