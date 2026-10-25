@@ -1,7 +1,7 @@
 import * as T from 'three';
 import './flight3d.css';
 import {createFlightShip,animateFlightShip,createFlightSection,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
-import {SPEED_MULTIPLIER,cruiseSpeed,boostSpeed,laserSpeed,missileSpeed,enemySpawnRange,displaySpeed} from './flight3d-tuning.ts';
+import {SPEED_MULTIPLIER,cruiseSpeed,boostSpeed,laserSpeed,missileSpeed,enemySpawnRange,displaySpeed,sweptCollision} from './flight3d-tuning.ts';
 
 const $ = <E extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as E;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -291,6 +291,7 @@ class Flight3D {
     this.baseY = clamp(this.baseY + dy * dt * 11, -6.5, 8);
     const accelerating = (this.boostHeld || k.has('shift') || k.has(' ')) && this.boost > 0;
     this.boost = clamp(this.boost + (accelerating ? -30 : 12) * dt, 0, 100);
+    const previousShipPosition=this.craft.position.clone();
     const speed = accelerating ? boostSpeed() : cruiseSpeed(this.stage);
     this.currentSpeed = speed;
     this.craft.position.x += (this.baseX - this.craft.position.x) * Math.min(1, dt * 12);
@@ -315,6 +316,7 @@ class Flight3D {
     if (this.laserDelay <= 0) { this.fireLasers(); this.laserDelay = .105; }
     const foes = this.boss ? [...this.enemies, this.boss] : [...this.enemies];
     for (const foe of foes) {
+      const foePrevious=foe.mesh.position.clone();
       if (foe.boss) {
         foe.mesh.position.z += (this.craft.position.z - 105 - foe.mesh.position.z) * Math.min(1, dt * 2.3);
         foe.mesh.position.x = Math.sin(this.sectorTime * .65) * 4.5;
@@ -334,7 +336,7 @@ class Flight3D {
         this.enemyShot(foe); foe.fire = foe.boss ? 1.4 : 2.7;
       }
       animateFlightShip(foe.mesh,this.totalTime+foe.phase,1);
-      if (!foe.boss && foe.mesh.position.distanceTo(this.craft.position) < foe.radius + .65) {
+      if (!foe.boss && sweptCollision(previousShipPosition,this.craft.position,foePrevious,foe.mesh.position,foe.radius+.65)) {
         this.hitShip(); this.damageFoe(foe, foe.hp);
       }
     }
@@ -348,7 +350,7 @@ class Flight3D {
       shot.mesh.position.addScaledVector(shot.velocity, dt); shot.life -= dt;
       let contact: Foe | null = null;
       if (shot.foe) {
-        if (hitSegment(a, shot.mesh.position, this.craft.position, shot.radius + .74)) { this.hitShip(); shot.life = 0; }
+        if (sweptCollision(a,shot.mesh.position,previousShipPosition,this.craft.position,shot.radius+.74)) { this.hitShip(); shot.life = 0; }
       } else {
         for (const e of foes) {
           if (e.hp > 0 && hitSegment(a, shot.mesh.position, e.mesh.position, shot.radius + e.radius)) { contact = e; break; }
