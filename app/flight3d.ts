@@ -511,6 +511,7 @@ class Nova64 {
   if(this.throttle<.18)this.heatLocked=false;
   const activeBoost=boosting&&!this.heatLocked,activeBrake=braking&&!this.heatLocked&&!activeBoost;
   this.throttle=clamp(this.throttle+(activeBoost||activeBrake?dt*.35:-dt*.27),0,1);
+  if(this.throttle>=.995)this.heatLocked=true;
   this.speed=activeBoost?128:activeBrake?26:62+this.mission.difficulty*3;
   this.lastPosition.copy(this.ship.position);
   if(this.mission.mode==='corridor'){
@@ -520,7 +521,7 @@ class Nova64 {
    this.ship.position.y=lerp(this.ship.position.y,center.y+this.wantY,dt*10);
    this.yaw=0;
   }else{
-   this.desiredYaw+=this.wantX*dt*.036+inputX*dt*.7;
+   this.desiredYaw+=this.wantX*dt*.19+inputX*dt*.65;
    this.yaw=lerp(this.yaw,this.desiredYaw,dt*4.5);
    const forward=this.forward();
    this.ship.position.addScaledVector(forward,this.speed*dt);
@@ -530,7 +531,7 @@ class Nova64 {
     this.desiredYaw+=Math.PI*.96;this.ship.position.set(clamped.x,clamped.y,clamped.z);
     this.message('EDGE OF COMBAT AREA / AUTO TURN',1.3);this.sound(220,.13);
    }
-   this.wantX*=Math.max(0,1-dt*2.5);
+   this.wantX*=Math.max(0,1-dt*1.4);
   }
   const tilt=-this.wantX*.075-inputX*.15+(this.bankRight?-.55:0)+(this.bankLeft?.55:0);
   this.roll=Math.max(0,this.roll-dt);this.rollCooldown=Math.max(0,this.rollCooldown-dt);
@@ -541,6 +542,10 @@ class Nova64 {
   if(this.roll>0)this.ship.rotation.z=tilt+this.rollDir*(1-this.roll/ROLL_SECONDS)*Math.PI*2;
   this.ship.rotation.x=lerp(this.ship.rotation.x,-inputY*.14,dt*5);
   if(this.somersault>0)this.ship.rotation.x=-(1-this.somersault/SOMERSAULT_SECONDS)*Math.PI*2;
+  if(this.ship.userData.brokenWing){
+   this.ship.rotation.z+=Math.sin(this.time*22)*.035;
+   this.speed*=.92;
+  }
   this.ship.visible=this.invulnerable<=0||Math.sin(this.time*35)>.15;
   animateFlightShip(this.ship,this.time,activeBoost?2:1);
   this.updateFriends(dt);
