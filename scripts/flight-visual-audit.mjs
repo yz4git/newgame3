@@ -80,6 +80,10 @@ for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches']
  await evaluate('window.__novaFlight3D.auditSeek('+seconds+')');
  await sleep(800);
  await capture(label);
+ if(label==='04b-canyon'){
+  const state=JSON.parse(await evaluate('JSON.stringify(window.__novaFlight3D.snapshot())'));
+  if(!state.checkpoint||state.rescueCount<1)throw Error('Stage order regression: escort encounter must follow checkpoint on canyon approach');
+ }
 }
 // Verify that lateral input SCROLLS THE ACTUAL WORLD CAMERA instead of only
 // shifting the aircraft across a fixed central view.
