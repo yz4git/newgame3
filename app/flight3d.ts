@@ -263,7 +263,14 @@ class Flight3D {
     this.scene.add(mesh);
     this.shots.push({mesh,velocity,foe,power,radius:homing?.68:.3,homing,life:3.2,bomb});
   }
-  private aimRay(){return this.camera.getWorldDirection(new T.Vector3()).normalize();}
+  private aimRay(){
+    // Converge the player muzzle onto the chase-camera crosshair. Without
+    // correcting third-person parallax, shots miss what the reticle indicates.
+    const focal=this.camera.position.clone().addScaledVector(
+      this.camera.getWorldDirection(new T.Vector3()),140
+    );
+    return focal.sub(this.craft.position).normalize();
+  }
   private findLock():Foe|null{
     const origin=this.craft.position.clone(),ray=this.aimRay();
     let best:Foe|null=null,rank=Infinity;
