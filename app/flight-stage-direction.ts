@@ -71,3 +71,11 @@ export function interceptTarget(enemy:V3,player:V3,playerVelocity:V3,projectileS
          y:player.y+playerVelocity.y*travel*.54,
          z:player.z+playerVelocity.z*travel*.54};
 }
+
+/** Gold rings follow the manual: 3 for extra shield, 6 for an extra craft. */
+export function ringMilestone(total:number):'shield'|'life'|null {
+ if(!Number.isInteger(total)||total<=0)return null;
+ if(total%6===0)return 'life';
+ if(total%6===3)return 'shield';
+ return null;
+}
