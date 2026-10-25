@@ -38,6 +38,7 @@ class Flight3D {
   private craft = createFlightShip(0xd5e5ef);
   private vfx = new FlightVfx(matchMedia('(pointer:coarse)').matches);
   private currentSpeed = cruiseSpeed(0);
+  private lockTarget: Foe | null = null;
   private cameraShake = 0;
   private state: State = 'title';
   private stage = 0;
@@ -133,7 +134,7 @@ class Flight3D {
   }
   private hideOverlay() { $('overlay').hidden = true; $('controls').hidden = false; }
   private start() {
-    this.stopObjects(); this.pendingSectorChange = false; this.stage = 0; this.score = 0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
+    this.stopObjects(); this.pendingSectorChange = false; this.lockTarget=null; this.stage = 0; this.score = 0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
     this.craft.position.set(0, 0, 0); this.baseX = 0; this.baseY = 0; this.totalTime = 0;
     this.missileDelay = 0; this.invulnerable = 2;
     this.configureSector(); this.state = 'playing'; this.hideOverlay();
@@ -159,7 +160,7 @@ class Flight3D {
     for (const b of this.blasts) this.scene.remove(b.mesh);
     for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.vfx.clear();
-    this.enemies = []; this.boss = null; this.shots = []; this.blasts = []; this.scenery = [];
+    this.enemies = []; this.boss = null; this.lockTarget=null; this.shots = []; this.blasts = []; this.scenery = [];
   }
   private configureSector() {
     const p = worlds[this.stage];
@@ -171,7 +172,7 @@ class Flight3D {
     for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.scenery = [];
     for (let i = 0; i < 16; i++) this.makeScenery(this.craft.position.z - 55 - i * 38, i);
-    this.sectorTime = 0; this.spawnDelay = 1.3; this.laserDelay = 0;
+    this.sectorTime = 0; this.spawnDelay = 1.3; this.laserDelay = 0;this.lockTarget=null;
     $('sector').textContent = String(this.stage + 1).padStart(2, '0') + ' / 06 — ' + worldNames[this.stage];
     $('bosswrap').hidden = true; $('progress').style.width = '0%';
   }
@@ -208,6 +209,7 @@ class Flight3D {
       const dx = Math.abs(f.mesh.position.x - this.craft.position.x), dy = Math.abs(f.mesh.position.y - this.craft.position.y);
       if (dz > 0 && dz < dist && dx < 6 && dy < 6) { lock = f; dist = dz; }
     }
+    this.lockTarget=lock;
     for (const side of [-1, 1]) {
       const origin = this.craft.position.clone().add(new T.Vector3(side * .62, -.10, -1.6));
       const aim = new T.Vector3(0, 0, -1);
@@ -380,6 +382,7 @@ class Flight3D {
     $('speed').textContent = displaySpeed(this.currentSpeed) + ' km/h';
     $('speed').classList.toggle('hypersonic',this.currentSpeed>=boostSpeed());
     $('boost-fill').style.width = this.boost.toFixed(0) + '%';
+    $('altitude').textContent = 'ALT ' + Math.round((this.craft.position.y+15)*75).toString().padStart(4,'0') + ' M';
     $('missile').textContent = this.missileDelay > 0 ? 'MISSILE ' + this.missileDelay.toFixed(1) : 'MISSILE READY';
     $('progress').style.width = Math.min(100, this.sectorTime / 45 * 100) + '%';
     if (this.boss) $('boss-fill').style.width = Math.max(0, this.boss.hp / this.boss.max * 100) + '%';
@@ -392,9 +395,26 @@ class Flight3D {
     this.camera.position.lerp(desired, Math.min(1, dt * 8 || .09));
     if(this.cameraShake>0){this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.28;this.camera.position.y+=(Math.random()-.5)*this.cameraShake*.27;}
     this.camera.lookAt(this.craft.position.x * .47, this.craft.position.y * .48 + 1, this.craft.position.z - 43);
+    this.camera.rotateZ(-this.craft.rotation.z*.09);
     const fov = accelerating ? 83 : 71;
     this.camera.fov+=(fov-this.camera.fov)*Math.min(1,dt*4.5);
     this.camera.updateProjectionMatrix();
+    const marked=this.lockTarget;
+    const reticle=$('target-ring');
+    const targetExists=marked && (marked===this.boss||this.enemies.includes(marked)) && marked.hp>0;
+    if(targetExists){
+      const worldPos=marked.mesh.position.clone();
+      const ahead=worldPos.sub(this.camera.position).dot(this.camera.getWorldDirection(new T.Vector3()))>0;
+      const clip=marked.mesh.position.clone().project(this.camera);
+      const visible=ahead&&clip.z>-.95&&clip.z<1&&Math.abs(clip.x)<.93&&Math.abs(clip.y)<.89;
+      reticle.hidden=!visible;
+      if(visible){
+        reticle.style.left=((clip.x+1)*50).toFixed(2)+'%';
+        reticle.style.top=((1-clip.y)*50).toFixed(2)+'%';
+        $('target-distance').textContent=Math.max(0,Math.round(this.craft.position.distanceTo(marked.mesh.position)))+' M';
+        reticle.classList.toggle('boss-lock',marked.boss);
+      }
+    }else reticle.hidden=true;
     this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame(time => this.frame(time));
   }
