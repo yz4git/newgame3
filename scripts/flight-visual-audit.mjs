@@ -98,6 +98,7 @@ const left=JSON.parse(await evaluate("JSON.stringify(window.__novaFlight3D.snaps
 if(!(right.laneX>40&&left.laneX< -40))throw Error('Horizontal world flight range still too narrow');
 if(!(right.cameraX-centered.cameraX>15&&centered.cameraX-left.cameraX>15))throw Error('Camera failed to scroll over distant lateral scenery');
 if(!(right.shipNdcX<.96&&right.shipNdcX>0&&left.shipNdcX>-.96&&left.shipNdcX<0))throw Error('Arwing left visible safe area while panning');
+if(right.cameraInsideSolid||left.cameraInsideSolid||centered.cameraInsideSolid)throw Error('Scrolling camera intersects buildings or the ground');
 console.log('AUDIT_LATERAL_SCROLL_OK',JSON.stringify({center:centered,right,left}));
 await evaluate("window.__novaFlight3D.auditSetLane(0)");
 await sleep(400);
