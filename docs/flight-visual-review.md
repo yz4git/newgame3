@@ -1,3 +1,14 @@
+## Wide horizontal scrolling / rail-camera behavior (2026-10-25)
+
+Unlike the earlier ±9.4-unit corridor, 3D Scroll mode now has **±44 units** of world-space horizontal maneuvering. The local aircraft offset is not simply remapped into a screen coordinate: the entire Three.js **camera is translated horizontally**, revealing the full-width modeled terrain, flanking buildings, turrets and enemies. This follows Star Fox 64 manual's defining 3D-scroll behavior: freely move around the viewing area with a screen-edge arrow at the outer limit.
+
+- Central dead zone **±6.5 units**: aircraft moves around the screen while camera stays on the course.
+- Past dead zone, `railCameraPan` follows **82%** of outer motion. At the edge, ~31 units of camera movement reveal new terrain, while the fighter remains about 13 units offset from the viewport center.
+- When near ±44, a red left/right world-boundary warning appears. Controls cannot send the ship off the corridor.
+- Local aim points at 70 and 145 units are projected in the same camera as actual shots so reticles remain valid after the sideways scroll.
+- Player speed, banking, mouse/touch steering and frame-independent gamepad input recalibrated for the expanded range; enemy intercept/crossfire/pincer groups, turrets and pickups now occupy flanks.
+- `tests/flight-corridor-scroll.test.mjs` validates dead zone, sign, smooth pan, boundaries and reticle geometry; `scripts/flight-visual-audit.mjs` captures center, far-right and far-left scenes **in a running browser** and asserts the camera has actually shifted at least 15 world units and the fighter stays on-screen. All-range mode remains separate.
+
 # 3D Flight — Reference video / live gameplay comparison (2026-10-25)
 
 ## Reference material
