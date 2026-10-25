@@ -69,3 +69,19 @@ test('terrain streams ahead without increasing the fixed 17-tile render budget',
  }
  w.clear();
 });
+
+test('all-range city and volcanic missions have ground across the entire combat arena',()=>{
+ for(const stage of [2,5]){
+  const world=new GroundWorld();world.configure(stage,0,true);
+  assert.equal(world.tilesCount,17);
+  let minX=Infinity,maxX=-Infinity;
+  for(const group of world.root.children)group.traverse(o=>{
+   if(!(o instanceof THREE.Mesh))return;
+   const a=o.geometry.getAttribute('position');
+   if(!a||a.count<300) return;
+   for(let i=0;i<a.count;i++){minX=Math.min(minX,a.getX(i));maxX=Math.max(maxX,a.getX(i));}
+  });
+  assert.ok(minX< -250 && maxX >250,'arena ground width should surround the whole field');
+  world.clear();
+ }
+});
