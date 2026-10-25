@@ -74,7 +74,7 @@ class GroundFlight {
   this.scene.add(new T.HemisphereLight(0xb6d8ef,0x24342e,2.45));
   const sun=new T.DirectionalLight(0xffedcb,2.75);sun.position.set(-75,110,-45);this.scene.add(sun);
   this.player.rotation.y=0;
-  this.player.scale.setScalar(1.35);
+  this.player.scale.setScalar(1.21);
   this.scene.add(this.terrain.root,this.player,this.sky.mesh,this.vfx.root);
   this.scene.add(new T.AmbientLight(0x99bcca,.15));
   this.bind();this.resize();this.setPalette();
@@ -771,7 +771,7 @@ class GroundFlight {
  }
  private render(dt:number){
   const forward=this.forward();
-  const behind=this.player.position.clone().addScaledVector(forward,-13.3).add(new T.Vector3(0,3.8,0));
+  const behind=this.player.position.clone().addScaledVector(forward,-15.5).add(new T.Vector3(0,4.3,0));
   this.camera.position.lerp(behind,Math.min(1,dt*7||.08));
   if(this.cameraShake>0){
    this.camera.position.x+=(Math.random()-.5)*this.cameraShake*.4;
@@ -785,7 +785,7 @@ class GroundFlight {
   }else look.y-=3;
   this.camera.lookAt(look);
   this.camera.rotateZ(-this.player.rotation.z*.08);
-  const fov=this.boostHeld?72:this.brakeHeld?53:61;
+  const fov=this.boostHeld?75:this.brakeHeld?56:64;
   this.camera.fov=lerp(this.camera.fov,fov,dt*3.7);this.camera.updateProjectionMatrix();
   const marker=$('target-ring');
   const e=this.currentTarget;
