@@ -21,6 +21,7 @@ type Foe = { mesh: T.Group; hp: number; max: number; radius: number; phase: numb
 type Shot = { mesh: T.Mesh; velocity: T.Vector3; foe: boolean; power: number; radius: number; homing: boolean; life: number; bomb?: boolean };
 type Blast = {mesh:T.Mesh;life:number;duration:number};
 type SupplyRing={mesh:T.Mesh;collecting:boolean};
+type CorridorHazard={mesh:T.Group;radius:number};
 const orbGeo = new T.IcosahedronGeometry(1, 1);
 const shotGeo = new T.SphereGeometry(1, 8, 6);
 const mat = (color: number, glow = 0) => new T.MeshStandardMaterial({ color, metalness: .65, roughness: .34, flatShading: true, emissive: color, emissiveIntensity: glow });
@@ -76,6 +77,8 @@ class Flight3D {
   private blasts:Blast[]=[];
   private supplies:SupplyRing[]=[];
   private nextSupply=9.5;
+  private nextHazard=13;
+  private hazards:CorridorHazard[]=[];
   private scenery: T.Group[] = [];
   private baseX = 0;
   private baseY = 0;
@@ -205,6 +208,8 @@ class Flight3D {
     for(const b of this.blasts){this.scene.remove(b.mesh);(b.mesh.material as T.Material).dispose();}
     for(const p of this.supplies){this.scene.remove(p.mesh);p.mesh.geometry.dispose();(p.mesh.material as T.Material).dispose();}
     this.supplies=[];
+    for(const h of this.hazards){this.scene.remove(h.mesh);disposeFlightVisual(h.mesh,true);}
+    this.hazards=[];
     for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.vfx.clear();
     this.enemies = []; this.boss = null; this.lockTarget=null; this.shots = []; this.blasts = []; this.scenery = [];
@@ -220,7 +225,7 @@ class Flight3D {
     for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.scenery = [];
     for (let i = 0; i < 16; i++) this.makeScenery(this.craft.position.z - 55 - i * 38, i);
-    this.sectorTime=0;this.waveIndex=0;this.bossPhaseSeen=1;this.nextSupply=9.5;this.waves=createRailWaves(this.stage);this.laserDelay=0;this.lockTarget=null;this.baseX=0;this.baseY=0;this.rollTime=0;this.charge=0;this.fireHeld=false;this.combo=0;
+    this.sectorTime=0;this.waveIndex=0;this.bossPhaseSeen=1;this.nextSupply=9.5;this.nextHazard=13;this.waves=createRailWaves(this.stage);this.laserDelay=0;this.lockTarget=null;this.baseX=0;this.baseY=0;this.rollTime=0;this.charge=0;this.fireHeld=false;this.combo=0;
     $('sector').textContent = String(this.stage + 1).padStart(2, '0') + ' / 06 — ' + worldNames[this.stage];
     $('bosswrap').hidden = true; $('progress').style.width = '0%';
   }
@@ -237,6 +242,29 @@ class Flight3D {
     ring.position.set(c.x+lane,c.y+Math.cos(this.sectorTime*.4)*2,z);
     this.scene.add(ring);
     this.supplies.push({mesh:ring,collecting:false});
+  }
+  private spawnHazard(){
+    const z=this.craft.position.z-172,center=trackCenter(this.stage,z);
+    const x=Math.sin(this.stage*2.6+this.sectorTime*.67)*5.8;
+    const y=Math.cos(this.sectorTime*.53)*2.4;
+    const group=new T.Group();
+    const shell=new T.Mesh(new T.IcosahedronGeometry(1,1),new T.MeshStandardMaterial({
+      color:0x663d50,emissive:0xb51d41,emissiveIntensity:.55,metalness:.78,roughness:.3,flatShading:true
+    }));
+    shell.scale.set(2.2,2.0,2.3);group.add(shell);
+    const ring=new T.Mesh(new T.TorusGeometry(2.65,.16,6,18),new T.MeshBasicMaterial({color:0xff6686}));
+    ring.rotation.x=.64;group.add(ring);
+    group.position.set(center.x+x,center.y+y,z);
+    this.scene.add(group);this.hazards.push({mesh:group,radius:2.4});
+    this.radio('NOVA CONTROL','航路に危険物。撃破するか回避せよ！',2.5);
+  }
+  private destroyHazard(h:CorridorHazard,score=true){
+    if(!this.hazards.includes(h))return;
+    const point=h.mesh.position.clone();
+    this.scene.remove(h.mesh);disposeFlightVisual(h.mesh,true);
+    this.hazards.splice(this.hazards.indexOf(h),1);
+    this.vfx.burst(point,2.3,0xff7391);this.sfx(125,.12);
+    if(score){this.score+=450;this.combo++;}
   }
   private spawnFoe(boss = false,lane?:{x:number;y:number;z:number},leader=false) {
     const seed = this.sectorTime * 9.13 + this.enemies.length * 4.3;
@@ -428,6 +456,15 @@ class Flight3D {
     this.craft.position.x+=(desiredX-this.craft.position.x)*Math.min(1,dt*11);
     this.craft.position.y+=(desiredY-this.craft.position.y)*Math.min(1,dt*11);
     this.craft.position.z-=speed*dt;
+    if(!this.boss&&this.sectorTime<STAGE_DURATION-5&&this.sectorTime>=this.nextHazard){
+      this.spawnHazard();this.nextHazard+=13;
+    }
+    for(const h of [...this.hazards]){
+      h.mesh.rotation.y+=dt*.85;h.mesh.rotation.x+=dt*.29;
+      if(sweptCollision(previousShipPosition,this.craft.position,h.mesh.position,h.mesh.position,h.radius+.75)){
+        this.hitShip();this.destroyHazard(h,false);
+      }else if(h.mesh.position.z>this.craft.position.z+24)this.destroyHazard(h,false);
+    }
     if(!this.boss&&this.sectorTime<this.waves[this.waves.length-1].at){
       if(this.sectorTime>=this.nextSupply){this.spawnSupply();this.nextSupply+=11.5;}
     }
@@ -526,7 +563,13 @@ class Flight3D {
       }
       shot.mesh.position.addScaledVector(shot.velocity, dt); shot.life -= dt;
       let contact: Foe | null = null;
-      if (shot.foe) {
+      if(!shot.foe){
+        for(const h of [...this.hazards])if(hitSegment(a,shot.mesh.position,h.mesh.position,h.radius+shot.radius)){
+          this.destroyHazard(h);shot.life=0;break;
+        }
+      }
+      if(shot.life<=0){this.scene.remove(shot.mesh);this.shots.splice(i,1);continue;}
+      if(shot.foe) {
         if(sweptCollision(a,shot.mesh.position,previousShipPosition,this.craft.position,shot.radius+.74)){
           if(rollDeflects(this.rollTime)){
             this.shotsReflected++;this.score+=75;this.vfx.burst(shot.mesh.position,.45,0x89dfff);this.sfx(460,.07);
@@ -564,7 +607,9 @@ class Flight3D {
       for (const shot of this.shots) this.scene.remove(shot.mesh);
       this.shots=[];
       for(const ring of this.supplies){this.scene.remove(ring.mesh);ring.mesh.geometry.dispose();(ring.mesh.material as T.Material).dispose();}
-      this.supplies=[];this.configureSector();
+      this.supplies=[];
+      for(const h of this.hazards){this.scene.remove(h.mesh);disposeFlightVisual(h.mesh,true);}
+      this.hazards=[];this.configureSector();
       this.alert('SECTOR CLEARED — NEXT WORLD', 2.9);
     }
     this.vfx.update(this.craft.position,this.totalTime,dt,speed,accelerating);
