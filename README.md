@@ -1,3 +1,18 @@
+## 2026-10-25: Grounded 3D shooting mode — true terrain/world replacement
+
+The separate `/flight3d.html` campaign has been **replaced again** after comparing original Star Fox 64 Corneria gameplay images, route guides and Nintendo's control documentation. The previous empty space/flat corridor implementation was not representative of the target.
+
+**What is physically modeled and playable now**
+
+- **Visible continuous polygonal terrain under the aircraft:** normals, directional daylight, textured-by-vertex green/brown land, procedurally varied heights and a receding ground horizon across every planetary level. `app/flight-terrain.ts` creates and recycles 17 bounded tiles.
+- **Opening stage with a geographical progression:** daylight city and broad roadway with markings/railings, actual high-rise buildings and turrets, a river canyon with raised stone banks and reflective water, **seven solid stone arches** that must be flown through with 3D collision/passage detection, a waterfall, and then a boss.
+- **Interactive geography:** collision with ground and building/rock/bridge volumes (not visual sprites), physically sampled elevation, routeCenter-based scenery placement as the course bends, and terrain extending across all-range arenas.
+- **Mission-1 hard path:** rescue the pursued wingmate and pass all 7 arches; the combination unlocks an alternate second mission automatically on completion. Otherwise the regular route continues. These are original missions/structures with genre-accurate objectives.
+- **Third-person space fighter controls:** pitched chase camera with flight HUD, terrain-anchored targets, standard / charge homing lasers, bombs, roll deflection, somersault, bank, boost and brake with heat/recharge. Touch, keyboard and basic gamepad.
+- **Original content:** NovaStrike spacecraft and architecture, names and radio messages, six planetary palettes, ally wingmen, scenery and enemy patterns.
+
+The reference game is **Star Fox 64**. This code adapts its level-design and gameplay principles; it is not a one-to-one copy of Nintendo's copyrighted levels/assets/music. Automation currently validates types, 3D geometry/physical arches/streaming tests and production output; iPhone Safari visual/manual playtesting is not yet verified.
+
 ## NEW 3D CAMPAIGN — Full flight-gameplay rebuild (2026-10-25)
 
 The standalone `flight3d.html` no longer runs the original TRUE 3D FLIGHT prototype or the interim RAIL FLIGHT prototype. Its **gameplay engine, DOM cockpit, mobile layout and campaign progression are replaced** by `app/flight3d.ts`, `app/flight3d.html`, `app/flight3d.css`, and the new pure rules module `app/nova64-rules.ts`. The prior rules/tuning files and tests have been deleted. The existing 3D ship/environment geometry helpers are retained as reusable rendering assets only. Classic and World Rebuild in the main game stay untouched.
