@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  STAGE1,crossedDistance,distanceToScriptSeconds,missionProgress,
- enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver
+ enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone,contextualManeuver,hiddenCourseUnlocked
 } from '../app/flight-stage-direction.ts';
 import {gateCount,gateZ} from '../app/flight-terrain.ts';
 
@@ -64,4 +64,9 @@ test('Star Fox contextual maneuvers depend on active pitch and flight mode',()=>
  assert.equal(contextualManeuver(true,false,true,false),null);
  assert.equal(contextualManeuver(false,true,false,true),null);
  assert.equal(contextualManeuver(true,true,true,true),'loop');
+});
+
+test('alternate guardian only unlocks if rescued pilot survives all seven bridges',()=>{
+ assert.equal(hiddenCourseUnlocked(true,true,7),true);
+ for(const [rescued,alive,gates] of [[false,true,7],[true,false,7],[true,true,6],[false,false,0]])assert.equal(hiddenCourseUnlocked(rescued,alive,gates),false);
 });
