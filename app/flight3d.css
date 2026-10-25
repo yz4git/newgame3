@@ -29,3 +29,22 @@ body{position:fixed;inset:0}button,a{font:inherit;-webkit-tap-highlight-color:tr
 .home{font-size:12px;letter-spacing:.1em;border-bottom:1px solid #83d5ee55;margin-top:23px;padding:7px}#hit{position:absolute;z-index:6;inset:0;background:#fd6b6870;pointer-events:none;opacity:0}
 @media(max-width:600px){#controls .help{max-width:37%;font-size:9px}#boost{width:76px;height:76px;min-width:76px;min-height:76px}#missile{width:85px;min-width:85px;min-height:71px;font-size:9px}.action-buttons{gap:8px}.hud .label,.minor{font-size:8px}}
 @media(orientation:landscape) and (max-height:480px){.hud{top:8px}#controls{bottom:10px}.panel h1{font-size:35px;margin:7px 0}.panel p{margin:6px 0 10px}.panel #action{padding:12px}.panel .home{margin-top:8px}#bosswrap{top:14%}}
+
+/* Cinematic flight telemetry: all UI elements are HTML, while targets,
+   craft, bullets and scenery are actual camera-projected 3D geometry. */
+.target-ring{position:absolute;z-index:4;pointer-events:none;transform:translate(-50%,-50%);width:62px;height:62px;border:1px solid #8cf7ffb5;box-shadow:0 0 18px #35e4ff65,inset 0 0 8px #70e9ff30;clip-path:polygon(0 0,32% 0,32% 6%,68% 6%,68% 0,100% 0,100% 32%,94% 32%,94% 68%,100% 68%,100% 100%,68% 100%,68% 94%,32% 94%,32% 100%,0 100%,0 68%,6% 68%,6% 32%,0 32%);transition:opacity .16s}
+.target-ring i{display:block;position:absolute;inset:23px;border:1px solid #a5faffaa;transform:rotate(45deg)}
+.target-ring span{position:absolute;left:50%;top:70px;transform:translateX(-50%);font-size:9px;letter-spacing:.13em;color:#9ef2ff;text-shadow:0 1px 9px #000;font-weight:800;white-space:nowrap}
+.target-ring b{margin-left:6px;font-variant-numeric:tabular-nums}
+.target-ring.boss-lock{width:106px;height:106px;border-color:#ffb38a;box-shadow:0 0 24px #ff965566}
+.target-ring.boss-lock i{inset:43px;border-color:#ffd3a7}
+.target-ring.boss-lock span{top:112px;color:#ffd0a6}
+.multiplier{display:block;color:#7df2f9;letter-spacing:.14em;font-size:9px;margin-top:6px;text-shadow:0 0 9px #12e6f777}
+.hud-right .minor{display:block;margin-top:5px;color:#9eb9d0}
+#speed{transition:color .2s,text-shadow .2s}
+#speed.hypersonic{color:#a6f8ff;text-shadow:0 0 12px #67ebffb0,0 0 30px #43edff55}
+.reticle{border-color:#adf7ffc7;box-shadow:0 0 15px #55dbff5c,inset 0 0 10px #68ebff26}
+#overlay .kicker{color:#8aeeff;text-shadow:0 0 20px #2cceff88}
+#overlay .panel h1{letter-spacing:-.062em}
+#overlay{background:radial-gradient(ellipse at 50% 27%,#113b55b0 0%,#041320cc 48%,#010610ed 100%)}
+@media(max-width:600px){.target-ring{width:45px;height:45px}.target-ring i{inset:16px}.target-ring span{top:52px;font-size:8px}.target-ring.boss-lock{width:70px;height:70px}.target-ring.boss-lock i{inset:27px}.target-ring.boss-lock span{top:78px}.multiplier{font-size:7px}}
