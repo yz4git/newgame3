@@ -28,7 +28,7 @@ export const seed=(n:number)=>{const t=Math.sin(n*127.13+31.71)*43758.5453;retur
 export function routeCenter(scene:number,z:number):V3 {
  const d=-z,scale=scene===4?1.35:1;
  return V(
- (Math.sin(d*.0015+scene*1.3)*5.5+Math.sin(d*.0031+scene)*2.4)*scale,
+ (scene===0?(Math.sin(d*.0021)*9.8+Math.sin(d*.006)*3.8):Math.sin(d*.0015+scene*1.3)*5.5+Math.sin(d*.0031+scene)*2.4)*scale,
  Math.sin(d*.0018+scene*.66)*1.7+Math.cos(d*.0032+scene)*1.15,0);
 }
 export function laneLimit(x:number,y:number){return V(clamp(x,-9.4,9.4),clamp(y,-6.7,7.8),0);}
