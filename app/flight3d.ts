@@ -23,7 +23,7 @@ type State=Phase;
 type Target={model:T.Group;position:T.Vector3;hp:number;max:number;radius:number;boss:boolean;ground:boolean;phase:number;age:number;fire:number;points:number;rescue:boolean;seed:number;side:number;pattern:WaveType;flightIndex:number;birth:T.Vector3};
 type Projectile={mesh:T.Mesh;velocity:T.Vector3;friendly:boolean;homing:boolean;bomb:boolean;damage:number;radius:number;life:number;target:Target|null};
 type Supply={mesh:T.Mesh;kind:'ring'|'laser'|'repair'|'bomb';radius:number};
-type Flash={mesh:T.Mesh;life:number;duration:number};
+type Flash={mesh:T.Mesh;life:number;duration:number;radius:number};
 type Ally={mesh:T.Group;name:string;hp:number;side:number;cooldown:number};
 const orb=new T.IcosahedronGeometry(1,1),boltGeo=new T.IcosahedronGeometry(1,0),laserBoltGeo=new T.CapsuleGeometry(.22,3.4,3,6),boxGeo=new T.BoxGeometry(1,1,1),coneGeo=new T.ConeGeometry(1,1,8);
 const allyColors=[0x84dcf2,0xf5c493],enemyColors=[0x9b5575,0xc67c65,0x704f96];
@@ -471,9 +471,9 @@ class GroundFlight {
  }
  private impact(position:T.Vector3,radius:number){
   this.vfx.burst(position,radius,radius>5?0xffd18a:0xff997e);
-  const material=new T.MeshBasicMaterial({color:0xffc39d,transparent:true,opacity:.7,depthWrite:false,blending:T.AdditiveBlending});
+  const material=new T.MeshBasicMaterial({color:0xffac73,transparent:true,opacity:.20,depthWrite:false,blending:T.AdditiveBlending});
   const mesh=new T.Mesh(orb,material);mesh.position.copy(position);mesh.scale.setScalar(.12);this.scene.add(mesh);
-  this.blasts.push({mesh,life:radius>4?.65:.38,duration:radius>4?.65:.38});
+  this.blasts.push({mesh,life:radius>4?.65:.38,duration:radius>4?.65:.38,radius});
  }
  private destroyTarget(e:Target,power:number){
   if(e.hp<=0)return;
@@ -750,8 +750,8 @@ class GroundFlight {
    const effect=this.blasts[i];
    effect.life-=dt;
    const fraction=1-effect.life/effect.duration;
-   effect.mesh.scale.setScalar(.2+fraction*5.5);
-   (effect.mesh.material as T.MeshBasicMaterial).opacity=Math.max(0,(1-fraction)*.72);
+   effect.mesh.scale.setScalar(.18+fraction*(effect.radius>5?3.6:1.7));
+   (effect.mesh.material as T.MeshBasicMaterial).opacity=Math.max(0,(1-fraction)*.20);
    if(effect.life<=0){this.scene.remove(effect.mesh);(effect.mesh.material as T.Material).dispose();this.blasts.splice(i,1);}
   }
  }
