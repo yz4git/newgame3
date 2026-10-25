@@ -15,9 +15,11 @@ const box=new T.BoxGeometry(1,1,1);
 const ico=new T.IcosahedronGeometry(1,1);
 const cone=new T.ConeGeometry(1,1,6);
 const torus=new T.TorusGeometry(1,.09,7,36);
+const stoneArch=new T.TorusGeometry(12,2.25,6,22,Math.PI);
+const archRim=new T.TorusGeometry(12,.32,4,22,Math.PI);
 const cylinder=new T.CylinderGeometry(1,1,1,8);
 const COLORS=[
- {earth:0x293e3a,grass:0x526d47,road:0x293b4a,water:0x226d8e,rock:0x626a6d,wall:0x68757b,top:0xa0b0b6,glow:0xffcb83},
+ {earth:0x293e3a,grass:0x526d47,road:0x293b4a,water:0x254a5e,rock:0x626a6d,wall:0x68757b,top:0xa0b0b6,glow:0xffcb83},
  {earth:0x275475,grass:0x377e89,road:0x345060,water:0x15749c,rock:0x729496,wall:0x809fa3,top:0xb4dcdf,glow:0x61f1e0},
  {earth:0x404464,grass:0x4d6071,road:0x222738,water:0x1a3860,rock:0x56617a,wall:0x7c91b0,top:0xa5c2d1,glow:0xc8a3ff},
  {earth:0x779eb1,grass:0xb4cdd4,road:0x557080,water:0x3981a9,rock:0xbed6de,wall:0x9cbcc9,top:0xe1f7ff,glow:0x9beaff},
@@ -104,6 +106,7 @@ export class GroundWorld{
  private waterfallMat=new T.MeshStandardMaterial({color:0x9bdfee,metalness:.15,roughness:.21,transparent:true,opacity:.54,side:T.DoubleSide,depthWrite:false});
  private roadMat=mat(0x2f3a43,.95);
  private roadLine=new T.MeshBasicMaterial({color:0xbdd9df});
+ private seaFoam=new T.MeshBasicMaterial({color:0x9bc7cc,transparent:true,opacity:.20,depthWrite:false});
  private wallMat=mat(0x8299a7,.49);
  private trimMat=mat(0xc0cfd2,.43);
  private emitter=new T.MeshBasicMaterial({color:0x72def6,toneMapped:false});
@@ -163,12 +166,15 @@ export class GroundWorld{
   const ocean=coastZone(this.sceneId,z)||this.sceneId===1||this.sceneId===5;
   if(ocean){
    const level=waterLevel(this.sceneId,z);
-   item(group,box,this.seaMaterial,routeCenter(this.sceneId,z).x,level-.08,0,coastZone(this.sceneId,z)?68:230,.16,TILE+.1);
-   if(coastZone(this.sceneId,z)){
-    for(let i=0;i<9;i++){
-     const w=24+u(i*7+z)*30,x=routeCenter(this.sceneId,z).x+(u(i+z+7)-.5)*46;
-     item(group,box,this.roadLine,x,level+.08,(u(i*8+z)-.5)*TILE,w*.7,.028,.11);
-    }
+   const intro=this.sceneId===0&&-z<330;
+   const canal=this.sceneId===0&&coastZone(this.sceneId,z)&&!intro;
+   item(group,box,this.seaMaterial,routeCenter(this.sceneId,z).x,level-.08,0,canal?68:250,.16,TILE+.12);
+   // Short, faint strips and irregular orientation read as water reflections
+   // rather than the bright straight white stripes seen in the old screenshots.
+   for(let i=0;i<(canal?5:8);i++){
+    const x=routeCenter(this.sceneId,z).x+(u(i*9+z)-.5)*(canal?52:185);
+    const streak=item(group,box,this.seaFoam,x,level+.033,(u(i*7+z)-.5)*TILE,4+u(i+z+4)*13,.022,.24+u(i+z)*.33);
+    streak.rotation.y=(u(i+z+99)-.5)*.7;
    }
   }else{
    // Visible physically placed continuous roadway with markings and guardrails.
@@ -269,16 +275,23 @@ export class GroundWorld{
  }
  private makeArch(group:T.Group,colliders:Collider[],gate:Gate,local:number){
   const center=routeCenter(this.sceneId,gate.z),x=center.x,base=heightAt(this.sceneId,x,gate.z);
-  const height=26,span=21;
+  const pedestal=15,openingRadius=12;
   for(const sign of [-1,1]){
-   item(group,box,this.stone,x+sign*span*.5,base+height*.5,local,4.4,height,6.5);
-   item(group,box,this.trimMat,x+sign*span*.5,base+height*.93,local,5.1,1.3,7.5);
-   colliders.push({x:x+sign*span*.5,y:base+height*.5,z:gate.z,rx:2.4,ry:height*.5,rz:3.3,kind:'rock'});
+   const bx=x+sign*openingRadius;
+   item(group,box,this.stone,bx,base+pedestal*.5,local,4.6,pedestal,7.1);
+   item(group,box,this.trimMat,bx,base+pedestal*.92,local,5.8,.9,8.1);
+   item(group,box,this.weathered,bx+sign*1.9,base+3.5,local,2.0,7.2,8);
+   colliders.push({x:bx,y:base+pedestal*.5,z:gate.z,rx:2.9,ry:pedestal*.5,rz:4,kind:'rock'});
   }
-  item(group,box,this.stone,x,base+height+1,local,span+4,4,7);
-  item(group,box,this.trimMat,x,base+height+3,local,span+5.3,1.2,8);
-  for(const sign of [-1,1])item(group,ico,this.stone,x+sign*12,base+height+4,local,4.6,4.2,5);
-  colliders.push({x,y:base+height+1,z:gate.z,rx:span*.52,ry:2.4,rz:3.5,kind:'bridge'});
+  // Genuine low-poly curved masonry arch. The opening remains flyable and the
+  // semicircle silhouette is recognizable from the third-person camera.
+  item(group,stoneArch,this.stone,x,base+pedestal,local,1,1,1.0);
+  item(group,archRim,this.ceramic,x,base+pedestal,local-2.1,1,1,1.02);
+  for(const sign of [-1,1]){
+   item(group,ico,this.weathered,x+sign*13.1,base+pedestal+2.5,local,3.3,4.2,4.5);
+  }
+  // Approximate top rim collision; the two side pillars are separate volumes.
+  colliders.push({x,y:base+pedestal+openingRadius,z:gate.z,rx:8.7,ry:2.8,rz:4,kind:'bridge'});
  }
  private addTile(z:number){
   const tileZ=Math.round(z/TILE)*TILE,colliders:Collider[]=[],group=new T.Group();
@@ -293,7 +306,7 @@ export class GroundWorld{
   for(let i=0;i<buildings;i++){
    const n=Math.round(tileZ*1.13)+stage*1003+i*31;
    const sign=i%2===0?1:-1;
-   const distance=city?(14+u(n+2)*46):coastStart?(28+u(n+2)*60):coast?42+u(n+2)*35:stage===2?16+u(n+2)*48:22+u(n+2)*67;
+   const distance=city?(34+u(n+2)*42):coastStart?(28+u(n+2)*60):coast?42+u(n+2)*35:stage===2?16+u(n+2)*48:22+u(n+2)*67;
    const x=center+sign*distance,local=(u(n+5)-.5)*TILE*.91,wz=tileZ+local;
    if(city||stage===2){
     const style=i+(Math.floor(d/TILE)*3);
