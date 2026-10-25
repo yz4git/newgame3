@@ -3,6 +3,7 @@ import './flight3d.css';
 import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
 import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
+import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
 /**
@@ -56,7 +57,7 @@ class GroundFlight {
  private supplies:Supply[]=[];private blasts:Flash[]=[];private allies:Ally[]=[];
  private waves=scriptWaves(this.mission);private waveIndex=0;private missionTime=0;
  private levelEvent=0;private checkpoint=false;private rescueFinished=false;private rescueCount=0;private gateBonus=false;
- private laneX=0;private laneY=1.2;private yaw=0;private targetYaw=0;private velocity=74;
+ private laneX=0;private laneY=1.2;private cameraPanX=0;private yaw=0;private targetYaw=0;private velocity=74;
  private boostHeld=false;private brakeHeld=false;private padBoost=false;private padBrake=false;private leftBank=false;private rightBank=false;private keys=new Set<string>();
  private heat=0;private overheated=false;private charge=0;private fireHeld=false;private shotDelay=0;
  private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;private respawnBlink=false;
@@ -90,9 +91,14 @@ class GroundFlight {
     altitude:this.player.position.y-heightAt(this.mission.scene,this.player.position.x,this.player.position.z),
     player:this.player.position.toArray(),terrainTiles:this.terrain.tilesCount,
     gates:{...this.terrain.gateState},rescue:this.rescueFinished,targets:this.enemies.length,shots:this.shots.length,
-    hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps}),
+    hits:this.missionHits,shield:this.shield,boss:this.boss!==null,missionTime:this.missionTime,fps:this.averageFps,
+    laneX:this.laneX,cameraPanX:this.cameraPanX,shipViewportOffset:railViewportOffset(this.laneX),cameraX:this.camera.position.x,
+    shipNdcX:this.player.position.clone().project(this.camera).x,shipVisible:this.player.visible,
+    sightFarX:($('sight-far') as HTMLElement).style.left,
+    cameraInsideSolid:this.terrain.collisions(P(this.camera.position),P(this.camera.position),2.5)?.kind??null}),
     start:()=>this.startCampaign(),pause:()=>this.pause(),
-    auditSeek:(seconds:number)=>this.auditSeek(seconds)}});
+    auditSeek:(seconds:number)=>this.auditSeek(seconds),
+    auditSetLane:(x:number)=>this.auditSetLane(x)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
  private get playing(){return this.stage==='combat'||this.stage==='boss';}
@@ -121,8 +127,9 @@ class GroundFlight {
    if(!this.playing||this.pointer!==e.pointerId)return;e.preventDefault();
    const x=(e.clientX-this.pX)/Math.max(1,this.canvas.clientWidth);
    const y=(e.clientY-this.pY)/Math.max(1,this.canvas.clientHeight);
-   this.laneX=clamp(this.laneX+x*30,-9.4,9.4);
-   this.laneY=clamp(this.laneY-y*29,-5.0,11.5);
+   if(this.mission.mode==='corridor')this.laneX=railMoveTarget(this.laneX,x*97);
+   else this.laneX=clamp(this.laneX+x*30,-9.4,9.4);
+   this.laneY=clamp(this.laneY-y*29,RAIL_Y_MIN,RAIL_Y_MAX);
    this.pX=e.clientX;this.pY=e.clientY;
   });
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])
@@ -167,7 +174,7 @@ class GroundFlight {
   });
   window.addEventListener('blur',()=>{this.keys.clear();this.padBoost=this.padBrake=this.boostHeld=this.brakeHeld=false;if(this.playing)this.pause();});
  }
- private gamepad(){
+ private gamepad(dt:number){
   const pad=navigator.getGamepads?.().find(g=>g&&g.connected);
   if(!pad){this.gamepadLast=[];this.padBoost=this.padBrake=false;return;}
   const on=(i:number)=>pad.buttons[i]?.pressed||false;
@@ -176,8 +183,8 @@ class GroundFlight {
   for(const [idx,fn] of Object.entries(commands))if(on(+idx)&&!this.gamepadLast[+idx])fn();
   if(!on(0)&&this.gamepadLast[0])this.fireUp();
   this.gamepadLast=pad.buttons.map(b=>b.pressed);
-  this.laneX=clamp(this.laneX+axis(0)*.52,-9.4,9.4);
-  this.laneY=clamp(this.laneY-axis(1)*.42,-5,11.5);
+  this.laneX=this.mission.mode==='corridor'?railMoveTarget(this.laneX,axis(0)*dt*49):clamp(this.laneX+axis(0)*dt*31,-9.4,9.4);
+  this.laneY=clamp(this.laneY-axis(1)*dt*26,RAIL_Y_MIN,RAIL_Y_MAX);
   this.padBoost=on(5);this.padBrake=on(4);
  }
  private setPalette(){
@@ -224,7 +231,7 @@ class GroundFlight {
   this.checkpoint=resume;this.rescueFinished=false;this.rescueCount=0;this.gateBonus=false;this.levelEvent=0;
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
   this.invulnerable=resume?2.3:4.2;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
-  this.laneX=0;this.laneY=2;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
+  this.laneX=0;this.laneY=2;this.cameraPanX=0;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
   this.player.position.set(0,2,resume?-this.missionTime*75:0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
   this.terrain.configure(this.mission.scene,this.player.position.z,this.mission.mode==='all-range');
@@ -271,6 +278,10 @@ class GroundFlight {
   return this.mission.mode==='all-range'?new T.Vector3(-Math.sin(this.yaw),0,-Math.cos(this.yaw)):new T.Vector3(0,0,-1);
  }
  private aim(){
+  if(this.mission.mode==='corridor'){
+   const p=railAimPoint(this.mission.scene,this.player.position.z,this.laneX,this.laneY,145);
+   return new T.Vector3(p.x,p.y,p.z).sub(this.player.position).normalize();
+  }
   const focus=this.camera.position.clone().addScaledVector(this.camera.getWorldDirection(new T.Vector3()),170);
   return focus.sub(this.player.position).normalize();
  }
@@ -346,7 +357,11 @@ class GroundFlight {
    let pos:T.Vector3;
    if(this.mission.mode==='corridor'){
     const z=this.player.position.z-118-f.z,route=routeCenter(this.mission.scene,z);
-    pos=new T.Vector3(route.x+f.x,route.y+f.y+3,z);
+    const flank=wave.type==='crossfire'?(i%3-1)*19
+     :wave.type==='pincer'?(i%2===0?-27:27)
+     :wave.type==='flypast'?(i%2===0?-33:33)
+     :wave.type==='intercept'?(i%2===0?-15:15):0;
+    pos=new T.Vector3(route.x+f.x+flank,route.y+f.y+3,z);
    }else{
     const angle=6.28*(i/wave.count)+this.missionTime*.17;
     pos=this.player.position.clone().add(new T.Vector3(Math.cos(angle)*98,f.y,Math.sin(angle)*98));
@@ -359,7 +374,7 @@ class GroundFlight {
  private spawnTurret(){
   const z=this.player.position.z-112,route=routeCenter(this.mission.scene,z);
   const left=Math.floor(this.missionTime*3)%2===0?-1:1;
-  const x=route.x+left*(8+seed(this.missionTime)*5);
+  const x=route.x+left*(17+seed(this.missionTime)*21);
   const y=heightAt(this.mission.scene,x,z)+1;
   const turret=this.makeEnemy(new T.Vector3(x,y,z),false,true);
   turret.fire=1.65;
@@ -406,7 +421,7 @@ class GroundFlight {
  }
  private spawnSupply(kind:Supply['kind']){
   const z=this.player.position.z-130,center=routeCenter(this.mission.scene,z);
-  const x=center.x+Math.sin(this.missionTime*1.1)*6;
+  const x=center.x+Math.sin(this.missionTime*1.1)*26;
   const pos=this.mission.mode==='corridor'?new T.Vector3(x,center.y+Math.sin(this.missionTime)*3,z):
     this.player.position.clone().addScaledVector(this.forward(),85);
   const color=kind==='ring'?0xffde84:kind==='laser'?0x9efbff:kind==='repair'?0x97ffab:0xffad6f;
@@ -488,12 +503,12 @@ class GroundFlight {
   this.enterMission(id);
  }
  private updatePlayer(dt:number){
-  this.gamepad();
+  this.gamepad(dt);
   const k=this.keys;
   const ix=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
   const iy=Number(k.has('w')||k.has('arrowup'))-Number(k.has('s')||k.has('arrowdown'));
-  this.laneX=clamp(this.laneX+ix*dt*14,-9.4,9.4);
-  this.laneY=clamp(this.laneY+iy*dt*13,-5,11.5);
+  this.laneX=this.mission.mode==='corridor'?railMoveTarget(this.laneX,ix*dt*34):clamp(this.laneX+ix*dt*14,-9.4,9.4);
+  this.laneY=clamp(this.laneY+iy*dt*13,RAIL_Y_MIN,RAIL_Y_MAX);
   const accelerating=(this.boostHeld||this.padBoost||k.has('shift'))&&!this.overheated;
   const braking=(this.brakeHeld||this.padBrake||k.has('control')||k.has('b'))&&!this.overheated&&!accelerating;
   this.heat=clamp(this.heat+(accelerating||braking?dt*.36:-dt*.33),0,1);
@@ -522,7 +537,7 @@ class GroundFlight {
   }
   this.roll=Math.max(0,this.roll-dt);this.rollCooldown=Math.max(0,this.rollCooldown-dt);
   this.loopTime=Math.max(0,this.loopTime-dt);this.loopCooldown=Math.max(0,this.loopCooldown-dt);
-  const bank=-ix*.23-this.laneX*.07+(this.leftBank?.34:0)-(this.rightBank?.34:0);
+  const bank=-ix*.23-clamp(this.laneX/(this.mission.mode==='corridor'?RAIL_X_MAX:9.4),-1,1)*.46+(this.leftBank?.34:0)-(this.rightBank?.34:0);
   this.player.rotation.set(0,this.yaw,lerp(this.player.rotation.z,bank,dt*6));
   if(this.roll>0)this.player.rotation.z=bank+this.rollDir*2*Math.PI*(1-this.roll/ROLL_SECONDS);
   if(this.loopTime>0)this.player.rotation.x=-(1-this.loopTime/SOMERSAULT_SECONDS)*Math.PI*2;
@@ -767,6 +782,18 @@ class GroundFlight {
   mark(this.player.position,'#f5ffff',4);
   context.restore();
  }
+ private auditSetLane(value:number){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  this.laneX=this.mission.mode==='corridor'?railMoveTarget(0,value):clamp(value,-9.4,9.4);
+  this.cameraPanX=railCameraPan(this.laneX);
+  if(this.mission.mode==='corridor'){
+   const route=routeCenter(this.mission.scene,this.player.position.z);
+   this.player.position.x=route.x+this.laneX;
+   this.previousPosition.copy(this.player.position);
+   this.invulnerable=2.5;
+   this.respawnBlink=false;this.player.visible=true;
+  }
+ }
  private auditSeek(seconds:number){
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
   // Inspection-only: seek physical scenery for reference comparisons without
@@ -783,18 +810,20 @@ class GroundFlight {
   this.enemies=[];
   for(const s of this.shots)this.scene.remove(s.mesh);
   this.shots=[];
-  this.camera.position.copy(this.player.position).add(new T.Vector3(0,4.1,13.5));
+  this.cameraPanX=railCameraPan(this.laneX);
+  this.camera.position.copy(this.player.position).add(new T.Vector3(-this.laneX+this.cameraPanX,4.1,13.5));
  }
  private render(dt:number){
   const forward=this.forward();
   const behind=this.player.position.clone().addScaledVector(forward,-15.5).add(new T.Vector3(0,4.3,0));
   if(this.mission.mode==='corridor'){
-   // Essential rail-shooter camera behaviour: steering moves the Arwing visibly
-   // across the image. The old camera followed 100% of player X/Y, pinning
-   // the plane in the center and making steering feel ineffective.
+   // In the center the camera stays still while the ship steers across the
+   // frame. When it reaches the camera dead zone, the panorama starts sliding.
+   // A WORLD-SPACE camera pan exposes more buildings/terrain on either side.
+   this.cameraPanX=lerp(this.cameraPanX,railCameraPan(this.laneX),Math.min(1,dt*9));
    const center=routeCenter(this.mission.scene,this.player.position.z);
-   behind.x=center.x+(this.player.position.x-center.x)*.27;
-   behind.y=center.y+4.3+(this.player.position.y-center.y)*.32;
+   behind.x=center.x+this.cameraPanX;
+   behind.y=center.y+4.3+railCameraPanY(this.laneY);
   }
   this.camera.position.lerp(behind,Math.min(1,dt*7||.08));
   if(this.cameraShake>0){
@@ -804,13 +833,34 @@ class GroundFlight {
   const look=this.player.position.clone().addScaledVector(forward,96);
   if(this.mission.mode==='corridor'){
    const center=routeCenter(this.mission.scene,look.z);
-   look.x=center.x+this.laneX*.12;
-   look.y=center.y-3.6+this.laneY*.13;
+   look.x=center.x+this.cameraPanX*.98;
+   look.y=center.y-3.6+railCameraPanY(this.laneY)*.75;
   }else look.y-=3;
   this.camera.lookAt(look);
   this.camera.rotateZ(-this.player.rotation.z*.08);
   const fov=this.boostHeld?75:this.brakeHeld?56:64;
   this.camera.fov=lerp(this.camera.fov,fov,dt*3.7);this.camera.updateProjectionMatrix();
+  if(this.playing){
+   const pNear=this.mission.mode==='corridor'
+    ?railAimPoint(this.mission.scene,this.player.position.z,this.laneX,this.laneY,70)
+    :P(this.player.position.clone().addScaledVector(this.aim(),70));
+   const pFar=this.mission.mode==='corridor'
+    ?railAimPoint(this.mission.scene,this.player.position.z,this.laneX,this.laneY,145)
+    :P(this.player.position.clone().addScaledVector(this.aim(),145));
+   for(const [id,p] of [['sight-near',pNear],['sight-far',pFar]] as const){
+    const sight=$(id);
+    const ndc=new T.Vector3(p.x,p.y,p.z).project(this.camera);
+    const visible=ndc.z>0&&ndc.z<1&&Math.abs(ndc.x)<.95&&Math.abs(ndc.y)<.95;
+    sight.hidden=!visible;
+    if(visible){
+     sight.style.left=((ndc.x+1)*50).toFixed(2)+'%';
+     sight.style.top=((1-ndc.y)*50).toFixed(2)+'%';
+    }
+   }
+  }
+  const warning=this.playing&&this.mission.mode==='corridor'?railEdgeWarning(this.laneX):0;
+  $('edge-left').style.opacity=String(this.laneX<0?warning:0);
+  $('edge-right').style.opacity=String(this.laneX>0?warning:0);
   const marker=$('target-ring');
   const e=this.currentTarget;
   if(e&&this.playing&&e.hp>0){

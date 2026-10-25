@@ -87,3 +87,20 @@ test('all-range city and volcanic missions have ground across the entire combat 
   world.clear();
  }
 });
+
+test('a wide-scrolling chase camera is never trapped inside tall city architecture',()=>{
+ for(const depth of [440,760,970,1200,1380]){
+  const world=new GroundWorld();
+  world.configure(0,-depth,false);
+  for(const lane of [-44,-35,-20,0,20,35,44]){
+   const z=-depth+15,route=routeCenter(0,-depth);
+   // On a wide corridor the camera follows roughly 82% of outer-lane
+   // displacement. In normal flight it stays about 4.3 above the course.
+   const x=route.x+Math.sign(lane)*Math.max(0,Math.abs(lane)-6.5)*.82;
+   const y=route.y+4.3;
+   assert.equal(world.collisions({x,y,z},{x,y,z},2.5),null,
+    'camera blocked by a city structure at depth '+depth+', lane '+lane);
+  }
+  world.clear();
+ }
+});

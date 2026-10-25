@@ -81,6 +81,28 @@ for(const [seconds,label] of [[8,'04a-city'],[19,'04b-canyon'],[31,'04c-arches']
  await sleep(800);
  await capture(label);
 }
+// Verify that lateral input SCROLLS THE ACTUAL WORLD CAMERA instead of only
+// shifting the aircraft across a fixed central view.
+await evaluate("window.__novaFlight3D.auditSeek(11);window.__novaFlight3D.auditSetLane(0)");
+await sleep(850);
+await capture('04g-center-corridor');
+const centered=JSON.parse(await evaluate("JSON.stringify(window.__novaFlight3D.snapshot())"));
+await evaluate("window.__novaFlight3D.auditSetLane(43)");
+await sleep(1400);
+await capture('04h-far-right-world-pan');
+const right=JSON.parse(await evaluate("JSON.stringify(window.__novaFlight3D.snapshot())"));
+await evaluate("window.__novaFlight3D.auditSetLane(-43)");
+await sleep(1400);
+await capture('04i-far-left-world-pan');
+const left=JSON.parse(await evaluate("JSON.stringify(window.__novaFlight3D.snapshot())"));
+if(!(right.laneX>40&&left.laneX< -40))throw Error('Horizontal world flight range still too narrow');
+if(!(right.cameraX-centered.cameraX>15&&centered.cameraX-left.cameraX>15))throw Error('Camera failed to scroll over distant lateral scenery');
+if(!(right.shipNdcX<.96&&right.shipNdcX>0&&left.shipNdcX>-.96&&left.shipNdcX<0))throw Error('Arwing left visible safe area while panning');
+if(right.cameraInsideSolid||left.cameraInsideSolid||centered.cameraInsideSolid)throw Error('Scrolling camera intersects buildings or the ground');
+if(!right.shipVisible||!left.shipVisible)throw Error('Craft was invisible when documenting side scrolling');
+console.log('AUDIT_LATERAL_SCROLL_OK',JSON.stringify({center:centered,right,left}));
+await evaluate("window.__novaFlight3D.auditSetLane(0)");
+await sleep(400);
 await command('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:2,mobile:true,screenWidth:844,screenHeight:390});
 await sleep(900);
 await capture('05-iphone-landscape');
