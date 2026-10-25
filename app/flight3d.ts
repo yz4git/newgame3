@@ -901,7 +901,7 @@ class GroundFlight {
     this.checkpoint=true;this.shield=Math.min(this.shieldMax,this.shield+10);this.notice('CHECKPOINT',1.5);
    }
    const crossed=(interval:number)=>(Math.floor(scriptClock/interval)!==Math.floor((scriptClock-(opening?this.velocity*dt/STAGE1.nominalSpeed:dt))/interval));
-   if(crossed(5.6))this.spawnTurret();
+   if((!opening||distance<STAGE1.escortDeadline||distance>STAGE1.waterfallPassage)&&crossed(5.6))this.spawnTurret();
    if(crossed(12))this.spawnSupply('ring');
    if(crossed(24))this.spawnSupply(this.laserLevel<3?'laser':'repair');
    if(opening?distance>=STAGE1.boss:this.missionTime>=this.mission.duration)this.spawnBoss();
