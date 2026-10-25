@@ -113,6 +113,7 @@ class GroundFlight {
     auditSeek:(seconds:number)=>this.auditSeek(seconds),
     auditSpawnAimTarget:()=>this.auditSpawnAimTarget(),
     auditSpawnGroup:()=>this.auditSpawnGroup(),
+    auditSpawnThreat:()=>this.auditSpawnThreat(),
     auditSetLane:(x:number)=>this.auditSetLane(x)}});
   this.raf=requestAnimationFrame(now=>this.frame(now));
  }
@@ -978,6 +979,12 @@ class GroundFlight {
    minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
   }
   return {left:minX,right:maxX};
+ }
+ private auditSpawnThreat(){
+  if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
+  const position=this.player.position.clone().addScaledVector(this.aim(),110);
+  const e=this.makeEnemy(position,false,false,false,'heavy',0);
+  e.fire=.04;e.warning=0;
  }
  private auditSpawnGroup(){
   if(!new URLSearchParams(location.search).has('audit')||!this.playing)return;
