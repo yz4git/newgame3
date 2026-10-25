@@ -58,7 +58,7 @@ class GroundFlight {
  private laneX=0;private laneY=1.2;private yaw=0;private targetYaw=0;private velocity=74;
  private boostHeld=false;private brakeHeld=false;private padBoost=false;private padBrake=false;private leftBank=false;private rightBank=false;private keys=new Set<string>();
  private heat=0;private overheated=false;private charge=0;private fireHeld=false;private shotDelay=0;
- private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;
+ private roll=0;private rollDir=1;private rollCooldown=0;private loopTime=0;private loopCooldown=0;private turnAround=0;private invulnerable=0;private respawnBlink=false;
  private pointer:number|null=null;private pX=0;private pY=0;private gamepadLast:boolean[]=[];
  private currentTarget:Target|null=null;private previousPosition=new T.Vector3();private time=0;private lastFrame=0;
  private noticeTime=0;private radioTime=0;private cameraShake=0;private damageFlash=0;private audio:AudioContext|null=null;
@@ -221,7 +221,7 @@ class GroundFlight {
   if(this.waveIndex<0)this.waveIndex=this.waves.length;
   this.checkpoint=resume;this.rescueFinished=false;this.rescueCount=0;this.gateBonus=false;this.levelEvent=0;
   this.roll=this.rollCooldown=this.loopTime=this.loopCooldown=this.charge=this.heat=this.shotDelay=0;
-  this.invulnerable=2.4;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
+  this.invulnerable=2.4;this.respawnBlink=resume;this.overheated=false;this.fireHeld=false;this.boostHeld=this.brakeHeld=false;
   this.laneX=0;this.laneY=2;this.yaw=this.targetYaw=0;this.velocity=75;this.damagedWing=false;
   this.player.position.set(0,2,resume?-this.missionTime*75:0);this.player.rotation.set(0,0,0);
   this.previousPosition.copy(this.player.position);
@@ -521,7 +521,7 @@ class GroundFlight {
   this.player.rotation.set(0,this.yaw,lerp(this.player.rotation.z,bank,dt*6));
   if(this.roll>0)this.player.rotation.z=bank+this.rollDir*2*Math.PI*(1-this.roll/ROLL_SECONDS);
   if(this.loopTime>0)this.player.rotation.x=-(1-this.loopTime/SOMERSAULT_SECONDS)*Math.PI*2;
-  this.player.visible=this.invulnerable<=0||Math.sin(this.time*36)>.15;
+  this.player.visible=!this.respawnBlink||this.invulnerable<=0||Math.sin(this.time*36)>.15;
   animateFlightShip(this.player,this.time,accelerating?2.3:1.1);
   this.terrain.step(this.player.position.z,this.mission.mode==='all-range');
   const sample=heightAt(this.mission.scene,this.player.position.x,this.player.position.z);
