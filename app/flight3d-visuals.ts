@@ -111,6 +111,46 @@ export function createFlightShip(color: number, boss = false, variant = 0) {
     const ring = part(root,torus,lamp,0,.6,-.75,1.53,1.53,1);
     ring.userData.spin = true; ring.rotation.x = .35;
     part(root,orb,lamp,0,.55,-.72,.6,.6,.6);
+    // Sector-exclusive silhouettes make each guardian a recognizable machine.
+    const signature=neon([0x75dcff,0x67ffe2,0xf0a5ff,0xa5f5ff,0x8cff9e,0xffaa66][variant%6]);
+    if(variant===0){ // orbital refinery: concentric stabilizers and dish array
+      for(const s of [-1,1]){
+        part(root,torus,signature,s*4.1,.7,.8,2.5,2.5,.85).rotation.y=.33*s;
+        part(root,orb,armor,s*4.1,.7,.8,.85,.85,.85);
+      }
+    }else if(variant===1){ // ocean carrier: elongated deck and outboard hulls
+      poly(root,[[-3,-2.6],[3,-2.6],[5.7,.4],[3.6,2.9],[-3.6,2.9],[-5.7,.4]],.25,armor,.9);
+      for(const s of [-1,1]){
+        part(root,cube,edge,s*5.2,-.55,1.2,1.5,1.2,5.3);
+        part(root,cube,signature,s*4.7,1,.5,.12,.14,2.5);
+      }
+    }else if(variant===2){ // urban sentinel: upright weapon spines
+      for(const s of [-1,1]){
+        part(root,cube,armor,s*3.2,1.9,.1,.82,4.6,1.2);
+        part(root,cube,signature,s*3.2,4.2,-.5,.2,1.15,.35);
+        beam(root,V(s*1.1,.6,.8),V(s*3.2,4.1,-.3),.23,edge);
+      }
+    }else if(variant===3){ // polar colossus: crystalline armor blades
+      for(const s of [-1,1]){
+        const spear=part(root,cone,edge,s*4.0,2.6,.1,1.05,6.7,.95);
+        spear.rotation.z=s*.31;
+        part(root,orb,signature,s*4.6,2.1,.3,.65,.85,.58);
+      }
+    }else if(variant===4){ // forest guardian: articulated claws
+      for(const s of [-1,1]){
+        beam(root,V(s*4.1,.6,-.6),V(s*6.2,1.9,-2.2),.58,armor);
+        beam(root,V(s*6.2,1.9,-2.2),V(s*7.4,.2,-3.6),.38,edge);
+        part(root,orb,signature,s*6.2,1.9,-2.2,.65,.65,.65);
+      }
+    }else{ // crucible: paired furnace drums and rotary heat rings
+      for(const s of [-1,1]){
+        const barrel=part(root,cylinder,armor,s*3.4,1.8,1.6,1.25,3.3,1.25);
+        barrel.rotation.x=Math.PI/2;
+        const rotor=part(root,torus,signature,s*3.4,1.8,-.3,1.4,1.4,1);
+        rotor.userData.spin=true;
+        part(root,orb,signature,s*3.4,1.8,-.3,.8,.8,.8);
+      }
+    }
   }
   root.userData.engines = root.children.filter(o => o.userData.flame);
   root.userData.variant = variant;
