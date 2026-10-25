@@ -317,12 +317,16 @@ class GroundFlight {
   const focus=this.camera.position.clone().addScaledVector(this.camera.getWorldDirection(new T.Vector3()),170);
   return focus.sub(this.player.position).normalize();
  }
+ private targetPoint(e:Target){
+  const core=e.boss?e.model.userData.weakpoint as T.Object3D|undefined:undefined;
+  return core?core.getWorldPosition(new T.Vector3()):e.position;
+ }
  private acquire(){
   const direction=this.aim(),origin=this.player.position;
   let best:Target|null=null,score=Infinity;
   for(const e of [...this.enemies,...(this.boss?[this.boss]:[])]){
    if(e.hp<=0)continue;
-   const to=e.position.clone().sub(origin),along=to.dot(direction);
+   const to=this.targetPoint(e).clone().sub(origin),along=to.dot(direction);
    if(along<6||along>320)continue;
    const spread=to.addScaledVector(direction,-along).length();
    const tolerance=e.boss?13:Math.max(3.5,along*.045);
@@ -360,7 +364,7 @@ class GroundFlight {
  }
  private fireCharge(){
   const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null,origin=this.player.position.clone().add(new T.Vector3(0,.2,-1.8));
-  const direction=target?target.position.clone().sub(origin).normalize():this.aim();
+  const direction=target?this.targetPoint(target).clone().sub(origin).normalize():this.aim();
   this.emit(origin,direction.multiplyScalar(270+this.velocity),16+this.laserLevel*3,true,!!target,false,target);
   this.notice(target?'CHARGE / LOCKED':'CHARGE LASER',.85);this.sound(850,.25,.05);
  }
@@ -388,7 +392,7 @@ class GroundFlight {
   this.bombs--;
   const target=this.lockedTarget?.hp&&this.lockedTarget.hp>0?this.lockedTarget:null;
   const origin=this.player.position.clone().add(new T.Vector3(0,-.1,-1.9));
-  const direction=target?target.position.clone().sub(origin).normalize():this.aim();
+  const direction=target?this.targetPoint(target).clone().sub(origin).normalize():this.aim();
   this.emit(origin,direction.multiplyScalar(240+this.velocity),46,true,!!target,true,target);
   this.notice('NOVA BOMB',.8);this.sound(240,.32,.07);
  }
@@ -766,7 +770,7 @@ class GroundFlight {
    const s=this.shots[i],from=s.mesh.position.clone();
    if(s.homing){
     const target=s.target&&s.target.hp>0?s.target:null;
-    if(target)s.velocity.lerp(DIR(s.mesh.position,target.position).multiplyScalar(this.velocity+290),Math.min(1,dt*5));
+    if(target)s.velocity.lerp(DIR(s.mesh.position,this.targetPoint(target)).multiplyScalar(this.velocity+290),Math.min(1,dt*5));
    }
    s.mesh.position.addScaledVector(s.velocity,dt);s.life-=dt;s.fuse-=dt;
    if(s.bomb&&s.fuse<=0){this.detonateBomb(s);this.scene.remove(s.mesh);this.shots.splice(i,1);continue;}
@@ -1081,7 +1085,7 @@ class GroundFlight {
   marker.classList.toggle('locked',!!e&&e===this.lockedTarget);
   $('lock-state').textContent=e&&e===this.lockedTarget?'LOCK':'ACQUIRE';
   if(e&&this.playing&&e.hp>0){
-   const ndc=e.position.clone().project(this.camera);
+   const ndc=this.targetPoint(e).clone().project(this.camera);
    const visible=ndc.z>0&&ndc.z<1&&Math.abs(ndc.x)<.93&&Math.abs(ndc.y)<.91;
    marker.hidden=!visible;
    if(visible){
