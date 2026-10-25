@@ -14,24 +14,34 @@
     <div class="reticle" aria-hidden="true"></div>
     <div id="target-ring" class="target-ring" aria-hidden="true" hidden><i></i><span>LOCKED <b id="target-distance">000 M</b></span></div>
     <header class="hud">
-      <div><span class="label">SCORE / TRUE 3D</span><strong id="score">0000000</strong><div id="sector">01 / 06</div></div>
+      <div><span class="label">SCORE / TRUE 3D</span><strong id="score">0000000</strong><div id="sector">01 / 06</div><div class="chain-stats"><span id="combo">HITS 000</span><span id="reflect">REFLECT 0</span></div></div>
       <div class="hud-right"><span class="label">SHIELD</span><strong id="hull">◆ ◆ ◆ ◆ ◆</strong><strong id="speed">720 km/h</strong><span id="altitude" class="minor">ALT 1125 M</span><span class="multiplier">FLIGHT SPEED ×3</span><button id="pause" aria-label="一時停止">Ⅱ PAUSE</button></div>
     </header>
     <section id="bosswrap" hidden><strong id="boss-name">GUARDIAN</strong><div class="track"><i id="boss-fill"></i></div></section>
     <div id="notice" aria-live="polite"></div>
+    <div id="radio" class="radio-panel" hidden aria-live="polite">
+      <div class="radio-avatar" aria-hidden="true">N/S</div>
+      <div class="radio-content"><strong id="radio-name">NOVA CONTROL</strong><p id="radio-message"></p></div>
+    </div>
     <div id="hit"></div>
     <div id="controls" hidden>
-      <div class="help">DRAG TO FLY<br>上下左右に移動<br>自動射撃 / AUTO FIRE</div>
-      <div class="action-buttons"><button id="boost">BOOST<span class="meter"><i id="boost-fill"></i></span></button><button id="missile">MISSILE READY</button></div>
+      <div class="flight-left">
+        <div class="help">DRAG TO STEER<br>コースに沿って自動飛行</div>
+        <div class="roll-buttons"><button id="roll-left" aria-label="左バレルロール">⟲ ROLL</button><button id="roll-right" aria-label="右バレルロール">ROLL ⟳</button></div>
+      </div>
+      <div class="flight-right">
+        <div class="flight-speed"><button id="brake">BRAKE</button><button id="boost">BOOST<span class="meter"><i id="boost-fill"></i></span></button></div>
+        <div class="flight-weapons"><button id="fire">FIRE<span class="charge-meter"><i id="charge-fill"></i></span><small>HOLD / CHARGE</small></button><button id="missile">NOVA BOMB</button></div>
+      </div>
     </div>
     <section id="overlay" class="overlay">
       <div class="panel">
         <span class="kicker">N / S — CINEMATIC 3D FLIGHT / 3× SPEED</span>
         <h1 id="overlay-title">NOVA STRIKE</h1>
-        <p id="overlay-info">3倍速のシネマティック3Dシューティング</p>
+        <p id="overlay-info">高速3Dレールシューティング — 照準・チャージショット・反射ロール・巨大ボス</p>
         <button id="action">3D出撃</button>
         <a class="home" href="./">← 通常モードに戻る</a>
-        <span class="minor" style="margin-top:25px">iPhone: DRAG / BOOST / MISSILE · PC: WASD / SHIFT / M / P</span>
+        <span class="minor" style="margin-top:25px">iPhone: DRAG / FIRE (HOLD TO CHARGE) / ROLL / BOOST / BRAKE<br>PC: WASD / SPACE FIRE / Q E ROLL / SHIFT BOOST / K BRAKE / M NOVA</span>
       </div>
     </section>
   </main>

@@ -48,3 +48,47 @@ body{position:fixed;inset:0}button,a{font:inherit;-webkit-tap-highlight-color:tr
 #overlay .panel h1{letter-spacing:-.062em}
 #overlay{background:radial-gradient(ellipse at 50% 27%,#113b55b0 0%,#041320cc 48%,#010610ed 100%)}
 @media(max-width:600px){.target-ring{width:45px;height:45px}.target-ring i{inset:16px}.target-ring span{top:52px;font-size:8px}.target-ring.boss-lock{width:70px;height:70px}.target-ring.boss-lock i{inset:27px}.target-ring.boss-lock span{top:78px}.multiplier{font-size:7px}}
+
+/* On-rails fighter control deck: screen-relative dual-thumb control. */
+#controls{gap:8px;align-items:end;justify-content:space-between}
+.flight-left{display:flex;flex-direction:column;align-items:flex-start;gap:13px}
+.flight-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.flight-left .help{max-width:100%!important;font-size:9px}
+.flight-speed,.flight-weapons,.roll-buttons{display:flex;gap:7px;align-items:center}
+#controls button{font-size:10px;min-height:48px;min-width:61px;letter-spacing:.065em;font-weight:800;background:#041b2cdb;border:1px solid #85cce866;color:#def5ff;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border-radius:4px;padding:8px 9px}
+#controls button:active,#controls button.on{background:#14425bcf;border-color:#91ebff;color:white}
+#controls button.cooling{opacity:.5}
+#roll-left,#roll-right{width:66px;min-height:52px!important;color:#7fe8f6!important;border-color:#67e0ef60!important}
+#brake{background:#26334acb!important;color:#bed1e5!important;min-height:42px!important}
+#boost{border-radius:5px!important;width:82px!important;height:46px!important;min-height:46px!important;min-width:82px!important;flex-direction:column!important;gap:4px!important}
+#missile{transform:none!important;min-height:57px!important;width:91px!important;min-width:91px!important;font-size:9px!important}
+#fire{background:linear-gradient(160deg,#176780ef,#082439ec)!important;border:2px solid #85f6ff!important;box-shadow:0 0 22px #1bd4ff35;min-height:79px!important;min-width:89px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:18px!important;letter-spacing:.1em!important;touch-action:none}
+#fire.on{background:linear-gradient(160deg,#227e8af2,#09415bef)!important}
+#fire.charged{border-color:#ffd090!important;box-shadow:0 0 20px #ffba5c88;color:#fff2c0}
+#fire small{font-size:7px;letter-spacing:0;color:#83d6e5}
+.charge-meter{display:block;width:65px;height:3px;background:#3d7893aa;border-radius:4px}
+.charge-meter i{display:block;width:0%;height:100%;background:#ffcc72}
+.chain-stats{display:flex;flex-direction:column;gap:3px;font-size:9px;font-weight:800;letter-spacing:.09em;color:#c4e6f6;margin-top:6px}
+.chain-stats #reflect{color:#95f9ff}
+#roll-left:focus-visible,#roll-right:focus-visible,#fire:focus-visible{outline:2px solid #acefff}
+@media(max-width:480px){
+ .flight-left{gap:7px}.flight-left .help{font-size:8px}
+ .flight-speed,.flight-weapons,.roll-buttons{gap:4px}
+ #controls button{font-size:9px;min-width:52px;padding:6px}
+ #roll-left,#roll-right{width:54px;min-width:54px;min-height:44px!important;font-size:8px!important}
+ #fire{min-width:76px!important;min-height:70px!important;font-size:15px!important}
+ #missile{width:78px!important;min-width:78px!important;min-height:53px!important;font-size:8px!important}
+ #boost{width:75px!important;min-width:75px!important}
+ .charge-meter{width:55px}
+}
+@media(orientation:landscape) and (max-height:480px){
+ .flight-right{gap:5px}.flight-left{gap:6px}
+ #fire{min-height:62px!important}
+ .flight-left .help{display:none}
+ #controls{bottom:max(7px,env(safe-area-inset-bottom))}
+}
+
+.radio-panel{position:absolute;z-index:6;left:max(17px,env(safe-area-inset-left));bottom:clamp(170px,22vh,235px);width:min(320px,65vw);min-height:67px;display:flex;gap:10px;align-items:center;padding:9px 11px;background:linear-gradient(105deg,#071b30e6,#061527a8);border:1px solid #6ab8e560;box-shadow:0 8px 24px #0008;pointer-events:none}
+.radio-panel .radio-avatar{height:47px;width:42px;min-width:42px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#145c73,#0c2338);color:#85ebff;font-size:11px;font-weight:900;transform:skew(-5deg);border:1px solid #8dedff75}
+.radio-content{min-width:0}.radio-content strong{font-size:9px;letter-spacing:.15em;color:#75e0ff}.radio-content p{font-size:10px;color:#d6e9f5;line-height:1.55;margin:4px 0 0}
+@media(max-height:520px){.radio-panel{bottom:130px;left:12px;min-height:45px;padding:6px}.radio-avatar{display:none!important}.radio-content p{font-size:9px}}

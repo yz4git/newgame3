@@ -1,3 +1,16 @@
+## NOVA STRIKE TRUE 3D FLIGHT — ON-RAILS SPACE COMBAT (2026-10-25)
+
+The standalone `flight3d.html` gameplay is reworked into an **original on-rails 3D space shooter**, inspired by the control and pacing conventions of classic console rail shooters (not a copy of copyrighted characters, music, world layouts, story, or vehicle designs).
+
+- A deterministic 3D flight corridor **turns, climbs and descends** across the six NovaStrike worlds. The craft moves in local screen-plane X/Y while travelling automatically along a preauthored curved course.
+- Ten authored **V, cross, squad, pincer, heavy-escort, and weaving formations** appear per sector, with relief gaps and a scripted finale guardian.
+- **Twin laser FIRE** on button press; holding FIRE builds a charged blast. Release after the charge indicator fills to launch a stronger homing shot, with priority target acquisition aligned to the actual chase-camera reticle.
+- **Left and right barrel rolls** turn the craft through 360 degrees and deflect incoming projectile hits during a short timed window. Separate cooldown prevents accidental invincibility.
+- **BOOST** and **BRAKE** share a regenerative energy meter, preserving the previous 3× high-speed cruise tuning. A NOVA BOMB has homing and area damage. Gold 3D energy rings heal hull or award score and refill the speed meter.
+- Guardians have **three HP-driven salvo phases**, 3D geometry, radio cues, cinematic breaks, scores and survival rewards.
+- Touch: drag the open scene to steer; hold FIRE to charge; tap ROLL buttons, hold BOOST/BRAKE, tap NOVA. Keyboard: WASD/arrows steer, Space/J/Z FIRE (hold/release), Q/E roll, Shift boost, K/X brake, M bomb, P/Esc pause. Gamepad: left stick, A FIRE, X/Y roll, B bomb, LB brake, RB boost, Start pause.
+- Safety and performance: moving-sphere bullet/ship collision, deterministic stage logic tests, a separate HTML game page that leaves all classic/2D modes unchanged. Automated test/build checks do **not** constitute a real iPhone performance or visual-play verification.
+
 ## NOVA STRIKE TRUE 3D FLIGHT — CINEMATIC SPEED ×3 (2026-10-25)
 
 This is an upgrade to the **independent** `flight3d.html` mode; the main campaign's World Rebuild and Classic visual/gameplay modes remain untouched.
