@@ -317,7 +317,7 @@ export class GroundWorld{
   for(let i=0;i<buildings;i++){
    const n=Math.round(tileZ*1.13)+stage*1003+i*31;
    const sign=i%2===0?1:-1;
-   const distance=city?(34+u(n+2)*42):coastStart?(28+u(n+2)*60):coast?42+u(n+2)*35:stage===2?16+u(n+2)*48:22+u(n+2)*67;
+   const distance=city?(75+u(n+2)*47):coastStart?(28+u(n+2)*60):coast?42+u(n+2)*35:stage===2?16+u(n+2)*48:22+u(n+2)*67;
    const x=center+sign*distance,local=(u(n+5)-.5)*TILE*.91,wz=tileZ+local;
    if(city||stage===2){
     const style=i+(Math.floor(d/TILE)*3);
@@ -333,6 +333,20 @@ export class GroundWorld{
    }else if(stage===4)this.makeForest(group,colliders,x,local,wz,i);
    else if(stage===5)this.makeCrane(group,colliders,x,local,wz,i);
    else this.makeRock(group,colliders,x,local,wz,n);
+  }
+  if(city){
+   // Low foreground industrial structures keep street detail without placing
+   // 50m-tall walls INSIDE the ±44-unit player/camera scrolling envelope.
+   // Far towers remain readable in projection and never intersect the camera.
+   for(const side of [-1,1]){
+    const idx=Math.floor(d/TILE)+side*9,dist=25+u(idx)*10,zl=(u(idx+7)-.5)*TILE;
+    const x=center+side*dist,base=heightAt(stage,x,tileZ+zl);
+    const w=8+u(idx+4)*8,depth=10+u(idx+11)*9,h=6+u(idx+2)*5;
+    item(group,box,this.weathered,x,base+h*.5,zl,w,h,depth);
+    item(group,box,this.girders,x,base+h+.2,zl,w*1.08,.45,depth*1.08);
+    item(group,box,this.amber,x,base+h*.45,zl+depth*.51,w*.56,.26,.12);
+    colliders.push({x,y:base+h*.5,z:tileZ+zl,rx:w*.52,ry:h*.53,rz:depth*.55,kind:'building'});
+   }
   }
   if(city&&Math.floor(d/TILE)%4===2)this.urbanOverpass(group,colliders,center,tileZ);
   if(city||cityAfter)for(let i=0;i<5;i++){
