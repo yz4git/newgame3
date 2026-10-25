@@ -10,7 +10,7 @@ import {routeCenter,seed,clamp,swept,type V3} from './nova64-rules.ts';
 export type Collider={x:number;y:number;z:number;rx:number;ry:number;rz:number;kind:'building'|'rock'|'tower'|'bridge'};
 export type Gate={z:number;passed:boolean;missed:boolean;index:number};
 type Tile={group:T.Group;z:number;colliders:Collider[]};
-const TILE=90,HALF=45,CORRIDOR_TILES=12,ARENA_TILES=17,CHANNEL=120;
+const TILE=90,HALF=45,CORRIDOR_TILES=9,ARENA_TILES=17,CHANNEL=120;
 const box=new T.BoxGeometry(1,1,1);
 const ico=new T.IcosahedronGeometry(1,1);
 const cone=new T.ConeGeometry(1,1,6);
