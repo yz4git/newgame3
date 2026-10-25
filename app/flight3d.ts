@@ -4,7 +4,7 @@ import {createFlightShip,animateFlightShip,FlightVfx,FlightAtmosphere,disposeFli
 import {GroundWorld,heightAt,gateCount,waterLevel,coastZone} from './flight-terrain.ts';
 import {createFirstStageBoss,animateFirstStageBoss} from './flight-boss-visuals.ts';
 import {RAIL_X_MAX,RAIL_Y_MIN,RAIL_Y_MAX,railCameraPan,railCameraPanY,railViewportOffset,railEdgeWarning,railMoveTarget,railAimPoint} from './flight-corridor-scroll.ts';
-import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget} from './flight-stage-direction.ts';
+import {STAGE1,distanceToScriptSeconds,missionProgress,enemyFlightOffset,enemyFlightSpeed,interceptTarget,ringMilestone} from './flight-stage-direction.ts';
 import type {WaveType} from './nova64-rules.ts';
 import {MISSIONS,scriptWaves,formation,routeCenter,laneLimit,dist,clamp,lerp,seed,swept,bossPhase,deflectDuringRoll,routeSelection,missionGrade,clampArena,ROLL_SECONDS,ROLL_REUSE,SOMERSAULT_SECONDS,LOCK_CHARGE,type Mission,type Phase,type V3} from './nova64-rules.ts';
 
@@ -704,13 +704,13 @@ class GroundFlight {
    if(pick){
     if(p.kind==='ring'){
      this.rings++;this.shield=Math.min(this.shieldMax,this.shield+23);
-     if(this.rings%6===3){this.shieldMax=Math.min(140,this.shieldMax+20);this.shield=this.shieldMax;this.notice('GOLD RINGS ×3 / SHIELD EXTENDED',1.8);}
-     if(this.rings%6===0){this.lives++;this.notice('GOLD RINGS ×6 / EXTRA SHIP',1.8);}
+     if(ringMilestone(this.rings)==='shield'){this.shieldMax=Math.min(140,this.shieldMax+20);this.shield=this.shieldMax;this.notice('GOLD RINGS ×3 / SHIELD EXTENDED',1.8);}
+     if(ringMilestone(this.rings)==='life'){this.lives++;this.notice('GOLD RINGS ×6 / EXTRA SHIP',1.8);}
     }
     if(p.kind==='laser')this.laserLevel=Math.min(3,this.laserLevel+1);
     if(p.kind==='bomb')this.bombs=Math.min(7,this.bombs+1);
     if(p.kind==='repair'){this.shield=this.shieldMax;this.damagedWing=false;}
-    if(p.kind!=='ring'||this.rings%3!==0)this.notice('SUPPLY / '+p.kind.toUpperCase(),.85);
+    if(p.kind!=='ring'||!ringMilestone(this.rings))this.notice('SUPPLY / '+p.kind.toUpperCase(),.85);
     this.sound(960,.19,.033);this.score+=230;
    }
    if(pick||lost){
