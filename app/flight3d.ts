@@ -1,7 +1,8 @@
 import * as T from 'three';
 import './flight3d.css';
 import {createFlightShip,animateFlightShip,createFlightSection,FlightVfx,FlightAtmosphere,disposeFlightVisual} from './flight3d-visuals.ts';
-import {SPEED_MULTIPLIER,cruiseSpeed,boostSpeed,laserSpeed,missileSpeed,enemySpawnRange,displaySpeed,sweptCollision} from './flight3d-tuning.ts';
+import {cruiseSpeed,boostSpeed,laserSpeed,missileSpeed,enemySpawnRange,displaySpeed,sweptCollision} from './flight3d-tuning.ts';
+import {STAGE_DURATION,ROLL_DURATION,ROLL_COOLDOWN,CHARGE_SECONDS,CHARGE_MAX,createRailWaves,formationOffset,trackCenter,trackYaw,clampRail,rollDeflects,bossPhase,type Wave} from './rail-mode.ts';
 
 const $ = <E extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as E;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -17,7 +18,7 @@ const worlds = [
 ] as const;
 type State = 'title' | 'playing' | 'paused' | 'over' | 'clear';
 type Foe = { mesh: T.Group; hp: number; max: number; radius: number; phase: number; x: number; y: number; fire: number; boss: boolean; points: number };
-type Shot = { mesh: T.Mesh; velocity: T.Vector3; foe: boolean; power: number; radius: number; homing: boolean; life: number };
+type Shot = { mesh: T.Mesh; velocity: T.Vector3; foe: boolean; power: number; radius: number; homing: boolean; life: number; bomb?: boolean };
 type Blast = { mesh: T.Mesh; life: number; duration: number };
 const orbGeo = new T.IcosahedronGeometry(1, 1);
 const shotGeo = new T.SphereGeometry(1, 8, 6);
@@ -52,6 +53,17 @@ class Flight3D {
   private missileDelay = 0;
   private laserDelay = 0;
   private spawnDelay = 1.2;
+  private waveIndex=0;
+  private waves: Wave[]=[];
+  private brakeHeld=false;
+  private fireHeld=false;
+  private firePointer:number|null=null;
+  private charge=0;
+  private rollTime=0;
+  private rollCooldown=0;
+  private rollSign=1;
+  private shotsReflected=0;
+  private combo=0;
   private invulnerable = 0;
   private flash = 0;
   private boss: Foe | null = null;
@@ -87,11 +99,11 @@ class Flight3D {
     this.attachControls();
     this.resize();
     this.configureSector();
-    this.renderOverlay('NOVA STRIKE', 'TRUE 3D / フル3D空間で飛び、避け、撃つ。<br>ドラッグで上下左右・BOOSTで前進加速・MISSILEで追尾攻撃。', '3D出撃');
+    this.renderOverlay('NOVA STRIKE', 'RAIL FLIGHT / 3Dレールシューティング。<br>ドラッグ操縦・FIRE射撃／長押しチャージ・ROLLで弾をはじく。<br>BOOST／BRAKEで速度制御。', '出撃する');
     window.addEventListener('resize', () => this.resize());
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'playing') this.pause(); });
     this.raf = requestAnimationFrame(t => this.frame(t));
-    Object.assign(window, { __novaFlight3D: { snapshot: () => ({ state: this.state, stage: this.stage, score: this.score, shield: this.shield, position: this.craft.position.toArray(), enemies: this.enemies.length, shots: this.shots.length, boss: !!this.boss }), start: () => this.start(), pause: () => this.pause() } });
+    Object.assign(window, { __novaFlight3D: { snapshot: () => ({ state: this.state, stage: this.stage, score: this.score, shield: this.shield, position: this.craft.position.toArray(), enemies:this.enemies.length,shots:this.shots.length,boss:!!this.boss,waveIndex:this.waveIndex,roll:this.rollTime,charge:this.charge,reflected:this.shotsReflected,combo:this.combo }), start: () => this.start(), pause: () => this.pause() } });
   }
   private attachControls() {
     this.canvas.addEventListener('pointerdown', e => {
@@ -102,8 +114,8 @@ class Flight3D {
     this.canvas.addEventListener('pointermove', e => {
       if (this.state !== 'playing' || this.pointer !== e.pointerId) return;
       e.preventDefault();
-      this.baseX = clamp(this.baseX + (e.clientX - this.lastTouch.x) / this.canvas.clientWidth * 26, -8.5, 8.5);
-      this.baseY = clamp(this.baseY - (e.clientY - this.lastTouch.y) / this.canvas.clientHeight * 26, -6.5, 8);
+      const steer=clampRail(this.baseX+(e.clientX-this.lastTouch.x)/this.canvas.clientWidth*26,this.baseY-(e.clientY-this.lastTouch.y)/this.canvas.clientHeight*26);
+      this.baseX=steer.x;this.baseY=steer.y;
       this.lastTouch = { x: e.clientX, y: e.clientY };
     });
     const release = (e: PointerEvent) => { if (this.pointer === e.pointerId) this.pointer = null; };
@@ -111,18 +123,44 @@ class Flight3D {
     const boost = $('boost');
     boost.addEventListener('pointerdown', e => { e.preventDefault(); this.boostHeld = true; boost.classList.add('on'); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) boost.addEventListener(ev, () => { this.boostHeld = false; boost.classList.remove('on'); });
+    const brake=$('brake');
+    brake.addEventListener('pointerdown',e=>{e.preventDefault();this.brakeHeld=true;brake.classList.add('on');});
+    for(const ev of ['pointerup','pointercancel','pointerleave','lostpointercapture'])
+      brake.addEventListener(ev,()=>{this.brakeHeld=false;brake.classList.remove('on');});
+    const fire=$('fire');
+    fire.addEventListener('pointerdown',e=>{
+      if(this.state!=='playing')return;
+      e.preventDefault();this.firePointer=e.pointerId;
+      fire.setPointerCapture(e.pointerId);this.beginFire();fire.classList.add('on');
+    });
+    for(const ev of ['pointerup','pointercancel','lostpointercapture'])
+      fire.addEventListener(ev,e=>{
+        if(this.firePointer!==null && (ev==='lostpointercapture'||this.firePointer===(e as PointerEvent).pointerId)){
+          this.firePointer=null;this.endFire();fire.classList.remove('on');
+        }
+      });
+    $('roll-left').addEventListener('click',()=>this.barrelRoll(-1));
+    $('roll-right').addEventListener('click',()=>this.barrelRoll(1));
     $('missile').addEventListener('click', () => this.fireMissile());
     $('pause').addEventListener('click', () => this.pause());
     $('action').addEventListener('click', () => { if (this.state === 'paused') this.resume(); else this.start(); });
     window.addEventListener('keydown', e => {
       const key = e.key.toLowerCase();
-      if (['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','shift','p','escape','m'].includes(key)) e.preventDefault();
+      if(['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','shift','p','escape','m','j','k','q','e','z','x'].includes(key))e.preventDefault();
+      if(!this.keys.has(key)&&!e.repeat){
+        if(key==='j'||key===' '||key==='z')this.beginFire();
+        if(key==='q')this.barrelRoll(-1);
+        if(key==='e')this.barrelRoll(1);
+      }
       this.keys.add(key);
       if (key === 'p' || key === 'escape') { if (this.state === 'playing') this.pause(); else if (this.state === 'paused') this.resume(); }
       if (key === 'm' && !e.repeat) this.fireMissile();
     });
-    window.addEventListener('keyup', e => this.keys.delete(e.key.toLowerCase()));
-    window.addEventListener('blur', () => { this.keys.clear(); this.boostHeld = false; if (this.state === 'playing') this.pause(); });
+    window.addEventListener('keyup',e=>{
+      const key=e.key.toLowerCase();this.keys.delete(key);
+      if((key==='j'||key===' '||key==='z')&&!this.keys.has('j')&&!this.keys.has(' ')&&!this.keys.has('z'))this.endFire();
+    });
+    window.addEventListener('blur', () => { this.keys.clear();this.boostHeld=false;this.brakeHeld=false;this.fireHeld=false;if(this.state==='playing')this.pause(); });
   }
   private resize() {
     const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
@@ -135,7 +173,7 @@ class Flight3D {
   }
   private hideOverlay() { $('overlay').hidden = true; $('controls').hidden = false; }
   private start() {
-    this.stopObjects(); this.pendingSectorChange = false; this.lockTarget=null; this.stage = 0; this.score = 0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
+    this.stopObjects();this.waveIndex=0;this.rollTime=0;this.rollCooldown=0;this.shotsReflected=0;this.combo=0;this.charge=0;this.fireHeld=false;this.pendingSectorChange=false;this.lockTarget=null;this.stage=0;this.score=0; this.currentSpeed = cruiseSpeed(0); this.cameraShake = 0; this.shield = 5; this.boost = 100;
     this.craft.position.set(0, 0, 0); this.baseX = 0; this.baseY = 0; this.totalTime = 0;
     this.missileDelay = 0; this.invulnerable = 2;
     this.configureSector(); this.state = 'playing'; this.hideOverlay();
@@ -145,7 +183,7 @@ class Flight3D {
   private resume() { if (this.state !== 'paused') return; this.state = 'playing'; this.hideOverlay(); this.previous = performance.now(); }
   private pause() {
     if (this.state !== 'playing') return;
-    this.state = 'paused'; this.pointer = null; this.boostHeld = false;
+    this.state='paused';this.pointer=null;this.boostHeld=false;this.brakeHeld=false;this.fireHeld=false;this.firePointer=null;
     this.renderOverlay('PAUSED', 'フライトを一時停止しました。<br>進行・弾・敵の時間は停止しています。', '飛行を再開');
   }
   private finish(clear: boolean) {
@@ -174,13 +212,13 @@ class Flight3D {
     for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.scenery = [];
     for (let i = 0; i < 16; i++) this.makeScenery(this.craft.position.z - 55 - i * 38, i);
-    this.sectorTime = 0; this.spawnDelay = 1.3; this.laserDelay = 0;this.lockTarget=null;
+    this.sectorTime=0;this.waveIndex=0;this.waves=createRailWaves(this.stage);this.laserDelay=0;this.lockTarget=null;this.baseX=0;this.baseY=0;this.rollTime=0;this.charge=0;this.fireHeld=false;this.combo=0;
     $('sector').textContent = String(this.stage + 1).padStart(2, '0') + ' / 06 — ' + worldNames[this.stage];
     $('bosswrap').hidden = true; $('progress').style.width = '0%';
   }
   private makeScenery(z: number, index: number) {
     const g=createFlightSection(this.stage,index,z,this.floorMaterial,this.terrainMaterial,this.accentMaterial);
-    this.scene.add(g);this.scenery.push(g);
+    const center=trackCenter(this.stage,z);g.position.x=center.x;g.position.y=center.y;g.rotation.y=trackYaw(this.stage,z);this.scene.add(g);this.scenery.push(g);
   }
   private spawnFoe(boss = false) {
     const seed = this.sectorTime * 9.13 + this.enemies.length * 4.3;
