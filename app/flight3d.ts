@@ -65,6 +65,8 @@ class Flight3D {
   private rollSign=1;
   private shotsReflected=0;
   private combo=0;
+  private bossPhaseSeen=1;
+  private radioRemaining=0;
   private invulnerable = 0;
   private flash = 0;
   private boss: Foe | null = null;
@@ -218,7 +220,7 @@ class Flight3D {
     for (const g of this.scenery){this.scene.remove(g);disposeFlightVisual(g);}
     this.scenery = [];
     for (let i = 0; i < 16; i++) this.makeScenery(this.craft.position.z - 55 - i * 38, i);
-    this.sectorTime=0;this.waveIndex=0;this.nextSupply=9.5;this.waves=createRailWaves(this.stage);this.laserDelay=0;this.lockTarget=null;this.baseX=0;this.baseY=0;this.rollTime=0;this.charge=0;this.fireHeld=false;this.combo=0;
+    this.sectorTime=0;this.waveIndex=0;this.bossPhaseSeen=1;this.nextSupply=9.5;this.waves=createRailWaves(this.stage);this.laserDelay=0;this.lockTarget=null;this.baseX=0;this.baseY=0;this.rollTime=0;this.charge=0;this.fireHeld=false;this.combo=0;
     $('sector').textContent = String(this.stage + 1).padStart(2, '0') + ' / 06 — ' + worldNames[this.stage];
     $('bosswrap').hidden = true; $('progress').style.width = '0%';
   }
@@ -248,7 +250,8 @@ class Flight3D {
     this.scene.add(mesh);
     const max=boss?180+this.stage*32:leader?14+this.stage*2:this.stage>=3?6:4;
     const foe: Foe = { mesh, hp: max, max, radius: boss ? 8.0 : 2.15, phase: seed, x, y, fire: boss ? 1.3 : 1.3 + rand(seed + 8) * 1.5, boss, points:boss?5000:leader?920+this.stage*100:180+this.stage*65 };
-    if (boss) {
+    if(boss){
+      this.radio('NOVA CONTROL','巨大敵反応。正面の中枢を狙え！',4);
       this.boss = foe; $('bosswrap').hidden = false; $('boss-name').textContent = 'GUARDIAN / ' + worldNames[this.stage];
       this.alert('WARNING — 3D GUARDIAN', 2.4);
     } else this.enemies.push(foe);
@@ -331,7 +334,7 @@ class Flight3D {
   }
   private hitShip() {
     if (this.invulnerable > 0 || this.state !== 'playing') return;
-    this.shield--; this.invulnerable = 1.65; this.flash = .6; this.cameraShake=.5; this.vfx.burst(this.craft.position,1.6,0xff6e6c); this.sfx(95, .24);
+    this.combo=0;this.shield--; this.invulnerable = 1.65; this.flash = .6; this.cameraShake=.5; this.vfx.burst(this.craft.position,1.6,0xff6e6c); this.sfx(95, .24);
     if (this.shield <= 0) this.finish(false);
   }
   private damageFoe(e: Foe, amount: number) {
@@ -352,6 +355,11 @@ class Flight3D {
     mesh.position.copy(position); mesh.scale.setScalar(.2); this.scene.add(mesh);
     this.blasts.push({ mesh, life: .65, duration: .65 });
     this.vfx.burst(position,size,size>4?0xffbd7c:0xff816e);
+  }
+  private radio(speaker:string,message:string,seconds=3.1){
+    $('radio-name').textContent=speaker;
+    $('radio-message').textContent=message;
+    this.radioRemaining=seconds;$('radio').hidden=false;
   }
   private alert(message: string, seconds = 2) { $('notice').textContent = message; $('notice').classList.add('visible'); this.noticeTime = seconds; }
   private sfx(freq: number, length: number) {
@@ -374,7 +382,9 @@ class Flight3D {
     this.missileDelay=Math.max(0,this.missileDelay-dt);
     this.rollCooldown=Math.max(0,this.rollCooldown-dt);
     this.rollTime=Math.max(0,this.rollTime-dt);
-    this.noticeTime -= dt;
+    this.noticeTime-=dt;
+    this.radioRemaining=Math.max(0,this.radioRemaining-dt);
+    $('radio').hidden=this.radioRemaining<=0;
     if (this.noticeTime < 0) $('notice').classList.remove('visible');
     const k=this.keys;
     const pad=navigator.getGamepads?.().find(p=>p&&p.connected)??null;
@@ -452,8 +462,11 @@ class Flight3D {
           const lane=formationOffset(wave.kind,i,wave.count,this.sectorTime);
           this.spawnFoe(false,lane,wave.support&&i===Math.floor(wave.count/2));
         }
-        if(this.waveIndex===1||this.waveIndex===5||this.waveIndex===9)
-          this.alert(['ENEMY FORMATION INBOUND','TIGHT PASSAGE / STAY ALERT','LAST WAVE — GUARDIAN AHEAD'][this.waveIndex===1?0:this.waveIndex===5?1:2],1.75);
+        if(this.waveIndex===1||this.waveIndex===5||this.waveIndex===9){
+          const messages=['敵編隊が進路を塞ぐ。照準を合わせろ！','ブーストとブレーキで位置を調整して！','この先に敵旗艦。装甲部位を破壊せよ！'];
+          this.radio(this.waveIndex===5?'ECHO / SUPPORT':'NOVA CONTROL',messages[this.waveIndex===1?0:this.waveIndex===5?1:2],3.5);
+          this.alert(['ENEMY FORMATION INBOUND','TIGHT PASSAGE / STAY ALERT','GUARDIAN AHEAD'][this.waveIndex===1?0:this.waveIndex===5?1:2],1.55);
+        }
       }
     }
     this.lockTarget=this.findLock();
@@ -465,7 +478,14 @@ class Flight3D {
     const foes = this.boss ? [...this.enemies, this.boss] : [...this.enemies];
     for (const foe of foes) {
       const foePrevious=foe.mesh.position.clone();
-      if (foe.boss) {
+      if(foe.boss){
+        const phase=bossPhase(foe.hp,foe.max);
+        if(phase>this.bossPhaseSeen){
+          this.bossPhaseSeen=phase;
+          this.vfx.burst(foe.mesh.position,5,0xffa66e);
+          this.radio('NOVA CONTROL',phase===2?'敵旗艦、装甲を展開！射撃パターン変化！':'中枢暴走！集中射撃で決着を！',3.6);
+          this.alert('GUARDIAN / PHASE '+phase,1.6);
+        }
         foe.mesh.position.z += (this.craft.position.z - 105 - foe.mesh.position.z) * Math.min(1, dt * 2.3);
         const p=trackCenter(this.stage,foe.mesh.position.z);
         foe.mesh.position.x=p.x+Math.sin(this.sectorTime*.65)*5;
