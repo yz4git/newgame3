@@ -173,7 +173,7 @@ class GroundFlight {
   });
   window.addEventListener('blur',()=>{this.keys.clear();this.padBoost=this.padBrake=this.boostHeld=this.brakeHeld=false;if(this.playing)this.pause();});
  }
- private gamepad(){
+ private gamepad(dt:number){
   const pad=navigator.getGamepads?.().find(g=>g&&g.connected);
   if(!pad){this.gamepadLast=[];this.padBoost=this.padBrake=false;return;}
   const on=(i:number)=>pad.buttons[i]?.pressed||false;
@@ -182,8 +182,8 @@ class GroundFlight {
   for(const [idx,fn] of Object.entries(commands))if(on(+idx)&&!this.gamepadLast[+idx])fn();
   if(!on(0)&&this.gamepadLast[0])this.fireUp();
   this.gamepadLast=pad.buttons.map(b=>b.pressed);
-  this.laneX=this.mission.mode==='corridor'?railMoveTarget(this.laneX,axis(0)*.92):clamp(this.laneX+axis(0)*.52,-9.4,9.4);
-  this.laneY=clamp(this.laneY-axis(1)*.42,RAIL_Y_MIN,RAIL_Y_MAX);
+  this.laneX=this.mission.mode==='corridor'?railMoveTarget(this.laneX,axis(0)*dt*49):clamp(this.laneX+axis(0)*dt*31,-9.4,9.4);
+  this.laneY=clamp(this.laneY-axis(1)*dt*26,RAIL_Y_MIN,RAIL_Y_MAX);
   this.padBoost=on(5);this.padBrake=on(4);
  }
  private setPalette(){
@@ -502,7 +502,7 @@ class GroundFlight {
   this.enterMission(id);
  }
  private updatePlayer(dt:number){
-  this.gamepad();
+  this.gamepad(dt);
   const k=this.keys;
   const ix=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
   const iy=Number(k.has('w')||k.has('arrowup'))-Number(k.has('s')||k.has('arrowdown'));
